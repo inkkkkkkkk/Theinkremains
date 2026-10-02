@@ -328,53 +328,6 @@ E:Slider({Title="修改跳跃高度",Value={Min=20,Max=200,Default=50},Callback=
     end
 end})
 
-E:Input({
-    Title = "重力设置",
-    Placeholder = "请输入重力数值",
-    Callback = function(text)
-        local gravity = tonumber(text)
-        if gravity then
-            workspace.Gravity = gravity
-        end
-    end
-})
-
-local spinSpeed = 10
-local spinEnabled = false
-local spinConnection = nil
-
-E:Input({
-    Title = "旋转速度",
-    Placeholder = "默认 10",
-    Callback = function(text)
-        local value = tonumber(text)
-        if value then
-            spinSpeed = value
-        end
-    end
-})
-
-E:Toggle({
-    Title = "旋转开关",
-    Value = false,
-    Callback = function(state)
-        spinEnabled = state
-        if spinConnection then
-            spinConnection:Disconnect()
-            spinConnection = nil
-        end
-        if state then
-            spinConnection = game:GetService("RunService").Heartbeat:Connect(function()
-                local char = LocalPlayer.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                if root then
-                    root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
-                end
-            end)
-        end
-    end
-})
-
 E:Slider({
     Title = "视野",
     Value = { Min = 60, Max = 120, Default = 70 },
@@ -514,6 +467,13 @@ E:Toggle({
 })
 
 E:Button({
+    Title = "防甩飞",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Linux6699/DaHubRevival/main/AntiFling.lua"))()
+    end
+})
+
+E:Button({
     Title = "防止摔落伤害",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/zczczczc766/ink/refs/heads/main/%E9%98%B2%E6%AD%A2%E6%91%94%E8%90%BD%E4%BC%A4%E5%AE%B3.lua"))()
@@ -567,13 +527,6 @@ E:Button({Title="强制显示聊天框",Callback=function()forceChatVisible()end
 E:Button({Title="走路撞人",Callback=function()loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_5wpM7bBcOPspmX7lQ3m75SrYNWqxZ858ai3tJdEAId6jSI05IOUB224FQ0VSAswH.lua.txt'),true))()end})
 
 E:Button({Title="铁拳打人",Callback=function()loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'),true))()end})
-
-E:Button({
-    Title = "飞踢",
-    Callback = function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-THE-REAL-dropkick-177199"))()
-    end
-})
 
 local P = D:Tab({Title="透视", Icon="eye"})
 
