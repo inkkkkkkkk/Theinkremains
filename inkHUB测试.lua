@@ -136,7 +136,7 @@ C = windowResult
 pcall(function()
     C:EditOpenButton({
         Title = "Project_ink_HUB_2026!",
-        Icon = "rbxassetid://71953031400395",
+        Icon = "crown",
         StrokeThickness = 5,
         TextColor = Color3.fromRGB(150, 150, 150),
         TitleColor = Color3.fromRGB(150, 150, 150),
@@ -149,26 +149,7 @@ pcall(function()
     })
 end)
 
-pcall(function()
-    local CoreGui = game:GetService("CoreGui")
-    local crownAsset = "71953031400395"
-    local function enlargeCrown(obj)
-        if (obj:IsA("ImageLabel") or obj:IsA("ImageButton")) and string.find(obj.Image or "", crownAsset, 1, true) then
-            local current = obj.AbsoluteSize
-            local side = math.max(current.X, current.Y, 24)
-            local target = math.clamp(math.floor(side * 1.35), 30, 42)
-            obj.Size = UDim2.fromOffset(target, target)
-        end
-    end
-    for _, obj in ipairs(CoreGui:GetDescendants()) do
-        enlargeCrown(obj)
-    end
-    CoreGui.DescendantAdded:Connect(function(obj)
-        task.defer(function()
-            pcall(function() enlargeCrown(obj) end)
-        end)
-    end)
-end)
+
 
 pcall(function()
     local RunService = game:GetService("RunService")
