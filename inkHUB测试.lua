@@ -1275,12 +1275,12 @@ local playerDropdown=TransTab:Dropdown({Title="选择玩家",Values=getPlayerNam
 local function refreshPlayerList()
     local newNames=getPlayerNames()
 
+    -- WindUI 1.6.66 使用 Refresh 更新下拉列表，能真正替换掉旧选项。
     pcall(function()
-        playerDropdown:SetValues({"无其他玩家"})
+        playerDropdown:Refresh(newNames)
     end)
-    task.wait()
-    playerDropdown:SetValues(newNames)
 
+    -- 如果当前选择的玩家已经退出，就自动切换到当前仍在线的玩家。
     local selectedStillExists = false
     for _,name in ipairs(newNames) do
         if name == selectedPlayer then
@@ -1290,6 +1290,11 @@ local function refreshPlayerList()
     end
     if not selectedStillExists then
         selectedPlayer = newNames[1]
+        pcall(function()
+            if selectedPlayer and selectedPlayer ~= "无其他玩家" then
+                playerDropdown:Select(selectedPlayer)
+            end
+        end)
     end
 end
 
@@ -1298,6 +1303,7 @@ TransTab:Button({Title="刷新列表",Callback=function()
     A:SetCore("SendNotification",{Title="已刷新",Text="玩家列表已更新",Duration=2})
 end})
 
+-- 玩家加入/退出时同步列表，避免退出的玩家继续残留在传送列表里。
 game:GetService("Players").PlayerAdded:Connect(function()
     task.defer(refreshPlayerList)
 end)
@@ -1317,7 +1323,6 @@ TransTab:Button({Title="传送",Callback=function()
     local target=game:GetService("Players"):FindFirstChild(selectedPlayer)
     if not target or not target.Character then
         A:SetCore("SendNotification",{Title="错误",Text="目标玩家不存在或没有角色",Duration=2})
-              A:SetCore("SendNotification",{Title="错误",Text="目标玩家不存在或没有角色",Duration=2})
         return
     end
     local targetRoot=target.Character:FindFirstChild("HumanoidRootPart")
