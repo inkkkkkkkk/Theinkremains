@@ -1270,37 +1270,13 @@ local function getPlayerNames()
     return names
 end
 
-local function createPlayerDropdown()
-    local names=getPlayerNames()
-    selectedPlayer=nil
-    playerDropdown=TransTab:Dropdown({
-        Title="选择玩家",
-        Values=names,
-        Value=names[1],
-        Callback=function(v)
-            selectedPlayer=v
-        end
-    })
-end
-
-local playerDropdown=nil
-createPlayerDropdown()
-
-local function refreshPlayerList()
-    if playerDropdown then
-        pcall(function() playerDropdown:Destroy() end)
-        playerDropdown=nil
-    end
-    createPlayerDropdown()
-end
+local playerDropdown=TransTab:Dropdown({Title="选择玩家",Values=getPlayerNames(),Value="无其他玩家",Callback=function(v)selectedPlayer=v end})
 
 TransTab:Button({Title="刷新列表",Callback=function()
-    local ok,err=pcall(refreshPlayerList)
-    if ok then
-        A:SetCore("SendNotification",{Title="已刷新",Text="玩家列表已更新",Duration=2})
-    else
-        warn("[ink_HUB] 传送列表刷新失败:",err)
-    end
+    local newNames=getPlayerNames()
+    playerDropdown:Refresh(newNames)
+    selectedPlayer=nil
+    A:SetCore("SendNotification",{Title="已刷新",Text="玩家列表已更新，请重新选择玩家",Duration=2})
 end})
 
 TransTab:Button({Title="传送",Callback=function()
