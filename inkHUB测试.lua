@@ -1270,50 +1270,38 @@ local function getPlayerNames()
     return names
 end
 
-local playerDropdown=TransTab:Dropdown({Title="选择玩家",Values=getPlayerNames(),Value="无其他玩家",Callback=function(v)selectedPlayer=v end})
+local function createPlayerDropdown()
+    local names=getPlayerNames()
+    selectedPlayer=nil
+    playerDropdown=TransTab:Dropdown({
+        Title="选择玩家",
+        Values=names,
+        Value=names[1],
+        Callback=function(v)
+            selectedPlayer=v
+        end
+    })
+end
+
+local playerDropdown=nil
+createPlayerDropdown()
 
 local function refreshPlayerList()
-    local newNames=getPlayerNames()
-
-    -- WindUI 1.6.66 使用 Refresh 更新下拉列表，能真正替换掉旧选项。
-    pcall(function()
-        playerDropdown:Refresh(newNames)
-    end)
-
-    -- 如果当前选择的玩家已经退出，就自动切换到当前仍在线的玩家。
-    local selectedStillExists = false
-    for _,name in ipairs(newNames) do
-        if name == selectedPlayer then
-            selectedStillExists = true
-            break
-        end
+    if playerDropdown then
+        pcall(function() playerDropdown:Destroy() end)
+        playerDropdown=nil
     end
-    if not selectedStillExists then
-        selectedPlayer = newNames[1]
-        pcall(function()
-            if selectedPlayer and selectedPlayer ~= "无其他玩家" then
-                playerDropdown:Select(selectedPlayer)
-            end
-        end)
-    end
+    createPlayerDropdown()
 end
 
 TransTab:Button({Title="刷新列表",Callback=function()
-    refreshPlayerList()
-    A:SetCore("SendNotification",{Title="已刷新",Text="玩家列表已更新",Duration=2})
-end})
-
--- 玩家加入/退出时同步列表，避免退出的玩家继续残留在传送列表里。
-game:GetService("Players").PlayerAdded:Connect(function()
-    task.defer(refreshPlayerList)
-end)
-
-game:GetService("Players").PlayerRemoving:Connect(function(player)
-    if selectedPlayer == player.Name then
-        selectedPlayer = nil
+    local ok,err=pcall(refreshPlayerList)
+    if ok then
+        A:SetCore("SendNotification",{Title="已刷新",Text="玩家列表已更新",Duration=2})
+    else
+        warn("[ink_HUB] 传送列表刷新失败:",err)
     end
-    task.defer(refreshPlayerList)
-end)
+end})
 
 TransTab:Button({Title="传送",Callback=function()
     if not selectedPlayer or selectedPlayer=="无其他玩家" then
