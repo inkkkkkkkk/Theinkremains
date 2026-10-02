@@ -246,7 +246,6 @@ local function updateAccessoryVisibility()
             if isWhitelistAccessory(obj) then
                 setAccessoryHidden(obj, false)
             elseif allAccessoriesHidden then
-                -- “去掉所有饰品”不处理头发；头发由“去掉头发”单独控制
                 if isHairAccessory(obj) then
                     setAccessoryHidden(obj, hairHidden)
                 else
@@ -293,7 +292,6 @@ local function getBodyParts(char, kind)
             table.insert(parts, head)
         end
     elseif kind == "断腿" then
-        -- R15
         for _, n in ipairs({"RightUpperLeg", "RightLowerLeg", "RightFoot"}) do
             local p = char:FindFirstChild(n)
             if p and p:IsA("BasePart") then
@@ -412,6 +410,11 @@ end
 local function isR6(char)
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     return hum and hum.RigType == Enum.HumanoidRigType.R6
+end
+
+local function isR15(char)
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return hum and hum.RigType == Enum.HumanoidRigType.R15
 end
 
 local function tryApplyR6RightLegDescription(char)
@@ -617,11 +620,46 @@ local function applyBodyPart(name, enabled)
             end
         end
 
-    elseif name == "断腿" then
+    elseif name == "断腿R15" then
         if enabled then
-            loadRealKorblox()
-        else
-            destroyKorblox()
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum and hum.RigType == Enum.HumanoidRigType.R15 then
+                    local rf = char:FindFirstChild("RightFoot")
+                    local rl = char:FindFirstChild("RightLowerLeg")
+                    local ru = char:FindFirstChild("RightUpperLeg")
+                    if ru and rl and rf then
+                        rf.Transparency = 1
+                        rl.Transparency = 1
+                        ru.MeshId = "http://www.roblox.com/asset/?id=902942096"
+                        ru.TextureID = "http://roblox.com/asset/?id=902843398"
+                    end
+                end
+            end
+        end
+    elseif name == "断腿R6" then
+        if enabled then
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum and hum.RigType == Enum.HumanoidRigType.R6 then
+                    local rightLeg = char:FindFirstChild("Right Leg")
+                    if rightLeg then
+                        local mesh = rightLeg:FindFirstChildOfClass("SpecialMesh")
+                        if not mesh then
+                            mesh = Instance.new("SpecialMesh")
+                            mesh.Parent = rightLeg
+                        end
+                        rightLeg.Color = Color3.fromRGB(64, 64, 64)
+                        rightLeg.Transparency = 0
+                        mesh.MeshType = Enum.MeshType.FileMesh
+                        mesh.MeshId = "rbxassetid://101851696"
+                        mesh.TextureId = "rbxassetid://101851254"
+                        mesh.Scale = Vector3.new(1, 1, 1)
+                    end
+                end
+            end
         end
     elseif name == "无腿" then
         if enabled then
@@ -655,17 +693,14 @@ task.spawn(function()
                     setLocalHidden(p, true)
                 end
             end
-            if accessoryStates["断腿"] then
-                if isR6(char) and korbloxR6DescriptionApplied then
-                    for _, p in ipairs(getRightLegParts(char)) do
-                        hideRightLegPart(p)
-                    end
-                elseif not korbloxObject or korbloxObject.Parent ~= char then
-                    applyBodyPart("断腿", true)
-                else
-                    for _, p in ipairs(getRightLegParts(char)) do
-                        hideRightLegPart(p)
-                    end
+            if accessoryStates["断腿R15"] then
+                if isR15(char) then
+                    applyBodyPart("断腿R15", true)
+                end
+            end
+            if accessoryStates["断腿R6"] then
+                if isR6(char) then
+                    applyBodyPart("断腿R6", true)
                 end
             end
         end
@@ -674,9 +709,6 @@ end)
 
 local function loadAccessory(id, name)
     if name == "无头" then
-        applyBodyPart(name, true)
-        return
-    elseif name == "断腿" then
         applyBodyPart(name, true)
         return
     end
@@ -764,9 +796,32 @@ local function removeAccessory(name)
     end
 end
 
+CosmeticsTab:Toggle({
+    Title = "断腿 R15",
+    Value = false,
+    Callback = function(state)
+        accessoryStates["断腿R15"] = state
+        if state then
+            applyBodyPart("断腿R15", true)
+        else
+        end
+    end
+})
+
+CosmeticsTab:Toggle({
+    Title = "断腿 R6",
+    Value = false,
+    Callback = function(state)
+        accessoryStates["断腿R6"] = state
+        if state then
+            applyBodyPart("断腿R6", true)
+        else
+        end
+    end
+})
+
 local accessories = {
     {name = "无头", id = 15093053680},
-    {name = "断腿", id = 139607718},
     {name = "无腿", id = 0},
     {name = "8位皇家王冠", id = 10159600649},
     {name = "8位血条", id = 10159610478},
@@ -801,6 +856,12 @@ player.CharacterAdded:Connect(function(char)
     savedBodyDescriptions = {}
     task.wait(0.8)
     updateAccessoryVisibility()
+    if accessoryStates["断腿R15"] then
+        applyBodyPart("断腿R15", true)
+    end
+    if accessoryStates["断腿R6"] then
+        applyBodyPart("断腿R6", true)
+    end
     for _, acc in ipairs(accessories) do
         if accessoryStates[acc.name] then
             loadAccessory(acc.id, acc.name)
