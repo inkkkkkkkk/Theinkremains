@@ -1441,32 +1441,6 @@ L:Button({Title="击杀NPC", Callback=function() loadstring(game:HttpGet("https:
 L:Button({Title="更改动画包+动作", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))() end})
 L:Button({Title="更改动画包", Callback=function() loadstring(game:HttpGet("https://api.rubis.app/v2/scrap/PwFrcMysMOIJuWAQ/raw"))() end})
 
-L:Section({Title="动作脚本"})
-L:Button({
-    Title="动作脚本",
-    Callback=function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))()
-    end
-})
-L:Button({
-    Title="R6动作脚本",
-    Callback=function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-R6-Animations-Menu-By-Me-19427"))()
-    end
-})
-L:Button({
-    Title="SCP-096",
-    Callback=function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-SCP-096-36948"))()
-    end
-})
-L:Button({
-    Title="海绵宝宝",
-    Callback=function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Emote-Player-51936"))()
-    end
-})
-
 local M=D:Tab({Title="漏洞",Icon="bug"})
 M:Button({Title="AC6音乐播放器",Callback=function()loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-Ac6-Music-Vulnerability-25536"))()end})
 M:Button({Title="后门执行器1",Callback=function()loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-LALOL-hub-without-hint-19587"))()end})
