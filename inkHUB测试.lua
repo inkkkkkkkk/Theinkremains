@@ -328,6 +328,53 @@ E:Slider({Title="修改跳跃高度",Value={Min=20,Max=200,Default=50},Callback=
     end
 end})
 
+E:Input({
+    Title = "重力设置",
+    Placeholder = "请输入重力数值",
+    Callback = function(text)
+        local gravity = tonumber(text)
+        if gravity then
+            workspace.Gravity = gravity
+        end
+    end
+})
+
+local spinSpeed = 10
+local spinEnabled = false
+local spinConnection = nil
+
+E:Input({
+    Title = "旋转速度",
+    Placeholder = "默认 10",
+    Callback = function(text)
+        local value = tonumber(text)
+        if value then
+            spinSpeed = value
+        end
+    end
+})
+
+E:Toggle({
+    Title = "旋转开关",
+    Value = false,
+    Callback = function(state)
+        spinEnabled = state
+        if spinConnection then
+            spinConnection:Disconnect()
+            spinConnection = nil
+        end
+        if state then
+            spinConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+                end
+            end)
+        end
+    end
+})
+
 E:Slider({
     Title = "视野",
     Value = { Min = 60, Max = 120, Default = 70 },
@@ -467,13 +514,6 @@ E:Toggle({
 })
 
 E:Button({
-    Title = "防甩飞",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Linux6699/DaHubRevival/main/AntiFling.lua"))()
-    end
-})
-
-E:Button({
     Title = "防止摔落伤害",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/zczczczc766/ink/refs/heads/main/%E9%98%B2%E6%AD%A2%E6%91%94%E8%90%BD%E4%BC%A4%E5%AE%B3.lua"))()
@@ -527,6 +567,13 @@ E:Button({Title="强制显示聊天框",Callback=function()forceChatVisible()end
 E:Button({Title="走路撞人",Callback=function()loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_5wpM7bBcOPspmX7lQ3m75SrYNWqxZ858ai3tJdEAId6jSI05IOUB224FQ0VSAswH.lua.txt'),true))()end})
 
 E:Button({Title="铁拳打人",Callback=function()loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'),true))()end})
+
+E:Button({
+    Title = "飞踢",
+    Callback = function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-THE-REAL-dropkick-177199"))()
+    end
+})
 
 local P = D:Tab({Title="透视", Icon="eye"})
 
@@ -1289,6 +1336,105 @@ TransTab:Button({Title="传送",Callback=function()
     A:SetCore("SendNotification",{Title="传送成功",Text="已传送到 "..selectedPlayer.." 旁边",Duration=2})
 end})
 
+TransTab:Section({Title="跟随功能"})
+
+local followTarget = nil
+local followForward = 5
+local followSide = 0
+local followHeight = 0
+local followEnabled = false
+local followConnection = nil
+
+local function getFollowPlayers()
+    local names = {}
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(names, player.Name)
+        end
+    end
+    if #names == 0 then
+        table.insert(names, "无其他玩家")
+    end
+    return names
+end
+
+local followDropdown = TransTab:Dropdown({
+    Title = "选择跟随目标",
+    Values = getFollowPlayers(),
+    Value = "无其他玩家",
+    Callback = function(value)
+        followTarget = value
+    end
+})
+
+TransTab:Button({
+    Title = "刷新跟随列表",
+    Callback = function()
+        local names = getFollowPlayers()
+        followDropdown:Refresh(names)
+        followTarget = nil
+        A:SetCore("SendNotification",{Title="已刷新",Text="跟随列表已更新，请重新选择玩家",Duration=2})
+    end
+})
+
+TransTab:Slider({
+    Title = "前后距离",
+    Value = {Min = -20, Max = 20, Default = 5},
+    Step = 1,
+    Callback = function(value)
+        followForward = value
+    end
+})
+
+TransTab:Slider({
+    Title = "左右距离",
+    Value = {Min = -20, Max = 20, Default = 0},
+    Step = 1,
+    Callback = function(value)
+        followSide = value
+    end
+})
+
+TransTab:Slider({
+    Title = "上下高度",
+    Value = {Min = -20, Max = 20, Default = 0},
+    Step = 1,
+    Callback = function(value)
+        followHeight = value
+    end
+})
+
+TransTab:Toggle({
+    Title = "跟随玩家",
+    Value = false,
+    Callback = function(state)
+        followEnabled = state
+        if followConnection then
+            followConnection:Disconnect()
+            followConnection = nil
+        end
+
+        if state then
+            followConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                if not followEnabled then return end
+
+                local target = followTarget and game:GetService("Players"):FindFirstChild(followTarget)
+                local localChar = LocalPlayer.Character
+                local targetChar = target and target.Character
+
+                if not targetChar or not localChar then return end
+
+                local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+                local localRoot = localChar:FindFirstChild("HumanoidRootPart")
+                if not targetRoot or not localRoot then return end
+
+                local offset = CFrame.new(followSide, followHeight, followForward)
+                localRoot.CFrame = targetRoot.CFrame * offset
+            end)
+        end
+    end
+})
+
 local MusicTab = D:Tab({Title="音乐播放器", Icon="music"})
 
 local currentSound = nil
@@ -1393,6 +1539,32 @@ L:Button({Title="NPC控制", Callback=function() loadstring(game:HttpGet("https:
 L:Button({Title="击杀NPC", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/GUI-Offical/FileTest/refs/heads/main/Grab%20R6.txt", true))() end})
 L:Button({Title="更改动画包+动作", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))() end})
 L:Button({Title="更改动画包", Callback=function() loadstring(game:HttpGet("https://api.rubis.app/v2/scrap/PwFrcMysMOIJuWAQ/raw"))() end})
+
+L:Section({Title="动作脚本"})
+L:Button({
+    Title="动作脚本",
+    Callback=function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))()
+    end
+})
+L:Button({
+    Title="R6动作脚本",
+    Callback=function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-R6-Animations-Menu-By-Me-19427"))()
+    end
+})
+L:Button({
+    Title="SCP-096",
+    Callback=function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-SCP-096-36948"))()
+    end
+})
+L:Button({
+    Title="海绵宝宝",
+    Callback=function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Emote-Player-51936"))()
+    end
+})
 
 local M=D:Tab({Title="漏洞",Icon="bug"})
 M:Button({Title="AC6音乐播放器",Callback=function()loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-Ac6-Music-Vulnerability-25536"))()end})
