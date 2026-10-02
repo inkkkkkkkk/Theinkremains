@@ -150,6 +150,27 @@ pcall(function()
 end)
 
 pcall(function()
+    local CoreGui = game:GetService("CoreGui")
+    local crownAsset = "71953031400395"
+    local function enlargeCrown(obj)
+        if (obj:IsA("ImageLabel") or obj:IsA("ImageButton")) and string.find(obj.Image or "", crownAsset, 1, true) then
+            local current = obj.AbsoluteSize
+            local side = math.max(current.X, current.Y, 24)
+            local target = math.clamp(math.floor(side * 1.35), 30, 42)
+            obj.Size = UDim2.fromOffset(target, target)
+        end
+    end
+    for _, obj in ipairs(CoreGui:GetDescendants()) do
+        enlargeCrown(obj)
+    end
+    CoreGui.DescendantAdded:Connect(function(obj)
+        task.defer(function()
+            pcall(function() enlargeCrown(obj) end)
+        end)
+    end)
+end)
+
+pcall(function()
     local RunService = game:GetService("RunService")
     local targetWindow = C.UIElements and C.UIElements.Main
 
@@ -266,8 +287,8 @@ Z:Paragraph({
     Title = "系统信息",
     Desc = string.format("用户名: %s\n显示名: %s\n用户ID: %d\n账号年龄: %d天",
         player.Name, player.DisplayName, player.UserId, player.AccountAge),
-    Image = "info",
-    ImageSize = 20
+    Image = "rbxassetid://131444442444524",
+    ImageSize = 100,
 })
 
 Z:Button({Title="复制作者QQ", Callback=function() setclipboard("2047955671") A:SetCore("SendNotification",{Title="已复制", Text="作者QQ：2047955671", Duration=2}) end})
