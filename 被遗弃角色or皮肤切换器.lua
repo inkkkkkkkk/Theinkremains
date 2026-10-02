@@ -17,30 +17,18 @@ end
 
 local B=nil
 local winduiLastError="未知错误"
-
-local ok,result=pcall(function()
-    local code=game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/1.6.66/main.lua",true)
-    if type(code)~="string" or #code<100 then error("WindUI下载内容为空") end
-    local loader=loadstring(code)
-    if type(loader)~="function" then error("WindUI loadstring失败") end
-    return loader()
-end)
-if ok and result then
-    B=result
-else
-    winduiLastError=tostring(result)
-end
+local winduiUrls={
+    "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua",
+    "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua",
+    "https://raw.githubusercontent.com/951357nvjn/dyzs/refs/heads/main/winduiYI.lua"
+}
 
 for _,url in ipairs(winduiUrls) do
     local ok,result=pcall(function()
         local code=game:HttpGet(url)
-        if type(code)~="string" or #code<100 then
-            error("UI库返回内容为空")
-        end
+        if type(code)~="string" or #code<100 then error("WindUI下载内容为空") end
         local loader=loadstring(code)
-        if type(loader)~="function" then
-            error("loadstring失败")
-        end
+        if type(loader)~="function" then error("WindUI loadstring失败") end
         return loader()
     end)
     if ok and result then
