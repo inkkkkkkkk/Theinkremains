@@ -135,7 +135,7 @@ C = windowResult
 
 pcall(function()
     C:EditOpenButton({
-        Title = "Project_ink_HUB_2026",
+        Title = "Project_ink_HUB_2026!",
         Icon = "crown",
         StrokeThickness = 5,
         TextColor = Color3.fromRGB(150, 150, 150),
@@ -260,33 +260,14 @@ Z:Paragraph({
     ImageSize = 100,
 })
 
-local infoFPS = 0
-local infoFrames = 0
-local infoLastTime = tick()
-game:GetService("RunService").RenderStepped:Connect(function()
-    infoFrames = infoFrames + 1
-    local now = tick()
-    if now - infoLastTime >= 1 then
-        infoFPS = infoFrames
-        infoFrames = 0
-        infoLastTime = now
-    end
-end)
+local player = game.Players.LocalPlayer
 
-Z:Button({
-    Title="我的信息",
-    Callback=function()
-        local player = game.Players.LocalPlayer
-        local ping = 0
-        pcall(function()
-            ping = math.floor(player:GetNetworkPing() * 1000 + 0.5)
-        end)
-        A:SetCore("SendNotification",{
-            Title="我的信息",
-            Text=string.format("显示名：%s\n用户名：@%s\nUserId：%s\nFPS：%d   Ping：%d ms", tostring(player.DisplayName), tostring(player.Name), tostring(player.UserId), infoFPS, ping),
-            Duration=6
-        })
-    end
+Z:Paragraph({
+    Title = "系统信息",
+    Desc = string.format("用户名: %s\n显示名: %s\n用户ID: %d\n账号年龄: %d天",
+        player.Name, player.DisplayName, player.UserId, player.AccountAge),
+    Image = "info",
+    ImageSize = 20
 })
 
 Z:Button({Title="复制作者QQ", Callback=function() setclipboard("2047955671") A:SetCore("SendNotification",{Title="已复制", Text="作者QQ：2047955671", Duration=2}) end})
