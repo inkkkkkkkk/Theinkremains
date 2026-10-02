@@ -1272,12 +1272,42 @@ end
 
 local playerDropdown=TransTab:Dropdown({Title="选择玩家",Values=getPlayerNames(),Value="无其他玩家",Callback=function(v)selectedPlayer=v end})
 
-TransTab:Button({Title="刷新列表",Callback=function()
+local function refreshPlayerList()
     local newNames=getPlayerNames()
+
+    pcall(function()
+        playerDropdown:SetValues({"无其他玩家"})
+    end)
+    task.wait()
     playerDropdown:SetValues(newNames)
-    if #newNames>0 then selectedPlayer=newNames[1] end
+
+    local selectedStillExists = false
+    for _,name in ipairs(newNames) do
+        if name == selectedPlayer then
+            selectedStillExists = true
+            break
+        end
+    end
+    if not selectedStillExists then
+        selectedPlayer = newNames[1]
+    end
+end
+
+TransTab:Button({Title="刷新列表",Callback=function()
+    refreshPlayerList()
     A:SetCore("SendNotification",{Title="已刷新",Text="玩家列表已更新",Duration=2})
 end})
+
+game:GetService("Players").PlayerAdded:Connect(function()
+    task.defer(refreshPlayerList)
+end)
+
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    if selectedPlayer == player.Name then
+        selectedPlayer = nil
+    end
+    task.defer(refreshPlayerList)
+end)
 
 TransTab:Button({Title="传送",Callback=function()
     if not selectedPlayer or selectedPlayer=="无其他玩家" then
