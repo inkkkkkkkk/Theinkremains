@@ -135,7 +135,7 @@ C = windowResult
 
 pcall(function()
     C:EditOpenButton({
-        Title = "Project_ink_HUB_2026!",
+        Title = "Project_ink_HUB_2026",
         Icon = "crown",
         StrokeThickness = 5,
         TextColor = Color3.fromRGB(150, 150, 150),
