@@ -34,7 +34,6 @@ local A=game:GetService("StarterGui")
 local finishStartup = nil
 local updateStartupProgress = nil
 
--- ==================== 启动动画 ====================
 do
     local startupGui
     local startupProgress = 0
@@ -95,7 +94,7 @@ do
             title.Position = UDim2.new(0.5,0,1,18)
             title.Size = UDim2.fromOffset(380,42)
             title.BackgroundTransparency = 1
-            title.Text = "ink_HUB"
+            title.Text = "Project_ink_HUB_2026!"
             title.TextColor3 = Color3.fromRGB(220,220,220)
             title.TextSize = 32
             title.Font = Enum.Font.GothamBold
@@ -134,7 +133,6 @@ do
             barFillCorner.CornerRadius = UDim.new(1,0)
             barFillCorner.Parent = bar
 
-            -- 从中心向外扩散的动态圆环
             task.spawn(function()
                 while startupGui and startupGui.Parent and not startupFinished do
                     local ring = Instance.new("Frame")
@@ -169,7 +167,6 @@ do
                 end
             end)
 
-            -- 中心图标轻微呼吸动画
             task.spawn(function()
                 while startupGui and startupGui.Parent and not startupFinished do
                     TweenService:Create(image,TweenInfo.new(0.65,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{
@@ -235,10 +232,7 @@ do
 
     createStartupAnimation()
 end
--- ==================== 启动动画结束 ====================
 
--- 主脚本从这里开始进入保护执行。这样即使后面的 WindUI、功能代码运行时报错，
--- 前面的启动动画也已经先显示出来。
 local ok,err=xpcall(function()
 
 local function gradient(text,startColor,endColor)
