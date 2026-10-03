@@ -75,7 +75,7 @@ do
             image.Position = UDim2.fromScale(0.5,0.5)
             image.Size = UDim2.fromOffset(140,140)
             image.BackgroundTransparency = 1
-            image.Image = "rbxassetid://71953031400395"
+            image.Image = "rbxassetid://131444442444524"
             image.ScaleType = Enum.ScaleType.Fit
             image.Parent = center
 
