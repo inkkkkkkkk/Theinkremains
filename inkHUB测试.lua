@@ -1615,6 +1615,7 @@ L:Button({Title="被遗弃人物", Callback=function() loadstring(game:HttpGet("
 L:Button({Title="R15下蹲", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Azizanzz0/Scripts/refs/heads/main/Crouching.txt"))() end})
 L:Button({Title="爬行", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe/main/obf_vZDX8j5ggfAf58QhdJ59BVEmF6nmZgq4Mcjt2l8wn16CiStIW2P6EkNc605qv9K4.lua.txt"))() end})
 L:Button({Title="免费动作", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Gazer-Ha/Free-emote/refs/heads/main/Delta%20mad%20stuffs"))() end})
+L:Button({Title="R6动作", Callback=function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-R6-Animations-Menu-By-Me-19427"))() end})
 L:Button({Title="假延迟", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/RENZXW/RENZXW-SCRIPTS/main/fakeLAGRENZXW.txt"))() end})
 L:Button({Title="假VR(仅自然灾害)", Callback=function() loadstring(game:HttpGet("https://pastefy.app/MvKHpycG/raw"))() end})
 L:Button({Title="冲刺", Callback=function() loadstring(game:HttpGet("https://pastefy.app/ZhKVgCK3/raw"))() end})
@@ -1622,6 +1623,8 @@ L:Button({Title="NPC控制", Callback=function() loadstring(game:HttpGet("https:
 L:Button({Title="击杀NPC", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/GUI-Offical/FileTest/refs/heads/main/Grab%20R6.txt", true))() end})
 L:Button({Title="更改动画包+动作", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))() end})
 L:Button({Title="更改动画包", Callback=function() loadstring(game:HttpGet("https://api.rubis.app/v2/scrap/PwFrcMysMOIJuWAQ/raw"))() end})
+L:Button({Title="SCP_096", Callback=function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-SCP-096-36948"))() end})
+L:Button({Title="海绵宝宝", Callback=function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Emote-Player-51936"))() end})
 
 local M=D:Tab({Title="漏洞",Icon="bug"})
 M:Button({Title="AC6音乐播放器",Callback=function()loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-Ac6-Music-Vulnerability-25536"))()end})
