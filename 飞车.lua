@@ -134,8 +134,8 @@ gui.Parent = CoreGui
 
 local main = Instance.new("Frame")
 main.Name = "Main"
-main.Size = UDim2.fromOffset(330, 400)
-main.Position = UDim2.new(0.5, -165, 0.5, -200)
+main.Size = UDim2.fromOffset(330, 440)
+main.Position = UDim2.new(0.5, -165, 0.5, -220)
 main.BackgroundColor3 = Color3.fromRGB(24, 24, 27)
 main.BackgroundTransparency = 0.06
 main.BorderSizePixel = 0
@@ -202,10 +202,11 @@ local close = Instance.new("TextButton")
 close.Size = UDim2.fromOffset(32, 32)
 close.Position = UDim2.new(1, -46, 0, 12)
 close.BackgroundColor3 = Color3.fromRGB(38, 38, 42)
+close.BorderSizePixel = 0
 close.Text = "×"
-close.TextSize = 22
-close.Font = Enum.Font.GothamMedium
-close.TextColor3 = Color3.fromRGB(190, 190, 190)
+close.TextSize = 26
+close.Font = Enum.Font.GothamBold
+close.TextColor3 = Color3.fromRGB(210, 210, 210)
 close.AutoButtonColor = true
 close.Parent = main
 
@@ -322,14 +323,75 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
-local forward = makeButton("↑  向前飞", 180, 42)
-local backward = makeButton("↓  向后飞", 228, 42)
-local stop = makeButton("■  停止移动", 276, 42)
+-- 自己输入速度
+local speedInput = Instance.new("TextBox")
+speedInput.Size = UDim2.new(1, -116, 0, 34)
+speedInput.Position = UDim2.fromOffset(18, 176)
+speedInput.BackgroundColor3 = Color3.fromRGB(35,35,39)
+speedInput.BorderSizePixel = 0
+speedInput.ClearTextOnFocus = false
+speedInput.PlaceholderText = "输入速度，例如 100"
+speedInput.PlaceholderColor3 = Color3.fromRGB(110,110,110)
+speedInput.Text = tostring(flySpeed)
+speedInput.TextSize = 13
+speedInput.Font = Enum.Font.Gotham
+speedInput.TextColor3 = Color3.fromRGB(215,215,215)
+speedInput.TextXAlignment = Enum.TextXAlignment.Left
+speedInput.Parent = main
+
+local inputPadding = Instance.new("UIPadding")
+inputPadding.PaddingLeft = UDim.new(0,10)
+inputPadding.PaddingRight = UDim.new(0,10)
+inputPadding.Parent = speedInput
+
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0,9)
+inputCorner.Parent = speedInput
+
+local inputStroke = Instance.new("UIStroke")
+inputStroke.Thickness = 1
+inputStroke.Transparency = 0.55
+inputStroke.Color = Color3.fromRGB(100,100,100)
+inputStroke.Parent = speedInput
+
+local applySpeed = makeButton("应用", 176, 34)
+applySpeed.Size = UDim2.fromOffset(80, 34)
+applySpeed.Position = UDim2.new(1, -98, 0, 176)
+applySpeed.TextSize = 12
+
+local function applyInputSpeed()
+    local value = tonumber(speedInput.Text)
+    if not value then
+        speedInput.Text = tostring(flySpeed)
+        notify("皮飞车", "请输入有效的数字速度。", 2)
+        return
+    end
+
+    flySpeed = math.clamp(math.floor(value), 1, 5000)
+    speedInput.Text = tostring(flySpeed)
+
+    local ratio = math.clamp(flySpeed / 500, 0, 1)
+    sliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+    sliderButton.Position = UDim2.new(ratio, 0, 0.5, 0)
+    speedText.Text = "飞车速度：" .. flySpeed
+end
+
+applySpeed.MouseButton1Click:Connect(applyInputSpeed)
+
+speedInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        applyInputSpeed()
+    end
+end)
+
+local forward = makeButton("↑  向前飞", 220, 42)
+local backward = makeButton("↓  向后飞", 268, 42)
+local stop = makeButton("■  停止移动", 316, 42)
 
 local status = Instance.new("TextLabel")
 status.BackgroundTransparency = 1
 status.Size = UDim2.new(1, -36, 0, 20)
-status.Position = UDim2.fromOffset(18, 328)
+status.Position = UDim2.fromOffset(18, 372)
 status.Font = Enum.Font.Gotham
 status.Text = "状态：待机"
 status.TextSize = 11
