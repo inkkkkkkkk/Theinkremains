@@ -1609,6 +1609,36 @@ BeautifyTab:Button({
     end
 })
 
+local IYTab = D:Tab({Title="IY指令", Icon="terminal"})
+
+IYTab:Button({
+    Title = "执行Dex",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/Dex%2B%2B%E4%BF%AE%E5%A4%8D%E5%8F%8D%E7%BC%96%E8%AF%91(1)%20(1).lua"))()
+    end
+})
+
+IYTab:Button({
+    Title = "执行rspy",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastefy.app/EVVdCgPf/raw"))()
+    end
+})
+
+IYTab:Button({
+    Title = "执行mdex",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
+    end
+})
+
+IYTab:Button({
+    Title = "执行Cspy",
+    Callback = function()
+        loadstring(game:HttpGet("https://gitlab.com/upio/cobalt/-/releases/permalink/latest/downloads/Cobalt.luau"))()
+    end
+})
+
 local L = D:Tab({Title="FE", Icon="zap"})
 L:Button({Title="coolgui", Callback=function() loadstring(game:GetObjects("rbxassetid://8127297852")[1].Source)() end})
 L:Button({Title="被遗弃人物", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/CyberNinja103/brodwa/refs/heads/main/ForsakationHub"))() end})
@@ -1624,7 +1654,7 @@ L:Button({Title="击杀NPC", Callback=function() loadstring(game:HttpGet("https:
 L:Button({Title="更改动画包+动作", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))() end})
 L:Button({Title="更改动画包", Callback=function() loadstring(game:HttpGet("https://api.rubis.app/v2/scrap/PwFrcMysMOIJuWAQ/raw"))() end})
 L:Button({Title="SCP_096", Callback=function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-SCP-096-36948"))() end})
-L:Button({Title="海绵宝宝", Callback=function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Emote-Player-51936"))() end})
+L:Button({Title="天空盒", Callback=function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fe-Emote-Player-51936"))() end})
 
 local M=D:Tab({Title="漏洞",Icon="bug"})
 M:Button({Title="AC6音乐播放器",Callback=function()loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-Ac6-Music-Vulnerability-25536"))()end})
@@ -3243,7 +3273,6 @@ end
 
 end,function(e)
     local errorText=tostring(e):sub(1,100)
-    -- 发生错误时：启动动画已经独立显示；先提示错误，再结束动画
     if updateStartupProgress then
         pcall(updateStartupProgress,100,"加载失败")
     end
