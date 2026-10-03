@@ -328,6 +328,22 @@ E:Slider({Title="修改跳跃高度",Value={Min=20,Max=200,Default=50},Callback=
     end
 end})
 
+E:Toggle({Title="启用设置重力",Value=false,Callback=function(s)
+    gravityEnabled=s
+    if s then
+        workspace.Gravity=gravityValue
+    else
+        workspace.Gravity=196.2
+    end
+end})
+
+E:Slider({Title="设置重力",Value={Min=0,Max=500,Default=196.2},Step=1,Callback=function(v)
+    gravityValue=v
+    if gravityEnabled then
+        workspace.Gravity=v
+    end
+end})
+
 E:Slider({
     Title = "视野",
     Value = { Min = 60, Max = 120, Default = 70 },
