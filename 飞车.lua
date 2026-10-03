@@ -1,7 +1,3 @@
--- 皮飞车 / 独立 UI 新版
--- 不使用 WindUI，使用 Roblox 原生实例创建独立界面
--- 保留：飞车开关、速度、前进、后退、停止、关闭清理
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
@@ -19,7 +15,6 @@ local function notify(title, text, duration)
     end)
 end
 
--- ==================== 飞车功能 ====================
 
 local flyEnabled = false
 local flySpeed = 50
@@ -69,7 +64,7 @@ local function startFly()
     local root = getRoot()
     if not root then
         flyEnabled = false
-        notify("皮飞车", "没有找到角色身体，请重新生成角色后再试。", 3)
+        notify("ink飞车", "没有找到角色身体，请重新生成角色后再试。", 3)
         return
     end
 
@@ -101,7 +96,7 @@ end
 
 local function setFlyVelocity(direction)
     if not flyEnabled or not bodyVelocity or not bodyVelocity.Parent then
-        notify("皮飞车", "请先开启飞车。", 2)
+        notify("ink飞车", "请先开启飞车。", 2)
         return
     end
 
@@ -118,7 +113,6 @@ local function setFlyVelocity(direction)
     end)
 end
 
--- ==================== 独立 UI ====================
 
 pcall(function()
     local old = CoreGui:FindFirstChild("PiFeiChe_IndependentUI")
@@ -145,7 +139,6 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 14)
 mainCorner.Parent = main
 
--- 动态银灰边框
 local border = Instance.new("UIStroke")
 border.Name = "DynamicSilverBorder"
 border.Thickness = 2
@@ -168,7 +161,6 @@ task.spawn(function()
     end
 end)
 
--- 顶部装饰线
 local topLine = Instance.new("Frame")
 topLine.Size = UDim2.new(1, -34, 0, 1)
 topLine.Position = UDim2.new(0, 17, 0, 58)
@@ -181,7 +173,7 @@ title.BackgroundTransparency = 1
 title.Size = UDim2.new(1, -70, 0, 36)
 title.Position = UDim2.fromOffset(18, 10)
 title.Font = Enum.Font.GothamBold
-title.Text = "皮飞车"
+title.Text = "ink飞车"
 title.TextSize = 22
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -192,7 +184,7 @@ subtitle.BackgroundTransparency = 1
 subtitle.Size = UDim2.new(1, -70, 0, 20)
 subtitle.Position = UDim2.fromOffset(19, 35)
 subtitle.Font = Enum.Font.Gotham
-subtitle.Text = "FLY CONTROL"
+subtitle.Text = "BY_墨水依旧"
 subtitle.TextSize = 10
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.TextColor3 = Color3.fromRGB(130, 130, 130)
@@ -323,7 +315,6 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- 自己输入速度
 local speedInput = Instance.new("TextBox")
 speedInput.Size = UDim2.new(1, -116, 0, 34)
 speedInput.Position = UDim2.fromOffset(18, 176)
@@ -363,7 +354,7 @@ local function applyInputSpeed()
     local value = tonumber(speedInput.Text)
     if not value then
         speedInput.Text = tostring(flySpeed)
-        notify("皮飞车", "请输入有效的数字速度。", 2)
+        notify("ink飞车", "请输入有效的数字速度。", 2)
         return
     end
 
@@ -399,7 +390,6 @@ status.TextXAlignment = Enum.TextXAlignment.Left
 status.TextColor3 = Color3.fromRGB(125,125,125)
 status.Parent = main
 
--- 拖动窗口
 local dragging = false
 local dragStart
 local startPos
@@ -475,4 +465,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 
-notify("皮飞车", "独立 UI 加载成功", 3)
+notify("ink飞车", "(⑉• •⑉)‥♡", 3)
