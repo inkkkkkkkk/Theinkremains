@@ -36,6 +36,209 @@ local A=game:GetService("StarterGui")
 local finishStartup = nil
 local updateStartupProgress = nil
 
+-- ==================== 启动动画 ====================
+do
+    local startupGui
+    local startupProgress = 0
+    local startupFinished = false
+
+    local function createStartupAnimation()
+        local ok, result = pcall(function()
+            local Players = game:GetService("Players")
+            local TweenService = game:GetService("TweenService")
+            local CoreGui = game:GetService("CoreGui")
+
+            local old = CoreGui:FindFirstChild("ink_HUB_StartupAnimation")
+            if old then old:Destroy() end
+
+            startupGui = Instance.new("ScreenGui")
+            startupGui.Name = "ink_HUB_StartupAnimation"
+            startupGui.IgnoreGuiInset = true
+            startupGui.ResetOnSpawn = false
+            startupGui.DisplayOrder = 2147483647
+            startupGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+            startupGui.Parent = CoreGui
+
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.fromScale(1,1)
+            bg.BackgroundColor3 = Color3.fromRGB(10,10,10)
+            bg.BorderSizePixel = 0
+            bg.Parent = startupGui
+
+            local center = Instance.new("Frame")
+            center.AnchorPoint = Vector2.new(0.5,0.5)
+            center.Position = UDim2.fromScale(0.5,0.45)
+            center.Size = UDim2.fromOffset(150,150)
+            center.BackgroundTransparency = 1
+            center.Parent = bg
+
+            local image = Instance.new("ImageLabel")
+            image.Name = "Logo"
+            image.AnchorPoint = Vector2.new(0.5,0.5)
+            image.Position = UDim2.fromScale(0.5,0.5)
+            image.Size = UDim2.fromOffset(100,100)
+            image.BackgroundTransparency = 1
+            image.Image = "rbxassetid://71953031400395"
+            image.ScaleType = Enum.ScaleType.Fit
+            image.Parent = center
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0,14)
+            corner.Parent = image
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Thickness = 2
+            stroke.Transparency = 0.1
+            stroke.Color = Color3.fromRGB(155,155,155)
+            stroke.Parent = image
+
+            local title = Instance.new("TextLabel")
+            title.AnchorPoint = Vector2.new(0.5,0)
+            title.Position = UDim2.new(0.5,0,1,18)
+            title.Size = UDim2.fromOffset(300,34)
+            title.BackgroundTransparency = 1
+            title.Text = "ink_HUB"
+            title.TextColor3 = Color3.fromRGB(220,220,220)
+            title.TextSize = 25
+            title.Font = Enum.Font.GothamBold
+            title.Parent = center
+
+            local status = Instance.new("TextLabel")
+            status.AnchorPoint = Vector2.new(0.5,0)
+            status.Position = UDim2.new(0.5,0,1,55)
+            status.Size = UDim2.fromOffset(340,24)
+            status.BackgroundTransparency = 1
+            status.Text = "正在启动..."
+            status.TextColor3 = Color3.fromRGB(155,155,155)
+            status.TextSize = 13
+            status.Font = Enum.Font.Gotham
+            status.Parent = center
+
+            local barBack = Instance.new("Frame")
+            barBack.AnchorPoint = Vector2.new(0.5,0)
+            barBack.Position = UDim2.new(0.5,0,1,88)
+            barBack.Size = UDim2.fromOffset(260,5)
+            barBack.BackgroundColor3 = Color3.fromRGB(45,45,45)
+            barBack.BorderSizePixel = 0
+            barBack.Parent = center
+
+            local barCorner = Instance.new("UICorner")
+            barCorner.CornerRadius = UDim.new(1,0)
+            barCorner.Parent = barBack
+
+            local bar = Instance.new("Frame")
+            bar.Size = UDim2.new(0,0,1,0)
+            bar.BackgroundColor3 = Color3.fromRGB(175,175,175)
+            bar.BorderSizePixel = 0
+            bar.Parent = barBack
+
+            local barFillCorner = Instance.new("UICorner")
+            barFillCorner.CornerRadius = UDim.new(1,0)
+            barFillCorner.Parent = bar
+
+            -- 从中心向外扩散的动态圆环
+            task.spawn(function()
+                while startupGui and startupGui.Parent and not startupFinished do
+                    local ring = Instance.new("Frame")
+                    ring.AnchorPoint = Vector2.new(0.5,0.5)
+                    ring.Position = UDim2.fromScale(0.5,0.5)
+                    ring.Size = UDim2.fromOffset(100,100)
+                    ring.BackgroundTransparency = 1
+                    ring.Parent = center
+
+                    local ringStroke = Instance.new("UIStroke")
+                    ringStroke.Thickness = 2
+                    ringStroke.Transparency = 0.25
+                    ringStroke.Color = Color3.fromRGB(145,145,145)
+                    ringStroke.Parent = ring
+
+                    local ringCorner = Instance.new("UICorner")
+                    ringCorner.CornerRadius = UDim.new(1,0)
+                    ringCorner.Parent = ring
+
+                    local tween = TweenService:Create(ring,TweenInfo.new(1.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+                        Size = UDim2.fromOffset(310,310)
+                    })
+                    local fade = TweenService:Create(ringStroke,TweenInfo.new(1.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+                        Transparency = 1
+                    })
+                    tween:Play()
+                    fade:Play()
+                    task.delay(1.25,function()
+                        if ring then ring:Destroy() end
+                    end)
+                    task.wait(0.38)
+                end
+            end)
+
+            -- 中心图标轻微呼吸动画
+            task.spawn(function()
+                while startupGui and startupGui.Parent and not startupFinished do
+                    TweenService:Create(image,TweenInfo.new(0.65,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{
+                        Size = UDim2.fromOffset(110,110)
+                    }):Play()
+                    task.wait(0.65)
+                    if not (startupGui and startupGui.Parent and not startupFinished) then break end
+                    TweenService:Create(image,TweenInfo.new(0.65,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{
+                        Size = UDim2.fromOffset(100,100)
+                    }):Play()
+                    task.wait(0.65)
+                end
+            end)
+
+            updateStartupProgress = function(value,textValue)
+                if startupFinished or not startupGui or not startupGui.Parent then return end
+                startupProgress = math.clamp(tonumber(value) or 0,0,100)
+                status.Text = textValue or "正在启动..."
+                TweenService:Create(bar,TweenInfo.new(0.25,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+                    Size = UDim2.new(startupProgress/100,0,1,0)
+                }):Play()
+            end
+
+            finishStartup = function()
+                if startupFinished then return end
+                startupFinished = true
+                if not startupGui or not startupGui.Parent then return end
+
+                updateStartupProgress(100,"加载完成")
+                task.wait(0.35)
+
+                local fadeObjects = {}
+                for _,obj in ipairs(startupGui:GetDescendants()) do
+                    if obj:IsA("GuiObject") then
+                        table.insert(fadeObjects,obj)
+                    end
+                end
+                for _,obj in ipairs(fadeObjects) do
+                    pcall(function()
+                        if obj:IsA("TextLabel") then
+                            TweenService:Create(obj,TweenInfo.new(0.35),{TextTransparency=1}):Play()
+                        elseif obj:IsA("ImageLabel") then
+                            TweenService:Create(obj,TweenInfo.new(0.35),{ImageTransparency=1}):Play()
+                        elseif obj:IsA("Frame") then
+                            TweenService:Create(obj,TweenInfo.new(0.35),{BackgroundTransparency=1}):Play()
+                        end
+                    end)
+                end
+                task.wait(0.4)
+                if startupGui then startupGui:Destroy() end
+            end
+
+            updateStartupProgress(15,"正在初始化...")
+            return true
+        end)
+        if not ok then
+            startupGui = nil
+            finishStartup = nil
+            updateStartupProgress = nil
+        end
+        return result
+    end
+
+    createStartupAnimation()
+end
+-- ==================== 启动动画结束 ====================
+
 local function gradient(text,startColor,endColor)
     local result=""
     local chars={}
