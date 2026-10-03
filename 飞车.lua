@@ -96,7 +96,7 @@ end
 
 local function setFlyVelocity(direction)
     if not flyEnabled or not bodyVelocity or not bodyVelocity.Parent then
-        notify("ink飞车", "请先开启飞车。", 2)
+        notify("ink飞车", "请先开启飞车", 2)
         return
     end
 
