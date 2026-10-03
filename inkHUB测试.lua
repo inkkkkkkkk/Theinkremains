@@ -344,6 +344,62 @@ E:Slider({Title="设置重力",Value={Min=0,Max=500,Default=196.2},Step=1,Callba
     end
 end})
 
+local rotationEnabled=false
+local rotationSpeed=120
+local rotationConnection=nil
+
+local function stopRotation()
+    if rotationConnection then
+        rotationConnection:Disconnect()
+        rotationConnection=nil
+    end
+    local char=LocalPlayer.Character
+    if char then
+        local hum=char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.AutoRotate=true end
+        local hrp=char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function()
+                hrp.AssemblyAngularVelocity=Vector3.new(0,0,0)
+            end)
+        end
+    end
+end
+
+local function startRotation()
+    stopRotation()
+    local char=LocalPlayer.Character
+    if char then
+        local hum=char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.AutoRotate=false end
+    end
+    rotationConnection=game:GetService("RunService").Heartbeat:Connect(function()
+        if not rotationEnabled then return end
+        local char=LocalPlayer.Character
+        if not char then return end
+        local hum=char:FindFirstChildOfClass("Humanoid")
+        local hrp=char:FindFirstChild("HumanoidRootPart")
+        if not hum or not hrp then return end
+        hum.AutoRotate=false
+        pcall(function()
+            hrp.AssemblyAngularVelocity=Vector3.new(0,math.rad(rotationSpeed),0)
+        end)
+    end)
+end
+
+E:Toggle({Title="旋转开关",Value=false,Callback=function(s)
+    rotationEnabled=s
+    if s then
+        startRotation()
+    else
+        stopRotation()
+    end
+end})
+
+E:Slider({Title="旋转速度",Value={Min=10,Max=1000,Default=120},Step=1,Callback=function(v)
+    rotationSpeed=v
+end})
+
 E:Slider({
     Title = "视野",
     Value = { Min = 60, Max = 120, Default = 70 },
@@ -404,6 +460,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     if hum then
         hum.WalkSpeed=speedEnabled and speedValue or 16
         hum.JumpPower=jumpEnabled and jumpValue or 50
+        if rotationEnabled then
+            task.wait(0.1)
+            startRotation()
+        end
     end
 end)
 
