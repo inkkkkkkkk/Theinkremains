@@ -480,6 +480,12 @@ E:Button({
     end
 })
 
+E:Button({Title="电脑端物品栏",Callback=function()
+    local src = game:HttpGet("http://raw.githubusercontent.com/ltseverydayyou/uuuuuuu/refs/heads/main/mobileBACKPACK.lua")
+    src = src:gsub("HOTBAR_SLOTS_MINI: number = 6", "HOTBAR_SLOTS_MINI: number = 10")
+    loadstring(src)()
+end})
+
 E:Button({Title = "祖国人",Callback = function()loadstring(game:HttpGet("https://raw.githubusercontent.com/giobolqv1/homelander-by-GioBolqv1-/main/homelander.lua"))()end})
 
 E:Button({Title="无敌少侠飞行",Callback=function()loadstring(game:HttpGet("https://raw.githubusercontent.com/396abc/Script/refs/heads/main/MobileFly.lua"))()end})
@@ -527,6 +533,10 @@ E:Button({Title="强制显示聊天框",Callback=function()forceChatVisible()end
 E:Button({Title="走路撞人",Callback=function()loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_5wpM7bBcOPspmX7lQ3m75SrYNWqxZ858ai3tJdEAId6jSI05IOUB224FQ0VSAswH.lua.txt'),true))()end})
 
 E:Button({Title="铁拳打人",Callback=function()loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'),true))()end})
+
+E:Button({Title="飞踢",Callback=function()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-THE-REAL-dropkick-177199"))()
+end})
 
 local P = D:Tab({Title="透视", Icon="eye"})
 
