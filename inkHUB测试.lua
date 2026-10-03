@@ -29,8 +29,6 @@ if not tasklib.spawn then
 end
 task=tasklib
 
-local ok,err=xpcall(function()
-
 local A=game:GetService("StarterGui")
 
 local finishStartup = nil
@@ -68,7 +66,7 @@ do
             local center = Instance.new("Frame")
             center.AnchorPoint = Vector2.new(0.5,0.5)
             center.Position = UDim2.fromScale(0.5,0.45)
-            center.Size = UDim2.fromOffset(150,150)
+            center.Size = UDim2.fromOffset(220,220)
             center.BackgroundTransparency = 1
             center.Parent = bg
 
@@ -76,7 +74,7 @@ do
             image.Name = "Logo"
             image.AnchorPoint = Vector2.new(0.5,0.5)
             image.Position = UDim2.fromScale(0.5,0.5)
-            image.Size = UDim2.fromOffset(100,100)
+            image.Size = UDim2.fromOffset(140,140)
             image.BackgroundTransparency = 1
             image.Image = "rbxassetid://71953031400395"
             image.ScaleType = Enum.ScaleType.Fit
@@ -95,29 +93,29 @@ do
             local title = Instance.new("TextLabel")
             title.AnchorPoint = Vector2.new(0.5,0)
             title.Position = UDim2.new(0.5,0,1,18)
-            title.Size = UDim2.fromOffset(300,34)
+            title.Size = UDim2.fromOffset(380,42)
             title.BackgroundTransparency = 1
             title.Text = "ink_HUB"
             title.TextColor3 = Color3.fromRGB(220,220,220)
-            title.TextSize = 25
+            title.TextSize = 32
             title.Font = Enum.Font.GothamBold
             title.Parent = center
 
             local status = Instance.new("TextLabel")
             status.AnchorPoint = Vector2.new(0.5,0)
             status.Position = UDim2.new(0.5,0,1,55)
-            status.Size = UDim2.fromOffset(340,24)
+            status.Size = UDim2.fromOffset(420,30)
             status.BackgroundTransparency = 1
             status.Text = "正在启动..."
             status.TextColor3 = Color3.fromRGB(155,155,155)
-            status.TextSize = 13
+            status.TextSize = 16
             status.Font = Enum.Font.Gotham
             status.Parent = center
 
             local barBack = Instance.new("Frame")
             barBack.AnchorPoint = Vector2.new(0.5,0)
             barBack.Position = UDim2.new(0.5,0,1,88)
-            barBack.Size = UDim2.fromOffset(260,5)
+            barBack.Size = UDim2.fromOffset(340,7)
             barBack.BackgroundColor3 = Color3.fromRGB(45,45,45)
             barBack.BorderSizePixel = 0
             barBack.Parent = center
@@ -142,7 +140,7 @@ do
                     local ring = Instance.new("Frame")
                     ring.AnchorPoint = Vector2.new(0.5,0.5)
                     ring.Position = UDim2.fromScale(0.5,0.5)
-                    ring.Size = UDim2.fromOffset(100,100)
+                    ring.Size = UDim2.fromOffset(140,140)
                     ring.BackgroundTransparency = 1
                     ring.Parent = center
 
@@ -157,7 +155,7 @@ do
                     ringCorner.Parent = ring
 
                     local tween = TweenService:Create(ring,TweenInfo.new(1.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
-                        Size = UDim2.fromOffset(310,310)
+                        Size = UDim2.fromOffset(420,420)
                     })
                     local fade = TweenService:Create(ringStroke,TweenInfo.new(1.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
                         Transparency = 1
@@ -175,12 +173,12 @@ do
             task.spawn(function()
                 while startupGui and startupGui.Parent and not startupFinished do
                     TweenService:Create(image,TweenInfo.new(0.65,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{
-                        Size = UDim2.fromOffset(110,110)
+                        Size = UDim2.fromOffset(150,150)
                     }):Play()
                     task.wait(0.65)
                     if not (startupGui and startupGui.Parent and not startupFinished) then break end
                     TweenService:Create(image,TweenInfo.new(0.65,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),{
-                        Size = UDim2.fromOffset(100,100)
+                        Size = UDim2.fromOffset(140,140)
                     }):Play()
                     task.wait(0.65)
                 end
@@ -239,6 +237,10 @@ do
 end
 -- ==================== 启动动画结束 ====================
 
+-- 主脚本从这里开始进入保护执行。这样即使后面的 WindUI、功能代码运行时报错，
+-- 前面的启动动画也已经先显示出来。
+local ok,err=xpcall(function()
+
 local function gradient(text,startColor,endColor)
     local result=""
     local chars={}
@@ -287,7 +289,7 @@ if not B then
         A:SetCore("SendNotification",{Title="WindUI加载失败",Text="请检查Delta网络/HttpGet支持",Duration=5})
     end)
     warn("[ink_HUB] WindUI加载失败:", winduiLastError)
-    return
+    error("WindUI加载失败: " .. tostring(winduiLastError))
 end
 
 pcall(function()
@@ -545,62 +547,6 @@ E:Slider({Title="设置重力",Value={Min=0,Max=500,Default=196.2},Step=1,Callba
     if gravityEnabled then
         workspace.Gravity=v
     end
-end})
-
-local rotationEnabled=false
-local rotationSpeed=120
-local rotationConnection=nil
-
-local function stopRotation()
-    if rotationConnection then
-        rotationConnection:Disconnect()
-        rotationConnection=nil
-    end
-    local char=LocalPlayer.Character
-    if char then
-        local hum=char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.AutoRotate=true end
-        local hrp=char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            pcall(function()
-                hrp.AssemblyAngularVelocity=Vector3.new(0,0,0)
-            end)
-        end
-    end
-end
-
-local function startRotation()
-    stopRotation()
-    local char=LocalPlayer.Character
-    if char then
-        local hum=char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.AutoRotate=false end
-    end
-    rotationConnection=game:GetService("RunService").Heartbeat:Connect(function()
-        if not rotationEnabled then return end
-        local char=LocalPlayer.Character
-        if not char then return end
-        local hum=char:FindFirstChildOfClass("Humanoid")
-        local hrp=char:FindFirstChild("HumanoidRootPart")
-        if not hum or not hrp then return end
-        hum.AutoRotate=false
-        pcall(function()
-            hrp.AssemblyAngularVelocity=Vector3.new(0,math.rad(rotationSpeed),0)
-        end)
-    end)
-end
-
-E:Toggle({Title="旋转开关",Value=false,Callback=function(s)
-    rotationEnabled=s
-    if s then
-        startRotation()
-    else
-        stopRotation()
-    end
-end})
-
-E:Slider({Title="旋转速度",Value={Min=10,Max=1000,Default=120},Step=1,Callback=function(v)
-    rotationSpeed=v
 end})
 
 E:Slider({
@@ -3299,6 +3245,12 @@ if finishStartup then
 end
 
 end,function(e)
+    local errorText=tostring(e):sub(1,100)
+    -- 发生错误时：启动动画已经独立显示；先提示错误，再结束动画
+    if updateStartupProgress then
+        pcall(updateStartupProgress,100,"加载失败")
+    end
+    safeNotify("ink_HUB错误",errorText,5)
+    task.wait(0.8)
     if finishStartup then pcall(finishStartup) end
-    safeNotify("ink_HUB错误",tostring(e):sub(1,100),5)
 end)
