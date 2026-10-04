@@ -333,6 +333,11 @@ end
 C = windowResult
 
 pcall(function()
+    C:Tag({ Title = "永久免费", Radius = 5, Color = Color3.fromHex("#555555") })
+    C:Tag({ Title = "2026", Radius = 6, Color = Color3.fromHex("#B0B0B0") })
+end)
+
+pcall(function()
     C:EditOpenButton({
         Title = "Project_ink_HUB_2026!",
         Icon = "crown",
