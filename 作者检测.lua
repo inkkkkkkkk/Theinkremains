@@ -12,10 +12,6 @@ local authorIds = {
     [10619015725] = "脚本作者_司空"
 }
 
-if not authorIds[localPlayer.UserId] then
-    return
-end
-
 local globalHide = false
 
 local function notify(title, text, duration)
@@ -146,6 +142,7 @@ task.spawn(function()
 end)
 
 
+if authorIds[localPlayer.UserId] then
 pcall(function()
     local old = CoreGui:FindFirstChild("AuthorControl_IndependentUI")
     if old then old:Destroy() end
@@ -304,7 +301,6 @@ local function setMinimized(value)
         normalPosition = main.Position
 
         main.Size = UDim2.fromOffset(165,48)
-        main.Position = UDim2.new(0.5,-82,0.5,-24)
 
         subtitle.Visible = false
         line.Visible = false
@@ -371,4 +367,5 @@ end)
 scanAuthors()
 refresh()
 
-notify("作者检测", "已检测到作者账号，作者控制 UI 已开启。", 4)
+notify("作者检测", "已检测到作者账号 作者控制 UI 已开启", 4)
+end
