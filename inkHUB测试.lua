@@ -1858,22 +1858,6 @@ O:Toggle({Title="访客666大运",Value=false,Callback=function(s)
     end
 end})
 
-local InfinityRealityTab = D:Tab({ Title = "无尽现实", Icon = "infinity" })
-
-InfinityRealityTab:Button({
-    Title = "执行ink无尽现实",
-    Callback = function()
-        local ok, err = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E6%97%A0%E5%B0%BD%E7%8E%B0%E5%AE%9E.lua"))()
-        end)
-        if ok then
-            A:SetCore("SendNotification",{Title="ink无尽现实", Text="执行成功", Duration=2})
-        else
-            A:SetCore("SendNotification",{Title="ink无尽现实", Text="执行失败: "..tostring(err):sub(1,80), Duration=4})
-        end
-    end
-})
-
 local FlashTab = D:Tab({Title="闪光", Icon="sparkles"})
 
 FlashTab:Section({ Title = "角色增强" })
