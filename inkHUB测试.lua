@@ -692,38 +692,6 @@ E:Toggle({
     end
 })
 
-local afkEnabled = false
-local afkThread = nil
-
-E:Toggle({
-    Title = "AFK",
-    Value = false,
-    Callback = function(v)
-        afkEnabled = v
-        if v then
-            if afkThread then
-                task.cancel(afkThread)
-            end
-            afkThread = task.spawn(function()
-                while afkEnabled do
-                    local player = game.Players.LocalPlayer
-                    local character = player and player.Character
-                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-                    if humanoid then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                    task.wait(3)
-                end
-            end)
-        else
-            if afkThread then
-                task.cancel(afkThread)
-                afkThread = nil
-            end
-        end
-    end
-})
-
 E:Button({
     Title = "防甩飞",
     Callback = function()
@@ -1890,12 +1858,19 @@ O:Toggle({Title="访客666大运",Value=false,Callback=function(s)
     end
 end})
 
-local EndlessRealityTab = D:Tab({Title="无尽现实", Icon="infinity"})
+local InfinityRealityTab = D:Tab({ Title = "无尽现实", Icon = "infinity" })
 
-EndlessRealityTab:Button({
-    Title = "执行ink_无尽现实",
+InfinityRealityTab:Button({
+    Title = "执行ink无尽现实",
     Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E6%97%A0%E5%B0%BD%E7%8E%B0%E5%AE%9E.lua"))()
+        local ok, err = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E6%97%A0%E5%B0%BD%E7%8E%B0%E5%AE%9E.lua"))()
+        end)
+        if ok then
+            A:SetCore("SendNotification",{Title="ink无尽现实", Text="执行成功", Duration=2})
+        else
+            A:SetCore("SendNotification",{Title="ink无尽现实", Text="执行失败: "..tostring(err):sub(1,80), Duration=4})
+        end
     end
 })
 
