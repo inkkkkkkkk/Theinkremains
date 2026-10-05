@@ -692,6 +692,38 @@ E:Toggle({
     end
 })
 
+local afkEnabled = false
+local afkThread = nil
+
+E:Toggle({
+    Title = "AFK",
+    Value = false,
+    Callback = function(v)
+        afkEnabled = v
+        if v then
+            if afkThread then
+                task.cancel(afkThread)
+            end
+            afkThread = task.spawn(function()
+                while afkEnabled do
+                    local player = game.Players.LocalPlayer
+                    local character = player and player.Character
+                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                    task.wait(3)
+                end
+            end)
+        else
+            if afkThread then
+                task.cancel(afkThread)
+                afkThread = nil
+            end
+        end
+    end
+})
+
 E:Button({
     Title = "防甩飞",
     Callback = function()
@@ -1863,8 +1895,7 @@ local EndlessRealityTab = D:Tab({Title="无尽现实", Icon="infinity"})
 EndlessRealityTab:Button({
     Title = "执行ink_无尽现实",
     Callback = function()
-        local key = "FUXH-H7NB-3PBL-2MQY"
-        loadstring(game:HttpGet("https://sikon.226618.xyz/sp/Endlessreality/?t=cc2c332123b1"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E6%97%A0%E5%B0%BD%E7%8E%B0%E5%AE%9E.lua"))()
     end
 })
 
