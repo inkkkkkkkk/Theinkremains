@@ -1858,6 +1858,16 @@ O:Toggle({Title="访客666大运",Value=false,Callback=function(s)
     end
 end})
 
+local EndlessRealityTab = D:Tab({Title="无尽现实", Icon="infinity"})
+
+EndlessRealityTab:Button({
+    Title = "执行ink_无尽现实",
+    Callback = function()
+        local key = "FUXH-H7NB-3PBL-2MQY"
+        loadstring(game:HttpGet("https://sikon.226618.xyz/sp/Endlessreality/?t=cc2c332123b1"))()
+    end
+})
+
 local FlashTab = D:Tab({Title="闪光", Icon="sparkles"})
 
 FlashTab:Section({ Title = "角色增强" })
