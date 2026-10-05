@@ -28,6 +28,127 @@ local function gradient(text, startColor, endColor)
     return result
 end
 
+pcall(function()
+    local TweenService = game:GetService("TweenService")
+    local CoreGui = game:GetService("CoreGui")
+    local Players = game:GetService("Players")
+    local PlayerGui = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    local guiParent = PlayerGui or CoreGui
+    if typeof(gethui) == "function" then
+        local ok, hui = pcall(gethui)
+        if ok and hui then guiParent = hui end
+    end
+
+    local oldGui = guiParent:FindFirstChild("ink_StartupIcon")
+    if oldGui then
+        oldGui:Destroy()
+    end
+
+    local startupGui = Instance.new("ScreenGui")
+    startupGui.Name = "ink_StartupIcon"
+    startupGui.IgnoreGuiInset = true
+    startupGui.ResetOnSpawn = false
+    startupGui.DisplayOrder = 999999
+    startupGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    startupGui.Parent = guiParent
+
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "Icon"
+    icon.BackgroundTransparency = 1
+    icon.BorderSizePixel = 0
+    icon.Size = UDim2.fromOffset(260, 260)
+    icon.AnchorPoint = Vector2.new(0.5, 0.5)
+    icon.Image = "rbxassetid://136433830518234"
+    icon.ImageTransparency = 0
+    icon.Active = false
+    icon.ZIndex = 999999
+    icon.Position = UDim2.new(0.5, 0, 1, 130)
+    icon.Parent = startupGui
+
+    local startupSound = Instance.new("Sound")
+    startupSound.Name = "ink_StartupSound"
+    startupSound.SoundId = "rbxassetid://117430703759954"
+    startupSound.Volume = 1
+    startupSound.Looped = false
+    startupSound.Parent = startupGui
+    pcall(function()
+        startupSound:Play()
+    end)
+
+    local function tween(position, duration, easingStyle, easingDirection)
+        local tw = TweenService:Create(
+            icon,
+            TweenInfo.new(
+                duration,
+                easingStyle or Enum.EasingStyle.Quad,
+                easingDirection or Enum.EasingDirection.InOut
+            ),
+            {Position = position}
+        )
+        tw:Play()
+        tw.Completed:Wait()
+    end
+
+    do
+        tween(
+            UDim2.new(0.5, 0, 0.5, 0),
+            1.35,
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.Out
+        )
+
+        for _ = 1, 2 do
+            tween(
+                UDim2.new(0.5, -38, 0.5, 0),
+                0.22,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            )
+            tween(
+                UDim2.new(0.5, 38, 0.5, 0),
+                0.44,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            )
+            tween(
+                UDim2.new(0.5, 0, 0.5, 0),
+                0.22,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            )
+        end
+
+        local Lighting = game:GetService("Lighting")
+        local blur = Lighting:FindFirstChild("ink_StartupBlur")
+        if blur then
+            blur:Destroy()
+        end
+
+        blur = Instance.new("BlurEffect")
+        blur.Name = "ink_StartupBlur"
+        blur.Size = 24
+        blur.Parent = Lighting
+
+        local blurTween = TweenService:Create(
+            blur,
+            TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = 0}
+        )
+        blurTween:Play()
+        blurTween.Completed:Wait()
+        blur:Destroy()
+
+        tween(
+            UDim2.new(0, 130, 1, -170),
+            0.9,
+            Enum.EasingStyle.Quint,
+            Enum.EasingDirection.InOut
+        )
+
+        icon.Position = UDim2.new(0, 130, 1, -170)
+    end
+end)
+
 local WindUI
 do
     local ok, result = pcall(function()
@@ -70,6 +191,11 @@ if not windowOk or not D then
 end
 
 C = D
+
+pcall(function()
+    C:Tag({ Title = "无尽现实", Radius = 5, Color = Color3.fromHex("#555555") })
+    C:Tag({ Title = "服务器专属", Radius = 6, Color = Color3.fromHex("#B0B0B0") })
+end)
 
 pcall(function()
     C:EditOpenButton({
@@ -223,11 +349,18 @@ Z:Button({Title="复制作者副群", Callback=function() setclipboard("10638285
 
 
 local GeneralTab = D:Tab({Title="主要功能", Icon="settings"})
+
+-- 主要功能分组，让功能排列更整齐
+local MovementGroup = GeneralTab:Section({Title="移动与视角", Opened=true})
+local InteractionGroup = GeneralTab:Section({Title="交互功能", Opened=true})
+local GameGroup = GeneralTab:Section({Title="游戏功能", Opened=true})
+local OtherGroup = GeneralTab:Section({Title="其他功能", Opened=true})
+
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
 local speedEnabled = false
 local speedValue = 16
-GeneralTab:Toggle({
+MovementGroup:Toggle({
     Title = "启用修改速度",
     Value = false,
     Callback = function(v)
@@ -237,7 +370,7 @@ GeneralTab:Toggle({
         if hum then hum.WalkSpeed = v and speedValue or 16 end
     end
 })
-GeneralTab:Slider({
+MovementGroup:Slider({
     Title = "修改速度",
     Value = {Min=16, Max=100, Default=16},
     Step = 1,
@@ -251,7 +384,17 @@ GeneralTab:Slider({
     end
 })
 
-GeneralTab:Button({
+MovementGroup:Slider({
+    Title = "视野",
+    Value = {Min=60, Max=120, Default=70},
+    Step = 1,
+    Callback = function(v)
+        local cam = workspace.CurrentCamera
+        if cam then cam.FieldOfView = v end
+    end
+})
+
+MovementGroup:Button({
     Title = "飞行",
     Callback = function()
         local ok, err = pcall(function()
@@ -274,7 +417,7 @@ local function applyNoClip(state)
         end
     end
 end
-GeneralTab:Toggle({
+MovementGroup:Toggle({
     Title = "穿墙",
     Value = false,
     Callback = function(v)
@@ -296,7 +439,7 @@ local Lighting = game:GetService("Lighting")
 local originalBrightness = Lighting.Brightness
 local originalAmbient = Lighting.Ambient
 local originalOutdoorAmbient = Lighting.OutdoorAmbient
-GeneralTab:Toggle({
+MovementGroup:Toggle({
     Title = "高亮",
     Value = false,
     Callback = function(v)
@@ -312,17 +455,7 @@ GeneralTab:Toggle({
     end
 })
 
-GeneralTab:Slider({
-    Title = "视野",
-    Value = {Min=60, Max=120, Default=70},
-    Step = 1,
-    Callback = function(v)
-        local cam = workspace.CurrentCamera
-        if cam then cam.FieldOfView = v end
-    end
-})
-
-GeneralTab:Toggle({
+MovementGroup:Toggle({
     Title = "第三人称",
     Value = false,
     Callback = function(v)
@@ -372,7 +505,7 @@ local function disableInstantProximity()
     end
     proximityChanged = {}
 end
-GeneralTab:Toggle({
+InteractionGroup:Toggle({
     Title = "瞬间交互",
     Value = false,
     Callback = function(v)
@@ -402,9 +535,9 @@ local function forceChatVisible()
     local chatWindows = CoreGui:FindFirstChild("ChatWindow")
     if chatWindows then chatWindows.Visible = true end
 end
-GeneralTab:Button({Title="强制显示聊天框", Callback=forceChatVisible})
+InteractionGroup:Button({Title="强制显示聊天框", Callback=forceChatVisible})
 
-GeneralTab:Button({Title="传送到电梯", Callback=function()
+GameGroup:Button({Title="传送到电梯", Callback=function()
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if root then
@@ -412,7 +545,7 @@ GeneralTab:Button({Title="传送到电梯", Callback=function()
     end
 end})
 
-GeneralTab:Button({
+GameGroup:Button({
     Title = "打开电梯",
     Callback = function()
         local rs = game:GetService("ReplicatedStorage")
@@ -423,7 +556,7 @@ GeneralTab:Button({
     end
 })
 
-GeneralTab:Toggle({
+GameGroup:Toggle({
     Title = "无限金钱",
     Value = false,
     Callback = function(v)
@@ -451,7 +584,7 @@ GeneralTab:Toggle({
 })
 
 local corpseCrashEnabled = false
-GeneralTab:Toggle({
+GameGroup:Toggle({
     Title = "尸体崩服",
     Value = false,
     Callback = function(v)
@@ -468,7 +601,7 @@ GeneralTab:Toggle({
     end
 })
 
-GeneralTab:Button({
+GameGroup:Button({
     Title = "清理尸体",
     Callback = function()
         local npcs = workspace:FindFirstChild("NPCS")
@@ -484,7 +617,7 @@ GeneralTab:Button({
     end
 })
 
-GeneralTab:Button({
+OtherGroup:Button({
     Title = "解锁三级表情",
     Callback = function()
         local player = game:GetService("Players").LocalPlayer
@@ -514,7 +647,7 @@ GeneralTab:Button({
 })
 
 local customLobbyBadgeId = ""
-GeneralTab:Button({
+OtherGroup:Button({
     Title = "自定义大厅徽章",
     Callback = function()
         local badgeId = tonumber(customLobbyBadgeId)
@@ -526,7 +659,7 @@ GeneralTab:Button({
     end
 })
 
-GeneralTab:Input({
+OtherGroup:Input({
     Title = "输入徽章ID",
     Placeholder = "请输入徽章ID",
     Callback = function(text)
@@ -1165,9 +1298,6 @@ espGroup:Toggle({Title="物品追踪线", Value=false, Callback=function(v)
     setServerItemESP(itemNameEnabled or itemOutlineEnabled or itemTracerEnabled)
 end})
 
-espGroup:Slider({Title="追踪线粗细", Value={Min=1,Max=6,Default=2}, Step=1, Callback=function(v)
-    espconfig.tracersize = v
-end})
 espGroup:Dropdown({Title="追踪线位置", Values={"底部","中间","顶部"}, Value="底部", Callback=function(v)
     espconfig.tracerposition = v
 end})
