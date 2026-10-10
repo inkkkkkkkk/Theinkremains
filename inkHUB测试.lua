@@ -133,6 +133,44 @@ do
             barFillCorner.CornerRadius = UDim.new(1,0)
             barFillCorner.Parent = bar
 
+local skipBtn = Instance.new("TextButton")
+skipBtn.Name = "SkipButton"
+skipBtn.AnchorPoint = Vector2.new(1,0)
+skipBtn.Position = UDim2.new(1,-24,0,24)
+skipBtn.Size = UDim2.fromOffset(130,40)
+skipBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+skipBtn.BorderSizePixel = 0
+skipBtn.Text = "跳过加载"
+skipBtn.TextColor3 = Color3.fromRGB(220,220,220)
+skipBtn.TextSize = 16
+skipBtn.Font = Enum.Font.GothamMedium
+skipBtn.AutoButtonColor = true
+skipBtn.ZIndex = 10
+skipBtn.Parent = bg
+
+local skipCorner = Instance.new("UICorner")
+skipCorner.CornerRadius = UDim.new(0,8)
+skipCorner.Parent = skipBtn
+
+local skipStroke = Instance.new("UIStroke")
+skipStroke.Thickness = 1.5
+skipStroke.Color = Color3.fromRGB(155,155,155)
+skipStroke.Transparency = 0.35
+skipStroke.Parent = skipBtn
+
+local skipDone = false
+skipBtn.MouseButton1Click:Connect(function()
+    if skipDone then return end
+    skipDone = true
+    skipBtn.Text = "跳过中..."
+    skipBtn.Active = false
+    if finishStartup then
+        pcall(finishStartup)
+    elseif startupGui then
+        pcall(function() startupGui:Destroy() end)
+    end
+end)
+
             task.spawn(function()
                 while startupGui and startupGui.Parent and not startupFinished do
                     local ring = Instance.new("Frame")
