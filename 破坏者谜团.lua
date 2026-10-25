@@ -676,6 +676,141 @@ MainTab:Slider({
     end
 })
 
+
+local autoDodgeEnabled = false
+local autoDodgeLastTime = 0
+local autoDodgeRange = 15 
+
+local function doAutoDodge(reason)
+    if tick() - autoDodgeLastTime < 1.0 then return end
+    autoDodgeLastTime = tick()
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local success = false
+    local finalPos = nil
+    
+    
+    for i = 1, 20 do
+        local angle = math.rad(math.random(0, 360))
+        local dist = math.random(20, 45)
+        
+        local testX = hrp.Position.X + math.cos(angle) * dist
+        local testZ = hrp.Position.Z + math.sin(angle) * dist
+        local rayOrigin = Vector3.new(testX, hrp.Position.Y + 30, testZ)
+        
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        raycastParams.FilterDescendantsInstances = {char}
+        
+        
+        local result = workspace:Raycast(rayOrigin, Vector3.new(0, -150, 0), raycastParams)
+        
+        if result then
+            local targetPos = result.Position + Vector3.new(0, 3, 0)
+            
+            
+            local overlapParams = OverlapParams.new()
+            overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+            overlapParams.FilterDescendantsInstances = {char}
+            
+            local boxSize = Vector3.new(3, 5, 3)
+            local partsInBox = workspace:GetPartBoundsInBox(CFrame.new(targetPos), boxSize, overlapParams)
+            
+            local blocked = false
+            for _, part in ipairs(partsInBox) do
+                if part.CanCollide and part.Transparency < 0.8 then
+                    blocked = true
+                    break
+                end
+            end
+            
+            
+            if not blocked then
+                finalPos = targetPos
+                success = true
+                break
+            end
+        end
+    end
+    
+    if success and finalPos then
+        hrp.CFrame = CFrame.new(finalPos)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        window:Notify({Title = "极限闪避", Content = reason, Duration = 2})
+    else
+        window:Notify({Title = "闪避失败", Content = "周围全是墙或虚空", Duration = 2})
+    end
+end
+
+-- 极速心跳检测
+RunService.Heartbeat:Connect(function()
+    if not autoDodgeEnabled then return end
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            if p.Character:FindFirstChild("Knife") then
+                local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
+                if enemyHrp then
+                    if (hrp.Position - enemyHrp.Position).Magnitude <= autoDodgeRange then
+                        doAutoDodge("规避持刀者 " .. p.Name)
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 拔刀监听
+local function watchDodgePlayer(p)
+    if p == LocalPlayer then return end
+    local function checkKnife(char)
+        if autoDodgeEnabled and char:FindFirstChild("Knife") then
+            doAutoDodge("预警: " .. p.Name .. " 拔刀")
+        end
+        char.ChildAdded:Connect(function(child)
+            if autoDodgeEnabled and child.Name == "Knife" then
+                doAutoDodge("预警: " .. p.Name .. " 拔刀")
+            end
+        end)
+    end
+    if p.Character then checkKnife(p.Character) end
+    p.CharacterAdded:Connect(checkKnife)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do watchDodgePlayer(p) end
+Players.PlayerAdded:Connect(watchDodgePlayer)
+
+
+
+MainTab:Toggle({
+    Title = "极限防秒杀 (全空间防卡)",
+    Value = false,
+    Callback = function(v)
+        autoDodgeEnabled = v
+        if v then
+            window:Notify({Title = "防秒杀已开启", Content = "有人拿刀进入 "..autoDodgeRange.." 格内将自动瞬移", Duration = 3})
+        end
+    end
+})
+
+
+MainTab:Slider({
+    Title = "防秒杀检测距离",
+    Value = {Min = 5, Max = 60, Default = 15},
+    Step = 1,
+    Callback = function(v)
+        autoDodgeRange = v
+    end
+})
+
 MainTab:Button({
     Title = "传送到警长旁边",
     Callback = function()
