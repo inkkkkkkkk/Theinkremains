@@ -358,6 +358,135 @@ pcall(function()
     task.delay(0.25, function() pcall(function() recolor(CoreGui) end) end)
     task.delay(0.8, function() pcall(function() recolor(CoreGui) end) end)
 end)
+local MainTab = window:Tab({Title = "主要功能", Icon = "settings"})
+
+local speedEnabled = false
+local speedValue = 16
+MainTab:Toggle({
+    Title = "启用修改速度",
+    Value = false,
+    Callback = function(v)
+        speedEnabled = v
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = v and speedValue or 16 end
+    end
+})
+MainTab:Slider({
+    Title = "修改速度",
+    Value = {Min=16, Max=100, Default=16},
+    Step = 1,
+    Callback = function(v)
+        speedValue = v
+        if speedEnabled then
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.WalkSpeed = v end
+        end
+    end
+})
+
+local jumpEnabled = false
+local jumpValue = 50
+MainTab:Toggle({
+    Title = "启用修改跳跃高度",
+    Value = false,
+    Callback = function(v)
+        jumpEnabled = v
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            if v then hum.JumpPower = jumpValue else hum.JumpPower = 50 end
+        end
+    end
+})
+MainTab:Slider({
+    Title = "修改跳跃高度",
+    Value = {Min=20, Max=200, Default=50},
+    Step = 1,
+    Callback = function(v)
+        jumpValue = v
+        if jumpEnabled then
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.JumpPower = v end
+        end
+    end
+})
+
+MainTab:Slider({
+    Title = "视野",
+    Value = { Min = 60, Max = 120, Default = 70 },
+    Step = 1,
+    Callback = function(v)
+        workspace.CurrentCamera.FieldOfView = v
+    end
+})
+
+local xrayenabled = false
+local xraytransparency = 0.6
+local originaltransparencies = {}
+
+MainTab:Toggle({
+    Title = "X光",
+    Value = false,
+    Callback = function(v)
+        xrayenabled = v
+        if v then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character) then
+                    originaltransparencies[obj] = obj.Transparency
+                    obj.Transparency = xraytransparency
+                end
+            end
+        else
+            for obj, t in pairs(originaltransparencies) do
+                if obj and obj.Parent then
+                    obj.Transparency = t
+                end
+            end
+            originaltransparencies = {}
+        end
+    end
+})
+MainTab:Slider({
+    Title = "X光透明度",
+    Value = { Min = 0, Max = 100, Default = 60 },
+    Step = 1,
+    Callback = function(v)
+        xraytransparency = v / 100
+        if xrayenabled then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character) and originaltransparencies[obj] then
+                    obj.Transparency = v / 100
+                end
+            end
+        end
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.1)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        if speedEnabled then hum.WalkSpeed = speedValue end
+        if jumpEnabled then hum.JumpPower = jumpValue end
+    end
+end)
+
+MainTab:Button({
+    Title = "传送到大厅",
+    Callback = function()
+        local char = LocalPlayer.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = CFrame.new(603.0, 467.8, 37.0)
+            end
+        end
+    end
+})
+
 local P = window:Tab({Title = "透视", Icon = "eye"})
 local categorySettings = {
     Normal = {
