@@ -185,7 +185,12 @@ local function playStartupAnimation()
     if not ok then warn("[ink_HUB] 启动动画异常：", tostring(err)) end
 end
 
-playStartupAnimation()
+local isAnimDone = false
+task.spawn(function()
+    playStartupAnimation()
+    isAnimDone = true
+end)
+
 local function loadWindUI()
     local source = game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/1.6.66/main.lua", true)
     assert(type(source) == "string" and #source > 100, "WindUI 下载内容为空")
@@ -195,6 +200,11 @@ local function loadWindUI()
 end
 
 local okWind, WindUI = pcall(loadWindUI)
+
+while not isAnimDone do
+    task.wait(0.05)
+end
+
 if not okWind or not WindUI then
     warn("[ink_HUB] UI 加载失败：", tostring(WindUI))
     return
@@ -508,6 +518,59 @@ local function findSafePosition(targetHrp, baseDistance)
     end
     return targetHrp.CFrame * CFrame.new(0, 0, baseDistance)
 end
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local killerNear = false
+        local sheriffNear = false
+        
+        if hrp then
+            
+            local myRole = "Normal"
+            local myBp = LocalPlayer:FindFirstChild("Backpack") or char:FindFirstChildOfClass("Backpack")
+            local myHasKnife = (myBp and myBp:FindFirstChild("Knife")) or char:FindFirstChild("Knife")
+            local myHasGun = (myBp and myBp:FindFirstChild("Gun")) or char:FindFirstChild("Gun")
+            
+            if myHasGun then
+                myRole = "Sheriff"
+            elseif myHasKnife then
+                myRole = "Killer"
+            end
+
+            
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if enemyHrp and (hrp.Position - enemyHrp.Position).Magnitude <= 10 then
+                        local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+                        local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife")
+                        local hasGun = (bp and bp:FindFirstChild("Gun")) or p.Character:FindFirstChild("Gun")
+                        
+                        
+                        if hasKnife then
+                            
+                            if killerRadarEnabled and (myRole == "Normal" or myRole == "Sheriff") then
+                                killerNear = true
+                            end
+                        end
+                        
+                        if hasGun then
+                            
+                            if sheriffRadarEnabled and (myRole == "Normal" or myRole == "Killer") then
+                                sheriffNear = true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        updateRadarUI(killerNear, sheriffNear)
+    end
+end)
 
 MainTab:Button({
     Title = "传送到警长旁边",
