@@ -523,6 +523,7 @@ local killerRadarEnabled = false
 local sheriffRadarEnabled = false
 local radarGui = nil
 local radarSound = nil
+local radarDistance = 40 
 
 
 local function updateRadarUI(killerNear, sheriffNear)
@@ -625,7 +626,7 @@ task.spawn(function()
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
                     local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
-                    if enemyHrp and (hrp.Position - enemyHrp.Position).Magnitude <= 10 then
+                    if enemyHrp and (hrp.Position - enemyHrp.Position).Magnitude <= radarDistance then
                         local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
                         local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife")
                         local hasGun = (bp and bp:FindFirstChild("Gun")) or p.Character:FindFirstChild("Gun")
@@ -651,7 +652,7 @@ task.spawn(function()
 end)
 
 MainTab:Toggle({
-    Title = "杀手靠近提示 (10格)",
+    Title = "杀手靠近提示",
     Value = false,
     Callback = function(v)
         killerRadarEnabled = v
@@ -659,10 +660,19 @@ MainTab:Toggle({
 })
 
 MainTab:Toggle({
-    Title = "警长靠近提示 (10格)",
+    Title = "警长靠近提示",
     Value = false,
     Callback = function(v)
         sheriffRadarEnabled = v
+    end
+})
+
+MainTab:Slider({
+    Title = "雷达检测距离",
+    Value = {Min = 10, Max = 100, Default = 40},
+    Step = 1,
+    Callback = function(v)
+        radarDistance = v
     end
 })
 
