@@ -582,8 +582,15 @@ addCategoryControls("Normal")
 addCategoryControls("Sheriff")
 addCategoryControls("Killer")
 
-local CoinESPGroup = P:Section({Title = "硬币透视", Opened = true})
-local coinESPEnabled = false
+local CoinESPGroup = P:Section({Title = "透视硬币", Opened = true})
+local coinSettings = {
+    esp = false,
+    outline = false,
+    tracer = false,
+    espColor = Color3.fromRGB(255, 215, 0),
+    outlineColor = Color3.fromRGB(255, 215, 0),
+    tracerColor = Color3.fromRGB(255, 215, 0)
+}
 local coinHighlighted = {} 
 local coinRenderConn = nil
 
@@ -606,7 +613,8 @@ local function hasTouch(obj)
 end
 
 local function scanCoins()
-    if not coinESPEnabled then return end
+
+    if not (coinSettings.esp or coinSettings.outline or coinSettings.tracer) then return end
     
     for obj, data in pairs(coinHighlighted) do
         if not obj or not obj.Parent then
@@ -641,10 +649,11 @@ local function scanCoins()
                     hl.Name = "CoinESP_Highlight"
                     hl.Adornee = parentModel
                     hl.FillTransparency = 1 
-                    hl.OutlineColor = Color3.fromRGB(255, 215, 0) 
+                    hl.OutlineColor = coinSettings.outlineColor
                     hl.OutlineTransparency = 0
                     hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
                     hl.Parent = parentModel
+                    hl.Enabled = coinSettings.outline
                     data.Highlight = hl
                     
                     if Drawing then
@@ -653,14 +662,14 @@ local function scanCoins()
                         text.Center = true
                         text.Outline = true
                         text.Font = 2
-                        text.Color = Color3.fromRGB(255, 215, 0)
+                        text.Color = coinSettings.espColor
                         text.Visible = false
                         data.Text = text
 
                         local line = Drawing.new("Line")
                         line.Thickness = 2
                         line.Transparency = 1
-                        line.Color = Color3.fromRGB(255, 215, 0)
+                        line.Color = coinSettings.tracerColor
                         line.Visible = false
                         data.Line = line
                     end
@@ -673,13 +682,18 @@ local function scanCoins()
 end
 
 local function updateCoinVisuals()
-    if not coinESPEnabled then return end
+    if not (coinSettings.esp or coinSettings.outline or coinSettings.tracer) then return end
     local camera = workspace.CurrentCamera
     if not camera then return end
     local screenHeight = camera.ViewportSize.Y
 
     for target, data in pairs(coinHighlighted) do
         if target and target.Parent then
+            if data.Highlight then
+                data.Highlight.Enabled = coinSettings.outline
+                data.Highlight.OutlineColor = coinSettings.outlineColor
+            end
+
             local centerPart = target
             if target:IsA("Model") then
                 centerPart = target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart", true)
@@ -693,12 +707,14 @@ local function updateCoinVisuals()
                     if data.Text then
                         data.Text.Position = Vector2.new(pos.X, pos.Y - 20)
                         data.Text.Text = target.Name .. " | " .. distance .. " 米"
-                        data.Text.Visible = true
+                        data.Text.Color = coinSettings.espColor
+                        data.Text.Visible = coinSettings.esp
                     end
                     if data.Line then
                         data.Line.From = Vector2.new(camera.ViewportSize.X / 2, screenHeight)
                         data.Line.To = Vector2.new(pos.X, pos.Y)
-                        data.Line.Visible = true
+                        data.Line.Color = coinSettings.tracerColor
+                        data.Line.Visible = coinSettings.tracer
                     end
                 else
                     if data.Text then data.Text.Visible = false end
@@ -709,27 +725,33 @@ local function updateCoinVisuals()
     end
 end
 
-CoinESPGroup:Toggle({
-    Title = "透视硬币",
-    Value = false,
-    Callback = function(v)
-        coinESPEnabled = v
-        if v then
-            scanCoins() 
-            
-            if coinRenderConn then coinRenderConn:Disconnect() end
+local function updateCoinState()
+    local anyEnabled = coinSettings.esp or coinSettings.outline or coinSettings.tracer
+    if anyEnabled then
+        if not coinRenderConn then
             coinRenderConn = RunService.RenderStepped:Connect(updateCoinVisuals)
-            
             task.spawn(function()
-                while coinESPEnabled do
+                while coinRenderConn do
                     task.wait(2)
-                    if coinESPEnabled then scanCoins() end
+                    if coinSettings.esp or coinSettings.outline or coinSettings.tracer then
+                        scanCoins()
+                    else
+                        break
+                    end
                 end
             end)
-        else
-            clearCoinESP()
         end
+        scanCoins()
+    else
+        clearCoinESP()
     end
-})
+end
+
+CoinESPGroup:Toggle({Title = "透视硬币", Value = false, Callback = function(v) coinSettings.esp = v; updateCoinState() end})
+CoinESPGroup:Colorpicker({Title = "硬币透视颜色", Default = coinSettings.espColor, Callback = function(v) coinSettings.espColor = v end})
+CoinESPGroup:Toggle({Title = "硬币轮廓", Value = false, Callback = function(v) coinSettings.outline = v; updateCoinState() end})
+CoinESPGroup:Colorpicker({Title = "硬币轮廓颜色", Default = coinSettings.outlineColor, Callback = function(v) coinSettings.outlineColor = v end})
+CoinESPGroup:Toggle({Title = "硬币追踪线", Value = false, Callback = function(v) coinSettings.tracer = v; updateCoinState() end})
+CoinESPGroup:Colorpicker({Title = "硬币追踪线颜色", Default = coinSettings.tracerColor, Callback = function(v) coinSettings.tracerColor = v end})
 
 print("[ink_HUB] 加载成功")
