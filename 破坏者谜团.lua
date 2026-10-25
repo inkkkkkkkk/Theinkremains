@@ -519,6 +519,87 @@ local function findSafePosition(targetHrp, baseDistance)
     return targetHrp.CFrame * CFrame.new(0, 0, baseDistance)
 end
 
+local killerRadarEnabled = false
+local sheriffRadarEnabled = false
+local radarGui = nil
+local radarSound = nil
+
+
+local function updateRadarUI(killerNear, sheriffNear)
+    local anyThreat = killerNear or sheriffNear
+
+    if anyThreat then
+        
+        if not radarGui or not radarGui.Parent then
+            radarGui = Instance.new("ScreenGui")
+            radarGui.Name = "ink_RadarWarning"
+            radarGui.ResetOnSpawn = false
+            radarGui.IgnoreGuiInset = true
+            radarGui.Parent = game:GetService("CoreGui")
+
+            local frame = Instance.new("Frame")
+            frame.Name = "RadarFrame"
+            frame.Size = UDim2.fromOffset(280, 60)
+            frame.Position = UDim2.new(1, -300, 1, -100) 
+            frame.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+            frame.BackgroundTransparency = 0.2
+            frame.BorderSizePixel = 0
+            frame.Parent = radarGui
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = frame
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = Color3.fromRGB(255, 0, 0)
+            stroke.Thickness = 3
+            stroke.Parent = frame
+
+            local text = Instance.new("TextLabel")
+            text.Name = "TextLabel"
+            text.Size = UDim2.fromScale(1, 1)
+            text.BackgroundTransparency = 1
+            text.TextColor3 = Color3.fromRGB(255, 255, 255)
+            text.Font = Enum.Font.SourceSansBold
+            text.TextSize = 20
+            text.Parent = frame
+        end
+
+        
+        local textLabel = radarGui.RadarFrame.TextLabel
+        if killerNear and sheriffNear then
+            textLabel.Text = "⚠️ 警告：杀手和警长靠近！"
+        elseif killerNear then
+            textLabel.Text = "⚠️ 警告：杀手靠近！"
+        elseif sheriffNear then
+            textLabel.Text = "⚠️ 警告：警长靠近！"
+        end
+
+        
+        if not radarSound then
+            radarSound = Instance.new("Sound")
+            radarSound.Name = "ink_RadarSound"
+            radarSound.SoundId = "rbxassetid://129496339606661"
+            radarSound.Volume = 5
+            radarSound.Looped = true
+            radarSound.Parent = game:GetService("SoundService")
+        end
+        if not radarSound.IsPlaying then
+            radarSound:Play()
+        end
+    else
+        
+        if radarGui then
+            radarGui:Destroy()
+            radarGui = nil
+        end
+        if radarSound and radarSound.IsPlaying then
+            radarSound:Stop()
+        end
+    end
+end
+
+
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -551,14 +632,12 @@ task.spawn(function()
                         
                         
                         if hasKnife then
-                            
                             if killerRadarEnabled and (myRole == "Normal" or myRole == "Sheriff") then
                                 killerNear = true
                             end
                         end
                         
                         if hasGun then
-                            
                             if sheriffRadarEnabled and (myRole == "Normal" or myRole == "Killer") then
                                 sheriffNear = true
                             end
@@ -567,10 +646,25 @@ task.spawn(function()
                 end
             end
         end
-
         updateRadarUI(killerNear, sheriffNear)
     end
 end)
+
+MainTab:Toggle({
+    Title = "杀手靠近提示 (10格)",
+    Value = false,
+    Callback = function(v)
+        killerRadarEnabled = v
+    end
+})
+
+MainTab:Toggle({
+    Title = "警长靠近提示 (10格)",
+    Value = false,
+    Callback = function(v)
+        sheriffRadarEnabled = v
+    end
+})
 
 MainTab:Button({
     Title = "传送到警长旁边",
