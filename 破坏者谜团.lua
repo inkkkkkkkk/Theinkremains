@@ -676,10 +676,9 @@ MainTab:Slider({
     end
 })
 
-
 local autoDodgeEnabled = false
 local autoDodgeLastTime = 0
-local autoDodgeRange = 15 
+local autoDodgeRange = 15
 
 local function doAutoDodge(reason)
     if tick() - autoDodgeLastTime < 1.0 then return end
@@ -691,7 +690,6 @@ local function doAutoDodge(reason)
     
     local success = false
     local finalPos = nil
-    
     
     for i = 1, 20 do
         local angle = math.rad(math.random(0, 360))
@@ -705,12 +703,10 @@ local function doAutoDodge(reason)
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
         raycastParams.FilterDescendantsInstances = {char}
         
-        
         local result = workspace:Raycast(rayOrigin, Vector3.new(0, -150, 0), raycastParams)
         
         if result then
             local targetPos = result.Position + Vector3.new(0, 3, 0)
-            
             
             local overlapParams = OverlapParams.new()
             overlapParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -726,7 +722,6 @@ local function doAutoDodge(reason)
                     break
                 end
             end
-            
             
             if not blocked then
                 finalPos = targetPos
@@ -745,13 +740,14 @@ local function doAutoDodge(reason)
     end
 end
 
--- 极速心跳检测
 RunService.Heartbeat:Connect(function()
     if not autoDodgeEnabled then return end
     
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+    
+    if char:FindFirstChild("Knife") then return end
     
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
@@ -768,14 +764,20 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- 拔刀监听
 local function watchDodgePlayer(p)
     if p == LocalPlayer then return end
     local function checkKnife(char)
+       
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("Knife") then return end
+        
         if autoDodgeEnabled and char:FindFirstChild("Knife") then
             doAutoDodge("预警: " .. p.Name .. " 拔刀")
         end
         char.ChildAdded:Connect(function(child)
+            local myChar2 = LocalPlayer.Character
+            if myChar2 and myChar2:FindFirstChild("Knife") then return end
+            
             if autoDodgeEnabled and child.Name == "Knife" then
                 doAutoDodge("预警: " .. p.Name .. " 拔刀")
             end
@@ -788,22 +790,19 @@ end
 for _, p in ipairs(Players:GetPlayers()) do watchDodgePlayer(p) end
 Players.PlayerAdded:Connect(watchDodgePlayer)
 
-
-
 MainTab:Toggle({
-    Title = "极限防秒杀 (全空间防卡)",
+    Title = "自动躲刀",
     Value = false,
     Callback = function(v)
         autoDodgeEnabled = v
         if v then
-            window:Notify({Title = "防秒杀已开启", Content = "有人拿刀进入 "..autoDodgeRange.." 格内将自动瞬移", Duration = 3})
+            window:Notify({Title = "防秒杀已开启", Content = "杀手靠近时将自动瞬移", Duration = 3})
         end
     end
 })
 
-
 MainTab:Slider({
-    Title = "防秒杀检测距离",
+    Title = "检测距离",
     Value = {Min = 5, Max = 60, Default = 15},
     Step = 1,
     Callback = function(v)
