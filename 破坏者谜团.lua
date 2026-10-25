@@ -970,6 +970,60 @@ MainTab:Button({
 })
 
 MainTab:Button({
+    Title = "传送到掉落枪械旁边",
+    Callback = function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        
+        local closestDrop = nil
+        local minDist = math.huge
+        
+        
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "GunDrop" and obj:FindFirstChild("Fire") then
+                local pos = nil
+                if obj:IsA("BasePart") then
+                    pos = obj.Position
+                elseif obj:IsA("Model") then
+                    local _, size = obj:GetBoundingBox()
+                    pos = obj:GetBoundingBox().Position
+                end
+                
+                if pos then
+                    local dist = (hrp.Position - pos).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        closestDrop = obj
+                    end
+                end
+            end
+        end
+        
+        if not closestDrop then
+            window:Notify({Title = "未找到", Content = "全图没有掉落的枪械", Duration = 3})
+            return
+        end
+        
+        
+        local targetPart = nil
+        if closestDrop:IsA("BasePart") then
+            targetPart = closestDrop
+        else
+            targetPart = closestDrop.PrimaryPart or closestDrop:FindFirstChildWhichIsA("BasePart")
+        end
+        
+        if targetPart then
+            
+            local safeCFrame = findSafePosition(targetPart, 4)
+            hrp.CFrame = safeCFrame
+            window:Notify({Title = "传送成功", Content = "已传送到掉落枪械旁边", Duration = 3})
+        else
+            window:Notify({Title = "传送失败", Content = "找到了枪械但无法获取其位置", Duration = 3})
+        end
+    end
+})
+
+MainTab:Button({
     Title = "传送到大厅",
     Callback = function()
         local char = LocalPlayer.Character
@@ -1388,5 +1442,180 @@ CoinESPGroup:Toggle({Title = "硬币轮廓", Value = false, Callback = function(
 CoinESPGroup:Colorpicker({Title = "硬币轮廓颜色", Default = coinSettings.outlineColor, Callback = function(v) coinSettings.outlineColor = v end})
 CoinESPGroup:Toggle({Title = "硬币追踪线", Value = false, Callback = function(v) coinSettings.tracer = v; updateCoinState() end})
 CoinESPGroup:Colorpicker({Title = "硬币追踪线颜色", Default = coinSettings.tracerColor, Callback = function(v) coinSettings.tracerColor = v end})
+
+local GunDropESPGroup = P:Section({Title = "透视掉落枪械", Opened = true})
+local gunDropSettings = {
+    esp = false,
+    outline = false,
+    tracer = false,
+    espColor = Color3.fromRGB(0, 255, 0), 
+    outlineColor = Color3.fromRGB(0, 255, 0), 
+    tracerColor = Color3.fromRGB(0, 255, 0) 
+}
+local gunDropHighlighted = {} 
+local gunDropRenderConn = nil
+
+local function clearGunDropESP()
+    for _, data in pairs(gunDropHighlighted) do
+        if data.Highlight then pcall(function() data.Highlight:Destroy() end) end
+        if data.Text then pcall(function() data.Text:Remove() end) end
+        if data.Line then pcall(function() data.Line:Remove() end) end
+    end
+    gunDropHighlighted = {}
+    if gunDropRenderConn then
+        gunDropRenderConn:Disconnect()
+        gunDropRenderConn = nil
+    end
+end
+
+local function scanGunDrops()
+    if not (gunDropSettings.esp or gunDropSettings.outline or gunDropSettings.tracer) then return end
+    
+    
+    for visual, data in pairs(gunDropHighlighted) do
+        if not visual or not visual.Parent then
+            if data.Highlight then pcall(function() data.Highlight:Destroy() end) end
+            if data.Text then pcall(function() data.Text:Remove() end) end
+            if data.Line then pcall(function() data.Line:Remove() end) end
+            gunDropHighlighted[visual] = nil
+        end
+    end
+
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "GunDrop" then
+            if not gunDropHighlighted[obj] then
+                
+                if obj:FindFirstChild("Fire") then
+                    local data = {}
+                    data.Visual = obj
+                    
+                    
+                    local target = nil
+                    if obj:IsA("BasePart") then
+                        target = obj
+                    else
+                        target = obj:FindFirstAncestorWhichIsA("BasePart") or obj:FindFirstChildWhichIsA("BasePart") or obj
+                    end
+                    
+                    if target then
+                        local hl = Instance.new("Highlight")
+                        hl.Adornee = target
+                        hl.FillTransparency = 1 
+                        hl.OutlineColor = gunDropSettings.outlineColor
+                        hl.OutlineTransparency = 0
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
+                        hl.Parent = target
+                        hl.Enabled = gunDropSettings.outline
+                        data.Highlight = hl
+                    end
+
+                    if Drawing then
+                        local text = Drawing.new("Text")
+                        text.Size = 16
+                        text.Center = true
+                        text.Outline = true
+                        text.Font = 2
+                        text.Color = gunDropSettings.espColor
+                        text.Visible = false
+                        data.Text = text
+
+                        local line = Drawing.new("Line")
+                        line.Thickness = 2
+                        line.Transparency = 1
+                        line.Color = gunDropSettings.tracerColor
+                        line.Visible = false
+                        data.Line = line
+                    end
+                    
+                    gunDropHighlighted[obj] = data
+                end
+            end
+        end
+    end
+end
+
+local function updateGunDropVisuals()
+    if not (gunDropSettings.esp or gunDropSettings.outline or gunDropSettings.tracer) then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local screenHeight = camera.ViewportSize.Y
+
+    for visual, data in pairs(gunDropHighlighted) do
+        if visual and visual.Parent then
+            if data.Highlight then
+                data.Highlight.Enabled = gunDropSettings.outline
+                data.Highlight.OutlineColor = gunDropSettings.outlineColor
+            end
+
+            local pos3D
+            if visual:IsA("BasePart") then
+                pos3D = visual.Position
+            elseif visual:IsA("Model") then
+                local _, size = visual:GetBoundingBox()
+                pos3D = visual:GetBoundingBox().Position
+            else
+                local ancestorPart = visual:FindFirstAncestorWhichIsA("BasePart")
+                if ancestorPart then
+                    pos3D = ancestorPart.Position
+                elseif visual.Parent and visual.Parent:IsA("BasePart") then
+                    pos3D = visual.Parent.Position
+                end
+            end
+
+            if pos3D then
+                local pos, onScreen = camera:WorldToViewportPoint(pos3D)
+                local distance = math.floor((camera.CFrame.Position - pos3D).Magnitude)
+                
+                if onScreen and pos.Z > 0 then
+                    if data.Text then
+                        data.Text.Position = Vector2.new(pos.X, pos.Y - 20)
+                        data.Text.Text = "GunDrop | " .. distance .. "m"
+                        data.Text.Color = gunDropSettings.espColor
+                        data.Text.Visible = gunDropSettings.esp
+                    end
+                    if data.Line then
+                        data.Line.From = Vector2.new(camera.ViewportSize.X / 2, screenHeight)
+                        data.Line.To = Vector2.new(pos.X, pos.Y)
+                        data.Line.Color = gunDropSettings.tracerColor
+                        data.Line.Visible = gunDropSettings.tracer
+                    end
+                else
+                    if data.Text then data.Text.Visible = false end
+                    if data.Line then data.Line.Visible = false end
+                end
+            end
+        end
+    end
+end
+
+local function updateGunDropState()
+    local anyEnabled = gunDropSettings.esp or gunDropSettings.outline or gunDropSettings.tracer
+    if anyEnabled then
+        if not gunDropRenderConn then
+            gunDropRenderConn = RunService.RenderStepped:Connect(updateGunDropVisuals)
+            task.spawn(function()
+                while gunDropRenderConn do
+                    task.wait(1)
+                    if gunDropSettings.esp or gunDropSettings.outline or gunDropSettings.tracer then
+                        scanGunDrops()
+                    else
+                        break
+                    end
+                end
+            end)
+        end
+        scanGunDrops()
+    else
+        clearGunDropESP()
+    end
+end
+
+GunDropESPGroup:Toggle({Title = "透视掉落枪械", Value = false, Callback = function(v) gunDropSettings.esp = v; updateGunDropState() end})
+GunDropESPGroup:Colorpicker({Title = "透视文字颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.espColor = v end})
+GunDropESPGroup:Toggle({Title = "掉落枪械轮廓", Value = false, Callback = function(v) gunDropSettings.outline = v; updateGunDropState() end})
+GunDropESPGroup:Colorpicker({Title = "轮廓颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.outlineColor = v end})
+GunDropESPGroup:Toggle({Title = "掉落枪械追踪线", Value = false, Callback = function(v) gunDropSettings.tracer = v; updateGunDropState() end})
+GunDropESPGroup:Colorpicker({Title = "追踪线颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.tracerColor = v end})
 
 print("[ink_HUB] 加载成功")
