@@ -7,7 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
 
 local authorIds = {
-    [10380595563] = "脚本作者_墨水依旧",
+    [10380595563] = "脚本作者_Theinkremains",
     [4122111506] = "脚本作者_司空",
     [10619015725] = "脚本作者_司空"
 }

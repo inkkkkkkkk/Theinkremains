@@ -346,7 +346,7 @@ local C
 local windowOk, windowResult = pcall(function()
     return B:CreateWindow({
         Title = gradient("ink_HUB",Color3.fromRGB(180,180,180),Color3.fromRGB(100,100,100)),
-        Author = gradient("@墨水依旧 司空",Color3.fromRGB(180,180,180),Color3.fromRGB(100,100,100)),
+        Author = gradient("@Theinkremains 司空",Color3.fromRGB(180,180,180),Color3.fromRGB(100,100,100)),
         Icon = "rbxassetid://71953031400395",
         Folder = "ink_HUB",
         NewElements = true,
@@ -483,7 +483,7 @@ pcall(function()
             if obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 if obj.Text == "ink_HUB" then
                     obj.TextColor3 = Color3.fromRGB(155,155,155)
-                elseif obj.Text == "@墨水依旧 司空" then
+                elseif obj.Text == "@Theinkremains 司空" then
                     obj.TextColor3 = Color3.fromRGB(125,125,125)
                 end
             end
@@ -499,7 +499,7 @@ local D=C
 local Z = D:Tab({Title="公告", Icon="bell"})
 Z:Paragraph({
     Title = "欢迎使用 ink_HUB",
-    Desc = "作者：墨水依旧和司空\n墨水快手号:zczczczc766\n司空快手号:smalldesikon111和smalldesikon\n开源并公开的4000+\n没惹你就开源的自动给我30年寿命\n公益脚本禁止倒卖\n认准 ink_HUB",
+    Desc = "作者：Theinkremains和司空\nTheinkremains快手号:zczczczc766\n司空快手号:smalldesikon111和smalldesikon\n开源并公开的4000+\n没惹你就开源的自动给我30年寿命\n公益脚本禁止倒卖\n认准 ink_HUB",
     Image = "rbxassetid://131444442444524",
     ImageSize = 100,
 })
