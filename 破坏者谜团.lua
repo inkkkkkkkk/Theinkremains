@@ -236,12 +236,12 @@ window = windowResult
 
 pcall(function()
     window:Tag({ Title = "破坏者谜团2", Radius = 5, Color = Color3.fromHex("#555555") })
-    window:Tag({ Title = "透视专属", Radius = 6, Color = Color3.fromHex("#B0B0B0") })
+    window:Tag({ Title = "服务器专属", Radius = 6, Color = Color3.fromHex("#B0B0B0") })
 end)
 
 pcall(function()
     window:EditOpenButton({
-        Title = "Project_ink_破坏者谜团",
+        Title = "Project_ink_破坏者谜团2",
         Icon = "crown",
         StrokeThickness = 5,
         TextColor = Color3.fromRGB(150, 150, 150),
@@ -582,4 +582,154 @@ addCategoryControls("Normal")
 addCategoryControls("Sheriff")
 addCategoryControls("Killer")
 
-print("[ink_HUB] 已加载无尽现实同款UI")
+local CoinESPGroup = P:Section({Title = "硬币透视", Opened = true})
+local coinESPEnabled = false
+local coinHighlighted = {} 
+local coinRenderConn = nil
+
+local function clearCoinESP()
+    for obj, data in pairs(coinHighlighted) do
+        if data.Highlight then pcall(function() data.Highlight:Destroy() end) end
+        if data.Text then pcall(function() data.Text:Remove() end) end
+        if data.Line then pcall(function() data.Line:Remove() end) end
+    end
+    coinHighlighted = {}
+    if coinRenderConn then
+        coinRenderConn:Disconnect()
+        coinRenderConn = nil
+    end
+end
+
+local function hasTouch(obj)
+    if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
+    return false
+end
+
+local function scanCoins()
+    if not coinESPEnabled then return end
+    
+    for obj, data in pairs(coinHighlighted) do
+        if not obj or not obj.Parent then
+            if data.Highlight then pcall(function() data.Highlight:Destroy() end) end
+            if data.Text then pcall(function() data.Text:Remove() end) end
+            if data.Line then pcall(function() data.Line:Remove() end) end
+            coinHighlighted[obj] = nil
+        end
+    end
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "CoinVisual" then
+            local parentModel = obj:FindFirstAncestorOfClass("Model") or obj.Parent
+            
+            if parentModel and not coinHighlighted[parentModel] then
+                local touchFound = false
+                if hasTouch(parentModel) then
+                    touchFound = true
+                else
+                    for _, child in ipairs(parentModel:GetDescendants()) do
+                        if hasTouch(child) then
+                            touchFound = true
+                            break
+                        end
+                    end
+                end
+                
+                if touchFound then
+                    local data = {}
+                    
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "CoinESP_Highlight"
+                    hl.Adornee = parentModel
+                    hl.FillTransparency = 1 
+                    hl.OutlineColor = Color3.fromRGB(255, 215, 0) 
+                    hl.OutlineTransparency = 0
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
+                    hl.Parent = parentModel
+                    data.Highlight = hl
+                    
+                    if Drawing then
+                        local text = Drawing.new("Text")
+                        text.Size = 16
+                        text.Center = true
+                        text.Outline = true
+                        text.Font = 2
+                        text.Color = Color3.fromRGB(255, 215, 0)
+                        text.Visible = false
+                        data.Text = text
+
+                        local line = Drawing.new("Line")
+                        line.Thickness = 2
+                        line.Transparency = 1
+                        line.Color = Color3.fromRGB(255, 215, 0)
+                        line.Visible = false
+                        data.Line = line
+                    end
+                    
+                    coinHighlighted[parentModel] = data
+                end
+            end
+        end
+    end
+end
+
+local function updateCoinVisuals()
+    if not coinESPEnabled then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local screenHeight = camera.ViewportSize.Y
+
+    for target, data in pairs(coinHighlighted) do
+        if target and target.Parent then
+            local centerPart = target
+            if target:IsA("Model") then
+                centerPart = target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart", true)
+            end
+
+            if centerPart then
+                local pos, onScreen = camera:WorldToViewportPoint(centerPart.Position)
+                local distance = math.floor((camera.CFrame.Position - centerPart.Position).Magnitude)
+                
+                if onScreen and pos.Z > 0 then
+                    if data.Text then
+                        data.Text.Position = Vector2.new(pos.X, pos.Y - 20)
+                        data.Text.Text = target.Name .. " | " .. distance .. " 米"
+                        data.Text.Visible = true
+                    end
+                    if data.Line then
+                        data.Line.From = Vector2.new(camera.ViewportSize.X / 2, screenHeight)
+                        data.Line.To = Vector2.new(pos.X, pos.Y)
+                        data.Line.Visible = true
+                    end
+                else
+                    if data.Text then data.Text.Visible = false end
+                    if data.Line then data.Line.Visible = false end
+                end
+            end
+        end
+    end
+end
+
+CoinESPGroup:Toggle({
+    Title = "透视硬币",
+    Value = false,
+    Callback = function(v)
+        coinESPEnabled = v
+        if v then
+            scanCoins() 
+            
+            if coinRenderConn then coinRenderConn:Disconnect() end
+            coinRenderConn = RunService.RenderStepped:Connect(updateCoinVisuals)
+            
+            task.spawn(function()
+                while coinESPEnabled do
+                    task.wait(2)
+                    if coinESPEnabled then scanCoins() end
+                end
+            end)
+        else
+            clearCoinESP()
+        end
+    end
+})
+
+print("[ink_HUB] 加载成功")
