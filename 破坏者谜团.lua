@@ -582,7 +582,7 @@ addCategoryControls("Normal")
 addCategoryControls("Sheriff")
 addCategoryControls("Killer")
 
-local CoinESPGroup = P:Section({Title = "透视硬币", Opened = true})
+local CoinESPGroup = P:Section({Title = "硬币透视", Opened = true})
 local coinSettings = {
     esp = false,
     outline = false,
@@ -595,7 +595,7 @@ local coinHighlighted = {}
 local coinRenderConn = nil
 
 local function clearCoinESP()
-    for obj, data in pairs(coinHighlighted) do
+    for _, data in pairs(coinHighlighted) do
         if data.Highlight then pcall(function() data.Highlight:Destroy() end) end
         if data.Text then pcall(function() data.Text:Remove() end) end
         if data.Line then pcall(function() data.Line:Remove() end) end
@@ -607,55 +607,56 @@ local function clearCoinESP()
     end
 end
 
-local function hasTouch(obj)
-    if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
-    return false
-end
-
 local function scanCoins()
-
     if not (coinSettings.esp or coinSettings.outline or coinSettings.tracer) then return end
     
-    for obj, data in pairs(coinHighlighted) do
-        if not obj or not obj.Parent then
+    -- 1. 清理消失的
+    for visual, data in pairs(coinHighlighted) do
+        if not visual or not visual.Parent then
             if data.Highlight then pcall(function() data.Highlight:Destroy() end) end
             if data.Text then pcall(function() data.Text:Remove() end) end
             if data.Line then pcall(function() data.Line:Remove() end) end
-            coinHighlighted[obj] = nil
+            coinHighlighted[visual] = nil
         end
     end
 
+    -- 2. 扫描新硬币
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj.Name == "CoinVisual" then
-            local parentModel = obj:FindFirstAncestorOfClass("Model") or obj.Parent
-            
-            if parentModel and not coinHighlighted[parentModel] then
-                local touchFound = false
-                if hasTouch(parentModel) then
-                    touchFound = true
-                else
-                    for _, child in ipairs(parentModel:GetDescendants()) do
-                        if hasTouch(child) then
-                            touchFound = true
-                            break
-                        end
+            if not coinHighlighted[obj] then
+                local hasTouch = false
+                local checkObj = obj
+                for i = 1, 4 do
+                    if checkObj and (checkObj:FindFirstChild("TouchInterest") or checkObj:FindFirstChildOfClass("TouchTransmitter")) then
+                        hasTouch = true
+                        break
                     end
+                    if checkObj then checkObj = checkObj.Parent end
                 end
                 
-                if touchFound then
+                if hasTouch then
                     local data = {}
+                    data.Visual = obj
                     
-                    local hl = Instance.new("Highlight")
-                    hl.Name = "CoinESP_Highlight"
-                    hl.Adornee = parentModel
-                    hl.FillTransparency = 1 
-                    hl.OutlineColor = coinSettings.outlineColor
-                    hl.OutlineTransparency = 0
-                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
-                    hl.Parent = parentModel
-                    hl.Enabled = coinSettings.outline
-                    data.Highlight = hl
+                    local target = nil
+                    if obj:IsA("BasePart") then
+                        target = obj
+                    else
+                        target = obj:FindFirstAncestorWhichIsA("BasePart") or obj:FindFirstAncestorOfClass("Model")
+                    end
                     
+                    if target and target ~= workspace then
+                        local hl = Instance.new("Highlight")
+                        hl.Adornee = target
+                        hl.FillTransparency = 1 
+                        hl.OutlineColor = coinSettings.outlineColor
+                        hl.OutlineTransparency = 0
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop 
+                        hl.Parent = target
+                        hl.Enabled = coinSettings.outline
+                        data.Highlight = hl
+                    end
+
                     if Drawing then
                         local text = Drawing.new("Text")
                         text.Size = 16
@@ -674,7 +675,7 @@ local function scanCoins()
                         data.Line = line
                     end
                     
-                    coinHighlighted[parentModel] = data
+                    coinHighlighted[obj] = data
                 end
             end
         end
@@ -687,26 +688,36 @@ local function updateCoinVisuals()
     if not camera then return end
     local screenHeight = camera.ViewportSize.Y
 
-    for target, data in pairs(coinHighlighted) do
-        if target and target.Parent then
+    for visual, data in pairs(coinHighlighted) do
+        if visual and visual.Parent then
             if data.Highlight then
                 data.Highlight.Enabled = coinSettings.outline
                 data.Highlight.OutlineColor = coinSettings.outlineColor
             end
 
-            local centerPart = target
-            if target:IsA("Model") then
-                centerPart = target.PrimaryPart or target:FindFirstChildWhichIsA("BasePart", true)
+            local pos3D
+            if visual:IsA("BasePart") then
+                pos3D = visual.Position
+            elseif visual.Parent and visual.Parent:IsA("BasePart") then
+                pos3D = visual.Parent.Position
+            elseif visual:IsA("Model") then
+                local _, size = visual:GetBoundingBox()
+                pos3D = visual:GetBoundingBox().Position
+            else
+                local ancestorPart = visual:FindFirstAncestorWhichIsA("BasePart")
+                if ancestorPart then
+                    pos3D = ancestorPart.Position
+                end
             end
 
-            if centerPart then
-                local pos, onScreen = camera:WorldToViewportPoint(centerPart.Position)
-                local distance = math.floor((camera.CFrame.Position - centerPart.Position).Magnitude)
+            if pos3D then
+                local pos, onScreen = camera:WorldToViewportPoint(pos3D)
+                local distance = math.floor((camera.CFrame.Position - pos3D).Magnitude)
                 
                 if onScreen and pos.Z > 0 then
                     if data.Text then
                         data.Text.Position = Vector2.new(pos.X, pos.Y - 20)
-                        data.Text.Text = target.Name .. " | " .. distance .. " 米"
+                        data.Text.Text = "Coin | " .. distance .. "m"
                         data.Text.Color = coinSettings.espColor
                         data.Text.Visible = coinSettings.esp
                     end
@@ -732,7 +743,7 @@ local function updateCoinState()
             coinRenderConn = RunService.RenderStepped:Connect(updateCoinVisuals)
             task.spawn(function()
                 while coinRenderConn do
-                    task.wait(2)
+                    task.wait(1)
                     if coinSettings.esp or coinSettings.outline or coinSettings.tracer then
                         scanCoins()
                     else
