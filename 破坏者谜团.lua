@@ -474,6 +474,87 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+local function findSafePosition(targetHrp, baseDistance)
+    local angles = {
+        Vector3.new(0, 0, baseDistance),   
+        Vector3.new(0, 0, -baseDistance),  
+        Vector3.new(baseDistance, 0, 0),   
+        Vector3.new(-baseDistance, 0, 0),  
+        Vector3.new(baseDistance * 0.7, 0, baseDistance * 0.7),
+        Vector3.new(-baseDistance * 0.7, 0, baseDistance * 0.7)
+    }
+    local distances = {baseDistance, 3, 1.5}
+    for _, dist in ipairs(distances) do
+        for _, offset in ipairs(angles) do
+            local currentOffset = offset * (dist / baseDistance)
+            local targetCFrame = targetHrp.CFrame * CFrame.new(currentOffset)
+            local pos = targetCFrame.Position + Vector3.new(0, 2, 0)
+            local boxSize = Vector3.new(3, 4, 3)
+            
+            local params = OverlapParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = {LocalPlayer.Character, targetHrp.Parent}
+            
+            local parts = workspace:GetPartBoundsInBox(CFrame.new(pos), boxSize, params)
+            local blocked = false
+            for _, part in ipairs(parts) do
+                if part.CanCollide and part.Transparency < 0.8 then
+                    blocked = true
+                    break
+                end
+            end
+            if not blocked then return targetCFrame end
+        end
+    end
+    return targetHrp.CFrame * CFrame.new(0, 0, baseDistance)
+end
+
+MainTab:Button({
+    Title = "传送到警长旁边",
+    Callback = function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local target = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+                if (bp and bp:FindFirstChild("Gun")) or p.Character:FindFirstChild("Gun") then
+                    target = p break
+                end
+            end
+        end
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            hrp.CFrame = findSafePosition(target.Character.HumanoidRootPart, 5)
+            window:Notify({Title = "传送成功", Content = "已传送到警长附近", Duration = 3})
+        else
+            window:Notify({Title = "未找到警长", Content = "当前没有玩家拿到枪", Duration = 3})
+        end
+    end
+})
+
+MainTab:Button({
+    Title = "传送到杀手旁边",
+    Callback = function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local target = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+                if (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") then
+                    target = p break
+                end
+            end
+        end
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            hrp.CFrame = findSafePosition(target.Character.HumanoidRootPart, 5)
+            window:Notify({Title = "传送成功", Content = "已传送到杀手附近", Duration = 3})
+        else
+            window:Notify({Title = "未找到杀手", Content = "当前没有玩家拿到刀", Duration = 3})
+        end
+    end
+})
+
 MainTab:Button({
     Title = "传送到大厅",
     Callback = function()
