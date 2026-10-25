@@ -810,6 +810,119 @@ MainTab:Slider({
     end
 })
 
+local slashEnabled = false
+local killAuraEnabled = false
+local slashDelay = 0.15
+local auraCooldown = 0.5
+local lastTeleportTime = 0
+
+
+local function getMyKnife()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    return char:FindFirstChild("Knife") 
+end
+
+local function doSlash()
+    local knife = getMyKnife()
+   
+    if not knife then return end
+    
+    
+    local events = knife:FindFirstChild("Events")
+    if events then
+        local event = events:FindFirstChild("KnifeStabbed")
+        if event then 
+            pcall(function() event:FireServer() end) 
+        end
+    end
+end
+
+
+local function getClosestPlayerHrp()
+    local closest = nil
+    local minDist = math.huge
+    local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return nil end
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and enemyHrp then
+                local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    closest = enemyHrp
+                end
+            end
+        end
+    end
+    return closest
+end
+
+
+task.spawn(function()
+    while true do
+        task.wait(slashDelay)
+        if slashEnabled then
+            doSlash()
+        end
+    end
+end)
+
+
+RunService.Heartbeat:Connect(function()
+    if not killAuraEnabled then return end
+    if tick() - lastTeleportTime < auraCooldown then return end
+    
+    local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
+
+    local targetHrp = getClosestPlayerHrp()
+    if targetHrp then
+        
+        myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 1, 0)
+        lastTeleportTime = tick()
+        
+        
+        doSlash() 
+    end
+end)
+
+MainTab:Toggle({
+    Title = "自动秒刀",
+    Value = false,
+    Callback = function(v)
+        slashEnabled = v
+    end
+})
+
+MainTab:Slider({
+    Title = "挥刀间隔",
+    Value = {Min = 0.05, Max = 0.5, Default = 0.15},
+    Step = 0.05,
+    Callback = function(v) slashDelay = v end
+})
+
+MainTab:Toggle({
+    Title = "杀戮光环",
+    Value = false,
+    Callback = function(v)
+        killAuraEnabled = v
+        if v then
+            window:Notify({Title = "杀戮光环开启", Content = "请手动拿着刀，落地自动砍人！", Duration = 3})
+        end
+    end
+})
+
+MainTab:Slider({
+    Title = "光环传送冷却",
+    Value = {Min = 0.2, Max = 3, Default = 0.5},
+    Step = 0.1,
+    Callback = function(v) auraCooldown = v end
+})
+
 MainTab:Button({
     Title = "传送到警长旁边",
     Callback = function()
