@@ -1077,6 +1077,150 @@ MainTab:Button({
     end
 })
 
+local AimTab = window:Tab({Title="自瞄", Icon="crosshair"})
+
+local AimbotSettings = {
+    Enabled = false,
+    TargetPart = "Head",
+    WallCheck = false,
+    TeamCheck = false,
+    CircleEnabled = false,
+    CircleRadius = 100,
+    CircleThickness = 2,
+    CircleColor = "彩色"
+}
+
+local Colors = {
+    ["红"] = Color3.fromRGB(255,0,0), ["橙"] = Color3.fromRGB(255,150,0), ["黄"] = Color3.fromRGB(255,255,15),
+    ["绿"] = Color3.fromRGB(0,255,0), ["青"] = Color3.fromRGB(0,255,219), ["蓝"] = Color3.fromRGB(0,0,255),
+    ["紫"] = Color3.fromRGB(183,0,255), ["彩色"] = nil,
+}
+
+local Circle = Drawing.new("Circle")
+Circle.Filled = false
+Circle.Visible = false
+
+local function getCircleColor()
+    if AimbotSettings.CircleColor ~= "彩色" and Colors[AimbotSettings.CircleColor] then
+        return Colors[AimbotSettings.CircleColor]
+    else
+        return Color3.fromHSV((tick() % 5) / 5, 1, 1)
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if AimbotSettings.CircleEnabled then
+        Circle.Visible = true
+        Circle.Position = workspace.CurrentCamera.ViewportSize / 2
+        Circle.Radius = AimbotSettings.CircleRadius
+        Circle.Thickness = AimbotSettings.CircleThickness
+        Circle.Color = getCircleColor()
+    else
+        Circle.Visible = false
+    end
+end)
+
+local function hasTool(p, toolName)
+    if not p or not p.Character then return false end
+    local backpack = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+    return (backpack and backpack:FindFirstChild(toolName)) or p.Character:FindFirstChild(toolName) ~= nil
+end
+
+local function isValidTarget(player)
+    if not player or player == LocalPlayer then return false end
+    if not player.Character then return false end
+    
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+
+    local myHasKnife = hasTool(LocalPlayer, "Knife")
+    local targetHasKnife = hasTool(player, "Knife")
+
+    if myHasKnife then
+        if targetHasKnife then return false end
+    else
+        if not targetHasKnife then return false end
+    end
+
+    local part = player.Character:FindFirstChild(AimbotSettings.TargetPart)
+    if not part then return false end
+    
+    if AimbotSettings.WallCheck or AimbotSettings.TeamCheck then
+        local origin = workspace.CurrentCamera.CFrame.Position
+        local dir = part.Position - origin
+        
+        local params = RaycastParams.new()
+        params.FilterDescendantsInstances = { LocalPlayer.Character, player.Character }
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.IgnoreWater = true
+
+        local result = workspace:Raycast(origin, dir, params)
+        
+        if result then
+            local hitPart = result.Instance
+            local hitPlayer = Players:GetPlayerFromCharacter(hitPart.Parent)
+
+            if hitPlayer then
+                if AimbotSettings.TeamCheck then
+                    if myHasKnife and hasTool(hitPlayer, "Knife") then
+                    else
+                        return false
+                    end
+                end
+            else
+                if AimbotSettings.WallCheck then
+                    return false
+                end
+            end
+        end
+    end
+    
+    return true
+end
+
+local function getClosestInCircle()
+    local closest = nil
+    local minDist = math.huge
+    local center = workspace.CurrentCamera.ViewportSize / 2
+    for _, p in pairs(Players:GetPlayers()) do
+        if isValidTarget(p) then
+            local head = p.Character:FindFirstChild(AimbotSettings.TargetPart)
+            if head then
+                local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local screenDist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if screenDist <= AimbotSettings.CircleRadius and screenDist < minDist then
+                        minDist = screenDist
+                        closest = p
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+RunService.Heartbeat:Connect(function()
+    if AimbotSettings.Enabled then
+        local target = getClosestInCircle()
+        if target then
+            local part = target.Character:FindFirstChild(AimbotSettings.TargetPart)
+            if part then
+                workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, part.Position)
+            end
+        end
+    end
+end)
+
+AimTab:Toggle({ Title = "开启自瞄", Value = false, Callback = function(s) AimbotSettings.Enabled = s end })
+AimTab:Toggle({ Title = "自瞄圆圈", Value = false, Callback = function(s) AimbotSettings.CircleEnabled = s end })
+AimTab:Dropdown({ Title = "瞄准部位", Values = { "Head", "HumanoidRootPart" }, Value = "Head", Callback = function(v) AimbotSettings.TargetPart = v end })
+AimTab:Toggle({ Title = "墙体检测", Value = false, Callback = function(s) AimbotSettings.WallCheck = s end })
+AimTab:Toggle({ Title = "队伍检测", Value = false, Callback = function(s) AimbotSettings.TeamCheck = s end })
+AimTab:Slider({ Title = "圆圈大小", Value = { Min = 30, Max = 500, Default = 100 }, Callback = function(v) AimbotSettings.CircleRadius = v end })
+AimTab:Slider({ Title = "圆圈厚度", Value = { Min = 1, Max = 10, Default = 2 }, Callback = function(v) AimbotSettings.CircleThickness = v end })
+AimTab:Dropdown({ Title = "圆圈颜色", Values = { "红", "橙", "黄", "绿", "青", "蓝", "紫", "彩色" }, Value = "彩色", Callback = function(v) AimbotSettings.CircleColor = v end })
+
 local P = window:Tab({Title = "透视", Icon = "eye"})
 local categorySettings = {
     Normal = {
