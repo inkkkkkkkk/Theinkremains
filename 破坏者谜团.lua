@@ -815,7 +815,10 @@ local killAuraEnabled = false
 local slashDelay = 0.15
 local auraCooldown = 0.5
 local lastTeleportTime = 0
-
+local lobbyCenter = Vector3.new(603.0, 467.8, 37.0) 
+local lobbyRadius = 250 
+local originCFrame = nil 
+local allowLobbyKill = false
 
 local function getMyKnife()
     local char = LocalPlayer.Character
@@ -825,9 +828,7 @@ end
 
 local function doSlash()
     local knife = getMyKnife()
-   
     if not knife then return end
-    
     
     local events = knife:FindFirstChild("Events")
     if events then
@@ -838,6 +839,20 @@ local function doSlash()
     end
 end
 
+local function isInLobby(hrp)
+    if not hrp then return true end
+    if (hrp.Position - lobbyCenter).Magnitude <= lobbyRadius then
+        return true
+    end
+    local parent = hrp.Parent
+    while parent and parent ~= workspace do
+        if string.lower(parent.Name):find("lobby") then
+            return true
+        end
+        parent = parent.Parent
+    end
+    return false
+end
 
 local function getClosestPlayerHrp()
     local closest = nil
@@ -850,17 +865,18 @@ local function getClosestPlayerHrp()
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
             if hum and hum.Health > 0 and enemyHrp then
-                local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                if dist < minDist then
-                    minDist = dist
-                    closest = enemyHrp
+                if allowLobbyKill or not isInLobby(enemyHrp) then
+                    local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        closest = enemyHrp
+                    end
                 end
             end
         end
     end
     return closest
 end
-
 
 task.spawn(function()
     while true do
@@ -871,9 +887,17 @@ task.spawn(function()
     end
 end)
 
-
 RunService.Heartbeat:Connect(function()
-    if not killAuraEnabled then return end
+    if not killAuraEnabled then 
+        originCFrame = nil
+        return 
+    end
+    
+    if not originCFrame then
+        local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myHrp then originCFrame = myHrp.CFrame end
+    end
+
     if tick() - lastTeleportTime < auraCooldown then return end
     
     local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -881,12 +905,19 @@ RunService.Heartbeat:Connect(function()
 
     local targetHrp = getClosestPlayerHrp()
     if targetHrp then
-        
         myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 1, 0)
         lastTeleportTime = tick()
-        
-        
         doSlash() 
+    else
+        if not allowLobbyKill then
+            if originCFrame and (myHrp.Position - originCFrame.Position).Magnitude > 5 then
+                if not isInLobby(myHrp) then
+                    myHrp.CFrame = originCFrame
+                    lastTeleportTime = tick()
+                    window:Notify({Title = "杀戮光环", Content = "无合法目标，已返回原地", Duration = 2})
+                end
+            end
+        end
     end
 end)
 
@@ -911,8 +942,18 @@ MainTab:Toggle({
     Callback = function(v)
         killAuraEnabled = v
         if v then
-            window:Notify({Title = "杀戮光环开启", Content = "请手动拿着刀，落地自动砍人！", Duration = 3})
+            window:Notify({Title = "杀戮光环开启", Content = "准备杀戮！", Duration = 3})
+        else
+            originCFrame = nil
         end
+    end
+})
+
+MainTab:Toggle({
+    Title = "包含大厅玩家",
+    Value = false,
+    Callback = function(v)
+        allowLobbyKill = v
     end
 })
 
@@ -1153,7 +1194,7 @@ local function updateVisuals()
                     local distance = math.floor((camera.CFrame.Position - root.Position).Magnitude)
                     textObj.Color = settings.espColor
                     textObj.Position = Vector2.new(pos.X, pos.Y - 20)
-                    textObj.Text = player.Name .. " | " .. distance .. " 米"
+                    textObj.Text = player.Name .. " | " .. distance .. " m"
                     textObj.Visible = true
                 else
                     textObj.Visible = false
