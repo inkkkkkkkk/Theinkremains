@@ -74,9 +74,9 @@ local function createBtn(txt, yPos, color)
     return function() return isOn end
 end
 
-local getShootState = createBtn("自动射击 (防友军/墙挡)", 50, Color3.fromRGB(0, 170, 255))
-local getThrowState = createBtn("自动飞刀 (防墙挡)", 105, Color3.fromRGB(255, 50, 50))
-local getAimState = createBtn("视角自瞄 (防墙挡)", 160, Color3.fromRGB(0, 200, 100))
+local getShootState = createBtn("警长自动射击", 50, Color3.fromRGB(0, 170, 255))
+local getThrowState = createBtn("杀手自动飞刀", 105, Color3.fromRGB(255, 50, 50))
+local getAimState = createBtn("通用自瞄", 160, Color3.fromRGB(0, 200, 100))
 
 local wm = Instance.new("TextLabel", f); wm.Size = UDim2.new(1, -40, 0, 20); wm.Position = UDim2.new(0, 15, 1, -30); wm.BackgroundTransparency = 1; wm.Text = "BY.Theinkremains"; wm.TextColor3 = Color3.fromRGB(160, 160, 160); wm.Font = Enum.Font.SourceSansBold; wm.TextSize = 16; wm.TextXAlignment = Enum.TextXAlignment.Left; wm.ZIndex = 10
 table.insert(mainElements, wm)
