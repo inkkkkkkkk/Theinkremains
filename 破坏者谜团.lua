@@ -613,12 +613,13 @@ local killerRadarEnabled = false
 local sheriffRadarEnabled = false
 local radarDistance = 40 
 local radarHighlights = {}
-local wasKillerNear = false
-local wasSheriffNear = false
 local mySelfHighlight = nil
 local selfHighlightConn = nil
+local radarGui = nil
+local isRadarUIOpen = false
+local radarSound = nil 
 
-local function updateSelfHighlight(active)
+local function updateSelfHighlight(active, color)
     local char = LocalPlayer.Character
     if not char then return end
 
@@ -635,19 +636,179 @@ local function updateSelfHighlight(active)
         end
         mySelfHighlight.Enabled = true
         
-        if not selfHighlightConn then
-            selfHighlightConn = RunService.Heartbeat:Connect(function()
-                if mySelfHighlight and mySelfHighlight.Enabled then
-                    local t = (math.sin(tick() * 4) + 1) / 2
-                    local color = Color3.fromRGB(255, 0, 0):Lerp(Color3.fromRGB(0, 120, 255), t)
-                    mySelfHighlight.OutlineColor = color
-                    mySelfHighlight.FillColor = color
-                end
-            end)
+        if color then
+            if selfHighlightConn then selfHighlightConn:Disconnect(); selfHighlightConn = nil end
+            mySelfHighlight.OutlineColor = color
+            mySelfHighlight.FillColor = color
+        else
+            if not selfHighlightConn then
+                selfHighlightConn = RunService.Heartbeat:Connect(function()
+                    if mySelfHighlight and mySelfHighlight.Enabled then
+                        local t = (math.sin(tick() * 4) + 1) / 2
+                        local gradColor = Color3.fromRGB(255, 0, 0):Lerp(Color3.fromRGB(0, 120, 255), t)
+                        mySelfHighlight.OutlineColor = gradColor
+                        mySelfHighlight.FillColor = gradColor
+                    end
+                end)
+            end
         end
     else
         if mySelfHighlight then mySelfHighlight.Enabled = false end
         if selfHighlightConn then selfHighlightConn:Disconnect(); selfHighlightConn = nil end
+    end
+end
+
+local function createPersistentRadarUI()
+    if radarGui and radarGui.Parent then return end
+    radarGui = Instance.new("ScreenGui")
+    radarGui.Name = "ink_RadarPersistent"
+    radarGui.ResetOnSpawn = false
+    radarGui.IgnoreGuiInset = true
+    radarGui.DisplayOrder = 999998
+    radarGui.Parent = game:GetService("CoreGui")
+
+    local frame = Instance.new("Frame")
+    frame.Name = "RadarFrame"
+    frame.Size = UDim2.fromOffset(260, 65)
+    frame.AnchorPoint = Vector2.new(1, 1)
+    frame.Position = UDim2.new(1, 300, 1, -100)
+    frame.BackgroundTransparency = 1
+    frame.Parent = radarGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Name = "RadarStroke"
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Transparency = 0.2
+    stroke.Thickness = 1.5
+
+    local baseBg = Instance.new("Frame", frame)
+    baseBg.Size, baseBg.BackgroundColor3, baseBg.BackgroundTransparency, baseBg.ZIndex = UDim2.fromScale(1, 1), Color3.fromRGB(100,100,100), 0.5, 1
+    Instance.new("UICorner", baseBg).CornerRadius = UDim.new(0, 8)
+
+    local baseIcon = Instance.new("Frame", baseBg)
+    baseIcon.Size, baseIcon.Position, baseIcon.BackgroundColor3, baseIcon.BackgroundTransparency, baseIcon.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), baseBg.BackgroundColor3, baseBg.BackgroundTransparency, 2
+    Instance.new("UICorner", baseIcon).CornerRadius = UDim.new(1,0)
+
+    local txtBase = Instance.new("TextLabel", baseBg)
+    txtBase.Size, txtBase.Position, txtBase.BackgroundTransparency, txtBase.Text, txtBase.TextColor3, txtBase.Font, txtBase.TextSize, txtBase.TextXAlignment, txtBase.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), 1, "!", Color3.fromRGB(80,80,80), Enum.Font.GothamBold, 16, Enum.TextXAlignment.Center, 3
+    
+    local tBase = Instance.new("TextLabel", baseBg)
+    tBase.Name = "TitleBase"
+    tBase.Size, tBase.Position, tBase.BackgroundTransparency, tBase.Text, tBase.TextColor3, tBase.Font, tBase.TextSize, tBase.TextXAlignment, tBase.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 12), 1, "威胁靠近", Color3.fromRGB(80,80,80), Enum.Font.GothamBold, 15, Enum.TextXAlignment.Left, 3
+    
+    local cBase = Instance.new("TextLabel", baseBg)
+    cBase.Name = "ContentBase"
+    cBase.Size, cBase.Position, cBase.BackgroundTransparency, cBase.Text, cBase.TextColor3, cBase.Font, cBase.TextSize, cBase.TextXAlignment, cBase.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 32), 1, "请小心！", Color3.fromRGB(120,120,120), Enum.Font.Gotham, 13, Enum.TextXAlignment.Left, 3
+
+    local fillBg = Instance.new("Frame", frame)
+    fillBg.Size, fillBg.BackgroundColor3, fillBg.BackgroundTransparency, fillBg.ZIndex = UDim2.fromScale(1, 1), Color3.fromRGB(25,25,25), 0, 2
+    Instance.new("UICorner", fillBg).CornerRadius = UDim.new(0, 8)
+
+    local bgGrad = Instance.new("UIGradient", fillBg)
+    bgGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.9, 1), NumberSequenceKeypoint.new(0.91, 0), NumberSequenceKeypoint.new(1, 0)})
+    bgGrad.Offset = Vector2.new(-1, 0)
+
+    local fillIcon = Instance.new("Frame", fillBg)
+    fillIcon.Size, fillIcon.Position, fillIcon.BackgroundColor3, fillIcon.BackgroundTransparency, fillIcon.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), fillBg.BackgroundColor3, 0, 2
+    Instance.new("UICorner", fillIcon).CornerRadius = UDim.new(1,0)
+
+    local iconGrad = Instance.new("UIGradient", fillIcon)
+    iconGrad.Transparency, iconGrad.Offset = bgGrad.Transparency, Vector2.new(-1, 0)
+
+    local txtFill = Instance.new("TextLabel", fillBg)
+    txtFill.Size, txtFill.Position, txtFill.BackgroundTransparency, txtFill.Text, txtFill.TextColor3, txtFill.Font, txtFill.TextSize, txtFill.TextXAlignment, txtFill.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), 1, "!", Color3.fromRGB(255,255,255), Enum.Font.GothamBold, 16, Enum.TextXAlignment.Center, 3
+    
+    local tFill = Instance.new("TextLabel", fillBg)
+    tFill.Name = "TitleFill"
+    tFill.Size, tFill.Position, tFill.BackgroundTransparency, tFill.Text, tFill.TextColor3, tFill.Font, tFill.TextSize, tFill.TextXAlignment, tFill.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 12), 1, "威胁靠近", Color3.fromRGB(255,255,255), Enum.Font.GothamBold, 15, Enum.TextXAlignment.Left, 3
+    
+    local cFill = Instance.new("TextLabel", fillBg)
+    cFill.Name = "ContentFill"
+    cFill.Size, cFill.Position, cFill.BackgroundTransparency, cFill.Text, cFill.TextColor3, cFill.Font, cFill.TextSize, cFill.TextXAlignment, cFill.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 32), 1, "请小心！", Color3.fromRGB(180,180,180), Enum.Font.Gotham, 13, Enum.TextXAlignment.Left, 3
+
+    TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 1, -100)}):Play()
+    TweenService:Create(bgGrad, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)}):Play()
+    TweenService:Create(iconGrad, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)}):Play()
+    isRadarUIOpen = true
+end
+
+local function updateRadarUI(killerNear, sheriffNear)
+    local anyThreat = killerNear or sheriffNear
+    if anyThreat then
+        if not isRadarUIOpen then 
+            createPersistentRadarUI() 
+            
+            
+            if not radarSound then
+                radarSound = Instance.new("Sound")
+                radarSound.SoundId = "rbxassetid://87047730068459"
+                radarSound.Volume = 5
+                radarSound.Looped = false
+                radarSound.Parent = game:GetService("SoundService")
+            end
+            radarSound:Play()
+        end
+        
+        local frame = radarGui:FindFirstChild("RadarFrame")
+        if not frame then return end
+        
+        local fillBg = frame:FindFirstChildWhichIsA("Frame", true)
+        local stroke = frame:FindFirstChild("RadarStroke")
+        
+        local titleBase = frame:FindFirstChild("TitleBase", true)
+        local contentBase = frame:FindFirstChild("ContentBase", true)
+        local titleFill = frame:FindFirstChild("TitleFill", true)
+        local contentFill = frame:FindFirstChild("ContentFill", true)
+
+        if killerNear and sheriffNear then
+            titleBase.Text = "极度危险！"
+            contentBase.Text = "杀手和警长同时靠近"
+            titleFill.Text = "极度危险！"
+            contentFill.Text = "杀手和警长同时靠近"
+            fillBg.BackgroundColor3 = Color3.fromRGB(30, 10, 30)
+            local existingGrad = stroke:FindFirstChildOfClass("UIGradient")
+            if not existingGrad then
+                local grad = Instance.new("UIGradient")
+                grad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 0, 150)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 120, 255))
+                })
+                grad.Parent = stroke
+            end
+        elseif killerNear then
+            titleBase.Text = "警告：杀手"
+            contentBase.Text = "杀手正在靠近你！"
+            titleFill.Text = "警告：杀手"
+            contentFill.Text = "杀手正在靠近你！"
+            fillBg.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+            local g = stroke:FindFirstChildOfClass("UIGradient")
+            if g then g:Destroy() end
+            stroke.Color = Color3.fromRGB(255, 0, 0)
+        elseif sheriffNear then
+            titleBase.Text = "警告：警长"
+            contentBase.Text = "警长正在靠近你！"
+            titleFill.Text = "警告：警长"
+            contentFill.Text = "警长正在靠近你！"
+            fillBg.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
+            local g = stroke:FindFirstChildOfClass("UIGradient")
+            if g then g:Destroy() end
+            stroke.Color = Color3.fromRGB(0, 120, 255)
+        end
+    else
+        if isRadarUIOpen and radarGui then
+            isRadarUIOpen = false
+            local frame = radarGui:FindFirstChild("RadarFrame")
+            if frame then
+                local t = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(1, 300, 1, -100)})
+                t:Play()
+                t.Completed:Wait()
+            end
+            radarGui:Destroy()
+            radarGui = nil
+            isRadarUIOpen = false
+        end
     end
 end
 
@@ -674,7 +835,6 @@ task.spawn(function()
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
                     local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
-                    
                     if enemyHrp and (hrp.Position - enemyHrp.Position).Magnitude <= radarDistance then
                         local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
                         local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife")
@@ -691,11 +851,7 @@ task.spawn(function()
                         
                         if (myRole == "Normal" or myRole == "Killer") and sheriffRadarEnabled and hasGun then
                             isThreat = true
-                            if hlColor then 
-                                hlColor = Color3.fromRGB(150, 0, 150)
-                            else
-                                hlColor = Color3.fromRGB(0, 120, 255)
-                            end
+                            if hlColor then hlColor = Color3.fromRGB(150, 0, 150) else hlColor = Color3.fromRGB(0, 120, 255) end
                             sheriffNear = true
                         end
                         
@@ -713,16 +869,10 @@ task.spawn(function()
                             radarHighlights[p].OutlineColor = hlColor
                             radarHighlights[p].FillColor = hlColor
                         else
-                            if radarHighlights[p] then
-                                radarHighlights[p]:Destroy()
-                                radarHighlights[p] = nil
-                            end
+                            if radarHighlights[p] then radarHighlights[p]:Destroy(); radarHighlights[p] = nil end
                         end
                     else
-                        if radarHighlights[p] then
-                            radarHighlights[p]:Destroy()
-                            radarHighlights[p] = nil
-                        end
+                        if radarHighlights[p] then radarHighlights[p]:Destroy(); radarHighlights[p] = nil end
                     end
                 end
             end
@@ -736,26 +886,16 @@ task.spawn(function()
         end
         
         if killerNear and sheriffNear then
-            if not (wasKillerNear and wasSheriffNear) then
-                showNotify("双重威胁", "杀手和警长同时靠近！", true)
-            end
             updateSelfHighlight(true)
         elseif killerNear then
-            if not wasKillerNear then
-                showNotify("警告", "杀手靠近！", true)
-            end
-            updateSelfHighlight(false)
+            updateSelfHighlight(true, Color3.fromRGB(255, 0, 0))
         elseif sheriffNear then
-            if not wasSheriffNear then
-                showNotify("警告", "警长靠近！", false)
-            end
-            updateSelfHighlight(false)
+            updateSelfHighlight(true, Color3.fromRGB(0, 120, 255))
         else
             updateSelfHighlight(false)
         end
         
-        wasKillerNear = killerNear
-        wasSheriffNear = sheriffNear
+        updateRadarUI(killerNear, sheriffNear)
     end
 end)
 
