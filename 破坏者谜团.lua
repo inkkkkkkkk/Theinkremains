@@ -1270,10 +1270,11 @@ local function isValidTarget(player)
     local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 then return false end
 
-    if AimbotSettings.TeamCheck then
-        local myHasKnife = hasTool(LocalPlayer, "Knife")
-        local targetHasKnife = hasTool(player, "Knife")
+    local myHasKnife = hasTool(LocalPlayer, "Knife")
+    local targetHasKnife = hasTool(player, "Knife")
 
+    -- 只有开启队伍检测，才会过滤阵营
+    if AimbotSettings.TeamCheck then
         if myHasKnife then
             if targetHasKnife then return false end
         else
@@ -1301,7 +1302,7 @@ local function isValidTarget(player)
 
             if hitPlayer then
                 if AimbotSettings.TeamCheck then
-                    if hasTool(LocalPlayer, "Knife") and hasTool(hitPlayer, "Knife") then
+                    if myHasKnife and hasTool(hitPlayer, "Knife") then
                     else
                         return false
                     end
@@ -1350,135 +1351,10 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local isSilentFireEnabled = false
-local silentFireCooldown = 0.25
-local lastSilentFireTime = 0
-
-RunService.Heartbeat:Connect(function()
-    if not isSilentFireEnabled then return end
-    if tick() - lastSilentFireTime < silentFireCooldown then return end
-    
-    local char = LocalPlayer.Character
-    local gun = char and char:FindFirstChild("Gun")
-    if not gun or not gun:FindFirstChild("Shoot") then return end
-
-    local camera = workspace.CurrentCamera
-    local centerPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-    
-    local closestTarget = nil
-    local minDist = math.huge
-    local targetPart = nil
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            if hasTool(p, "Knife") then
-                local head = p.Character.Head
-                local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
-                
-                if onScreen and screenPos.Z > 0 then
-                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - centerPos).Magnitude
-                    
-                    if dist <= 300 then
-                        if AimbotSettings.TeamCheck then
-                            local origin = camera.CFrame.Position
-                            local dir = head.Position - origin
-                            local raycastParams = RaycastParams.new()
-                            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-                            raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, p.Character}
-                            
-                            local result = workspace:Raycast(origin, dir, raycastParams)
-                            if not result then
-                                if dist < minDist then
-                                    minDist = dist
-                                    closestTarget = p
-                                    targetPart = head
-                                end
-                            end
-                        else
-                            if dist < minDist then
-                                minDist = dist
-                                closestTarget = p
-                                targetPart = head
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    if closestTarget and targetPart then
-        local targetPos = targetPart.Position
-        local fakeCamCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
-        local targetCFrame = CFrame.new(targetPos)
-        
-        pcall(function() gun:Activate() end)
-        pcall(function() gun:Shoot:FireServer(fakeCamCFrame, targetCFrame) end)
-        
-        lastSilentFireTime = tick()
-    end
-end)
-
-local isAutoThrowEnabled = false
-local throwCooldown = 2.0 
-local lastThrowTime = 0
-
-task.spawn(function()
-    while task.wait(0.1) do
-        if isAutoThrowEnabled and tick() - lastThrowTime >= throwCooldown then
-            local char = LocalPlayer.Character
-            local knife = char and char:FindFirstChild("Knife")
-            local knifeEvent = knife and knife:FindFirstChild("Events") and knife.Events:FindFirstChild("KnifeThrown")
-            
-            if knifeEvent then
-                local closestTarget = nil
-                local minDist = math.huge
-                
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                        local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
-                        local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") ~= nil
-                        
-                        if not hasKnife then
-                            local dist = (char.Head.Position - p.Character.Head.Position).Magnitude
-                            if dist < minDist then
-                                minDist = dist
-                                closestTarget = p
-                            end
-                        end
-                    end
-                end
-                
-                if closestTarget then
-                    local targetPos = closestTarget.Character.Head.Position
-                    local camera = workspace.CurrentCamera
-                    local originalCFrame = camera.CFrame
-                    local aimCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
-                    
-                    camera.CFrame = aimCFrame
-                    task.wait(0.05)
-                    
-                    local startCFrame = camera.CFrame
-                    local targetCFrame = CFrame.new(targetPos)
-                    
-                    pcall(function()
-                        knifeEvent:FireServer(startCFrame, targetCFrame)
-                    end)
-                    
-                    camera.CFrame = originalCFrame
-                    lastThrowTime = tick()
-                end
-            end
-        end
-    end
-end)
-
 AimTab:Toggle({ Title = "开启自瞄", Value = false, Callback = function(s) AimbotSettings.Enabled = s end })
-AimTab:Toggle({ Title = "警长自动开枪", Value = false, Callback = function(s) isSilentFireEnabled = s end })
-AimTab:Toggle({ Title = "杀手自动飞刀", Value = false, Callback = function(s) isAutoThrowEnabled = s end })
-AimTab:Toggle({ Title = "队伍检测", Value = false, Callback = function(s) AimbotSettings.TeamCheck = s end })
 AimTab:Toggle({ Title = "自瞄圆圈", Value = false, Callback = function(s) AimbotSettings.CircleEnabled = s end })
 AimTab:Dropdown({ Title = "瞄准部位", Values = { "Head", "HumanoidRootPart" }, Value = "Head", Callback = function(v) AimbotSettings.TargetPart = v end })
+AimTab:Toggle({ Title = "队伍检测", Value = false, Callback = function(s) AimbotSettings.TeamCheck = s end })
 AimTab:Toggle({ Title = "墙体检测", Value = false, Callback = function(s) AimbotSettings.WallCheck = s end })
 AimTab:Slider({ Title = "圆圈大小", Value = { Min = 30, Max = 500, Default = 100 }, Callback = function(v) AimbotSettings.CircleRadius = v end })
 AimTab:Slider({ Title = "圆圈厚度", Value = { Min = 1, Max = 10, Default = 2 }, Callback = function(v) AimbotSettings.CircleThickness = v end })
