@@ -611,85 +611,45 @@ end
 
 local killerRadarEnabled = false
 local sheriffRadarEnabled = false
-local radarGui = nil
-local radarSound = nil
 local radarDistance = 40 
+local radarHighlights = {}
+local wasKillerNear = false
+local wasSheriffNear = false
+local mySelfHighlight = nil
+local selfHighlightConn = nil
 
+local function updateSelfHighlight(active)
+    local char = LocalPlayer.Character
+    if not char then return end
 
-local function updateRadarUI(killerNear, sheriffNear)
-    local anyThreat = killerNear or sheriffNear
-
-    if anyThreat then
-        
-        if not radarGui or not radarGui.Parent then
-            radarGui = Instance.new("ScreenGui")
-            radarGui.Name = "ink_RadarWarning"
-            radarGui.ResetOnSpawn = false
-            radarGui.IgnoreGuiInset = true
-            radarGui.Parent = game:GetService("CoreGui")
-
-            local frame = Instance.new("Frame")
-            frame.Name = "RadarFrame"
-            frame.Size = UDim2.fromOffset(280, 60)
-            frame.Position = UDim2.new(1, -300, 1, -100) 
-            frame.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-            frame.BackgroundTransparency = 0.2
-            frame.BorderSizePixel = 0
-            frame.Parent = radarGui
-
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(0, 8)
-            corner.Parent = frame
-
-            local stroke = Instance.new("UIStroke")
-            stroke.Color = Color3.fromRGB(255, 0, 0)
-            stroke.Thickness = 3
-            stroke.Parent = frame
-
-            local text = Instance.new("TextLabel")
-            text.Name = "TextLabel"
-            text.Size = UDim2.fromScale(1, 1)
-            text.BackgroundTransparency = 1
-            text.TextColor3 = Color3.fromRGB(255, 255, 255)
-            text.Font = Enum.Font.SourceSansBold
-            text.TextSize = 20
-            text.Parent = frame
+    if active then
+        if not mySelfHighlight or mySelfHighlight.Parent ~= char then
+            if mySelfHighlight then mySelfHighlight:Destroy() end
+            mySelfHighlight = Instance.new("Highlight")
+            mySelfHighlight.Name = "ink_SelfGradientOutline"
+            mySelfHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            mySelfHighlight.FillTransparency = 1
+            mySelfHighlight.OutlineTransparency = 0
+            mySelfHighlight.Adornee = char
+            mySelfHighlight.Parent = char
         end
-
+        mySelfHighlight.Enabled = true
         
-        local textLabel = radarGui.RadarFrame.TextLabel
-        if killerNear and sheriffNear then
-            textLabel.Text = "⚠️ 警告：杀手和警长靠近！"
-        elseif killerNear then
-            textLabel.Text = "⚠️ 警告：杀手靠近！"
-        elseif sheriffNear then
-            textLabel.Text = "⚠️ 警告：警长靠近！"
-        end
-
-        
-        if not radarSound then
-            radarSound = Instance.new("Sound")
-            radarSound.Name = "ink_RadarSound"
-            radarSound.SoundId = "rbxassetid://129496339606661"
-            radarSound.Volume = 5
-            radarSound.Looped = true
-            radarSound.Parent = game:GetService("SoundService")
-        end
-        if not radarSound.IsPlaying then
-            radarSound:Play()
+        if not selfHighlightConn then
+            selfHighlightConn = RunService.Heartbeat:Connect(function()
+                if mySelfHighlight and mySelfHighlight.Enabled then
+                    local t = (math.sin(tick() * 4) + 1) / 2
+                    local color = Color3.fromRGB(255, 0, 0):Lerp(Color3.fromRGB(0, 120, 255), t)
+                    mySelfHighlight.OutlineColor = color
+                    mySelfHighlight.FillColor = color
+                end
+            end)
         end
     else
-        
-        if radarGui then
-            radarGui:Destroy()
-            radarGui = nil
-        end
-        if radarSound and radarSound.IsPlaying then
-            radarSound:Stop()
-        end
+        if mySelfHighlight then mySelfHighlight.Enabled = false end
+        if selfHighlightConn then selfHighlightConn:Disconnect(); selfHighlightConn = nil end
     end
 end
-
 
 task.spawn(function()
     while true do
@@ -700,7 +660,6 @@ task.spawn(function()
         local sheriffNear = false
         
         if hrp then
-            
             local myRole = "Normal"
             local myBp = LocalPlayer:FindFirstChild("Backpack") or char:FindFirstChildOfClass("Backpack")
             local myHasKnife = (myBp and myBp:FindFirstChild("Knife")) or char:FindFirstChild("Knife")
@@ -712,32 +671,91 @@ task.spawn(function()
                 myRole = "Killer"
             end
 
-            
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
                     local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    
                     if enemyHrp and (hrp.Position - enemyHrp.Position).Magnitude <= radarDistance then
                         local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
                         local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife")
                         local hasGun = (bp and bp:FindFirstChild("Gun")) or p.Character:FindFirstChild("Gun")
                         
+                        local isThreat = false
+                        local hlColor = nil
                         
-                        if hasKnife then
-                            if killerRadarEnabled and (myRole == "Normal" or myRole == "Sheriff") then
-                                killerNear = true
-                            end
+                        if (myRole == "Normal" or myRole == "Sheriff") and killerRadarEnabled and hasKnife then
+                            isThreat = true
+                            hlColor = Color3.fromRGB(255, 0, 0)
+                            killerNear = true
                         end
                         
-                        if hasGun then
-                            if sheriffRadarEnabled and (myRole == "Normal" or myRole == "Killer") then
-                                sheriffNear = true
+                        if (myRole == "Normal" or myRole == "Killer") and sheriffRadarEnabled and hasGun then
+                            isThreat = true
+                            if hlColor then 
+                                hlColor = Color3.fromRGB(150, 0, 150)
+                            else
+                                hlColor = Color3.fromRGB(0, 120, 255)
                             end
+                            sheriffNear = true
+                        end
+                        
+                        if isThreat and hlColor then
+                            if not radarHighlights[p] or not radarHighlights[p].Parent then
+                                local hl = Instance.new("Highlight")
+                                hl.Name = "ink_RadarOutline"
+                                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                hl.FillTransparency = 1
+                                hl.OutlineTransparency = 0
+                                hl.Adornee = p.Character
+                                hl.Parent = p.Character
+                                radarHighlights[p] = hl
+                            end
+                            radarHighlights[p].OutlineColor = hlColor
+                            radarHighlights[p].FillColor = hlColor
+                        else
+                            if radarHighlights[p] then
+                                radarHighlights[p]:Destroy()
+                                radarHighlights[p] = nil
+                            end
+                        end
+                    else
+                        if radarHighlights[p] then
+                            radarHighlights[p]:Destroy()
+                            radarHighlights[p] = nil
                         end
                     end
                 end
             end
+            
+            for p, hl in pairs(radarHighlights) do
+                if not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
+                    hl:Destroy()
+                    radarHighlights[p] = nil
+                end
+            end
         end
-        updateRadarUI(killerNear, sheriffNear)
+        
+        if killerNear and sheriffNear then
+            if not (wasKillerNear and wasSheriffNear) then
+                showNotify("双重威胁", "杀手和警长同时靠近！", true)
+            end
+            updateSelfHighlight(true)
+        elseif killerNear then
+            if not wasKillerNear then
+                showNotify("警告", "杀手靠近！", true)
+            end
+            updateSelfHighlight(false)
+        elseif sheriffNear then
+            if not wasSheriffNear then
+                showNotify("警告", "警长靠近！", false)
+            end
+            updateSelfHighlight(false)
+        else
+            updateSelfHighlight(false)
+        end
+        
+        wasKillerNear = killerNear
+        wasSheriffNear = sheriffNear
     end
 end)
 
@@ -746,6 +764,7 @@ MainTab:Toggle({
     Value = false,
     Callback = function(v)
         killerRadarEnabled = v
+        if v then showNotify("杀手雷达", "已开启杀手靠近提示", false) end
     end
 })
 
@@ -754,6 +773,7 @@ MainTab:Toggle({
     Value = false,
     Callback = function(v)
         sheriffRadarEnabled = v
+        if v then showNotify("警长雷达", "已开启警长靠近提示", false) end
     end
 })
 
@@ -761,9 +781,7 @@ MainTab:Slider({
     Title = "雷达检测距离",
     Value = {Min = 10, Max = 100, Default = 40},
     Step = 1,
-    Callback = function(v)
-        radarDistance = v
-    end
+    Callback = function(v) radarDistance = v end
 })
 
 local autoDodgeEnabled = false
@@ -1011,10 +1029,13 @@ RunService.Heartbeat:Connect(function()
 end)
 
 MainTab:Toggle({
-    Title = "自动秒刀",
+    Title = "自动刀人",
     Value = false,
     Callback = function(v)
         slashEnabled = v
+        if v then
+            showNotify("自动刀人", "已开启自动刀人", false)
+        end
     end
 })
 
