@@ -885,7 +885,7 @@ MainTab:Toggle({
     Callback = function(v)
         autoDodgeEnabled = v
         if v then
-            showNotify("防秒杀已开启", "杀手靠近时将自动瞬移", false)
+            showNotify("防秒杀已开启", "杀手拿刀靠近时将自动瞬移", false)
         end
     end
 })
@@ -1003,7 +1003,7 @@ RunService.Heartbeat:Connect(function()
                 if not isInLobby(myHrp) then
                     myHrp.CFrame = originCFrame
                     lastTeleportTime = tick()
-                    showNotify("杀戮光环", "无合法目标，已返回原地", false)
+                    showNotify("杀戮光环", "无大厅以外的地方有其他玩家，已返回原地", false)
                 end
             end
         end
@@ -1197,7 +1197,7 @@ AimTab:Slider({ Title = "圆圈大小", Value = { Min = 30, Max = 500, Default =
 AimTab:Slider({ Title = "圆圈厚度", Value = { Min = 1, Max = 10, Default = 2 }, Callback = function(v) AimbotSettings.CircleThickness = v end })
 AimTab:Dropdown({ Title = "圆圈颜色", Values = { "红", "橙", "黄", "绿", "青", "蓝", "紫", "彩色" }, Value = "彩色", Callback = function(v) AimbotSettings.CircleColor = v end })
 
-local TransTab=D:Tab({Title="传送",Icon="send"})
+local TransTab=window:Tab({Title="传送",Icon="send"})
 
 local selectedPlayer=nil
 
