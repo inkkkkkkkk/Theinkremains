@@ -460,6 +460,29 @@ pcall(function()
 end)
 local MainTab = window:Tab({Title = "主要功能", Icon = "settings"})
 
+MainTab:Button({
+    Title = "飞行",
+    Callback = function()
+        local success, err = pcall(function()
+            local url = "https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E9%A3%9E%E8%A1%8C%E8%84%9A%E6%9C%AC.lua"
+            local code = game:HttpGet(url)
+            local func = loadstring(code)
+            if func then
+                func()
+            else
+                error("loadstring 失败")
+            end
+        end)
+        
+        if not success then
+            warn("[ink_HUB] 飞行脚本加载失败: " .. tostring(err))
+            if showNotify then
+                showNotify("加载失败", "飞行脚本加载出错，请检查网络或链接", true)
+            end
+        end
+    end
+})
+
 local speedEnabled = false
 local speedValue = 16
 MainTab:Toggle({
@@ -1216,6 +1239,26 @@ MainTab:Slider({
 
 local AimTab = window:Tab({Title="自瞄", Icon="crosshair"})
 
+AimTab:Button({
+    Title = "加载警长X杀手辅助",
+    Callback = function()
+        local success, err = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/%E7%A0%B4%E5%9D%8F%E8%80%85%E8%B0%9C%E5%9B%A2%E8%87%AA%E5%8A%A8%E6%94%BB%E5%87%BB.lua"))()
+        end)
+        
+        if success then
+            if showNotify then
+                showNotify("加载成功", "警长X杀手辅助已成功启动", false)
+            end
+        else
+            warn("[ink_HUB] 辅助加载失败：", tostring(err))
+            if showNotify then
+                showNotify("加载失败", "请检查网络或执行器报错", true)
+            end
+        end
+    end
+})
+
 local AimbotSettings = {
     Enabled = false,
     TargetPart = "Head",
@@ -1273,7 +1316,7 @@ local function isValidTarget(player)
     local myHasKnife = hasTool(LocalPlayer, "Knife")
     local targetHasKnife = hasTool(player, "Knife")
 
-    -- 只有开启队伍检测，才会过滤阵营
+    
     if AimbotSettings.TeamCheck then
         if myHasKnife then
             if targetHasKnife then return false end
