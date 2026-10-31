@@ -1423,52 +1423,53 @@ local isAutoThrowEnabled = false
 local throwCooldown = 2.0 
 local lastThrowTime = 0
 
-RunService.Heartbeat:Connect(function()
-    if not isAutoThrowEnabled then return end
-    if tick() - lastThrowTime < throwCooldown then return end
-    
-    local char = LocalPlayer.Character
-    local knife = char and char:FindFirstChild("Knife")
-    local knifeEvent = knife and knife:FindFirstChild("Events") and knife.Events:FindFirstChild("KnifeThrown")
-    
-    if not knifeEvent then return end
-
-    local closestTarget = nil
-    local minDist = math.huge
-    
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
-            local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") ~= nil
+task.spawn(function()
+    while task.wait(0.1) do
+        if isAutoThrowEnabled and tick() - lastThrowTime >= throwCooldown then
+            local char = LocalPlayer.Character
+            local knife = char and char:FindFirstChild("Knife")
+            local knifeEvent = knife and knife:FindFirstChild("Events") and knife.Events:FindFirstChild("KnifeThrown")
             
-            if not hasKnife then
-                local dist = (char.Head.Position - p.Character.Head.Position).Magnitude
-                if dist < minDist then
-                    minDist = dist
-                    closestTarget = p
+            if knifeEvent then
+                local closestTarget = nil
+                local minDist = math.huge
+                
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                        local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+                        local hasKnife = (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") ~= nil
+                        
+                        if not hasKnife then
+                            local dist = (char.Head.Position - p.Character.Head.Position).Magnitude
+                            if dist < minDist then
+                                minDist = dist
+                                closestTarget = p
+                            end
+                        end
+                    end
+                end
+                
+                if closestTarget then
+                    local targetPos = closestTarget.Character.Head.Position
+                    local camera = workspace.CurrentCamera
+                    local originalCFrame = camera.CFrame
+                    local aimCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
+                    
+                    camera.CFrame = aimCFrame
+                    task.wait(0.05)
+                    
+                    local startCFrame = camera.CFrame
+                    local targetCFrame = CFrame.new(targetPos)
+                    
+                    pcall(function()
+                        knifeEvent:FireServer(startCFrame, targetCFrame)
+                    end)
+                    
+                    camera.CFrame = originalCFrame
+                    lastThrowTime = tick()
                 end
             end
         end
-    end
-    
-    if closestTarget then
-        local targetPos = closestTarget.Character.Head.Position
-        local camera = workspace.CurrentCamera
-        local originalCFrame = camera.CFrame
-        local aimCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
-        
-        camera.CFrame = aimCFrame
-        task.wait(0.05)
-        
-        local startCFrame = camera.CFrame
-        local targetCFrame = CFrame.new(targetPos)
-        
-        pcall(function()
-            knifeEvent:FireServer(startCFrame, targetCFrame)
-        end)
-        
-        camera.CFrame = originalCFrame
-        lastThrowTime = tick()
     end
 end)
 
