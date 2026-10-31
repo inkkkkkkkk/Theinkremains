@@ -244,6 +244,96 @@ if not okWindow or not windowResult then
 end
 window = windowResult
 
+local function showNotify(titleText, contentText, isError)
+    local TweenService = game:GetService("TweenService")
+    local CoreGui = game:GetService("CoreGui")
+    local activeNotifies = _G.inkActiveNotifies or {}
+    _G.inkActiveNotifies = activeNotifies
+
+    local gui = CoreGui:FindFirstChild("ink_Notify") or Instance.new("ScreenGui", CoreGui)
+    gui.Name, gui.ResetOnSpawn, gui.DisplayOrder = "ink_Notify", false, 999999
+
+    local frame = Instance.new("Frame", gui)
+    frame.Size, frame.AnchorPoint, frame.Position, frame.BackgroundTransparency = UDim2.fromOffset(260, 65), Vector2.new(1, 1), UDim2.new(1, 300, 1, -20), 1
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Color, stroke.Transparency, stroke.Thickness = isError and Color3.fromRGB(255,100,100) or Color3.fromRGB(180,180,180), 0.2, 1.5
+
+    local baseBg = Instance.new("Frame", frame)
+    baseBg.Size, baseBg.BackgroundColor3, baseBg.BackgroundTransparency, baseBg.ZIndex = UDim2.fromScale(1, 1), isError and Color3.fromRGB(140,70,70) or Color3.fromRGB(100,100,100), 0.5, 1
+    Instance.new("UICorner", baseBg).CornerRadius = UDim.new(0, 8)
+
+    local baseIcon = Instance.new("Frame", baseBg)
+    baseIcon.Size, baseIcon.Position, baseIcon.BackgroundColor3, baseIcon.BackgroundTransparency, baseIcon.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), baseBg.BackgroundColor3, baseBg.BackgroundTransparency, 2
+    Instance.new("UICorner", baseIcon).CornerRadius = UDim.new(1,0)
+
+    local txtBase = Instance.new("TextLabel", baseBg)
+    txtBase.Size, txtBase.Position, txtBase.BackgroundTransparency, txtBase.Text, txtBase.TextColor3, txtBase.Font, txtBase.TextSize, txtBase.TextXAlignment, txtBase.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), 1, isError and "×" or "✓", Color3.fromRGB(80,80,80), Enum.Font.GothamBold, 16, Enum.TextXAlignment.Center, 3
+    
+    local tBase = Instance.new("TextLabel", baseBg)
+    tBase.Size, tBase.Position, tBase.BackgroundTransparency, tBase.Text, tBase.TextColor3, tBase.Font, tBase.TextSize, tBase.TextXAlignment, tBase.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 12), 1, titleText or "提示", Color3.fromRGB(80,80,80), Enum.Font.GothamBold, 15, Enum.TextXAlignment.Left, 3
+    
+    local cBase = Instance.new("TextLabel", baseBg)
+    cBase.Size, cBase.Position, cBase.BackgroundTransparency, cBase.Text, cBase.TextColor3, cBase.Font, cBase.TextSize, cBase.TextXAlignment, cBase.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 32), 1, contentText or "", Color3.fromRGB(120,120,120), Enum.Font.Gotham, 13, Enum.TextXAlignment.Left, 3
+
+    local fillBg = Instance.new("Frame", frame)
+    fillBg.Size, fillBg.BackgroundColor3, fillBg.BackgroundTransparency, fillBg.ZIndex = UDim2.fromScale(1, 1), isError and Color3.fromRGB(70,10,10) or Color3.fromRGB(25,25,25), 0, 2
+    Instance.new("UICorner", fillBg).CornerRadius = UDim.new(0, 8)
+
+    local bgGrad = Instance.new("UIGradient", fillBg)
+    bgGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.9, 1), NumberSequenceKeypoint.new(0.91, 0), NumberSequenceKeypoint.new(1, 0)})
+    bgGrad.Offset = Vector2.new(1, 0)
+
+    local fillIcon = Instance.new("Frame", fillBg)
+    fillIcon.Size, fillIcon.Position, fillIcon.BackgroundColor3, fillIcon.BackgroundTransparency, fillIcon.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), fillBg.BackgroundColor3, 0, 2
+    Instance.new("UICorner", fillIcon).CornerRadius = UDim.new(1,0)
+
+    local iconGrad = Instance.new("UIGradient", fillIcon)
+    iconGrad.Transparency, iconGrad.Offset = bgGrad.Transparency, Vector2.new(1, 0)
+
+    local txtFill = Instance.new("TextLabel", fillBg)
+    txtFill.Size, txtFill.Position, txtFill.BackgroundTransparency, txtFill.Text, txtFill.TextColor3, txtFill.Font, txtFill.TextSize, txtFill.TextXAlignment, txtFill.ZIndex = UDim2.fromOffset(30, 30), UDim2.new(0, 12, 0.5, -15), 1, isError and "×" or "✓", Color3.fromRGB(255,255,255), Enum.Font.GothamBold, 16, Enum.TextXAlignment.Center, 3
+    
+    local tFill = Instance.new("TextLabel", fillBg)
+    tFill.Size, tFill.Position, tFill.BackgroundTransparency, tFill.Text, tFill.TextColor3, tFill.Font, tFill.TextSize, tFill.TextXAlignment, tFill.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 12), 1, titleText or "提示", Color3.fromRGB(255,255,255), Enum.Font.GothamBold, 15, Enum.TextXAlignment.Left, 3
+    
+    local cFill = Instance.new("TextLabel", fillBg)
+    cFill.Size, cFill.Position, cFill.BackgroundTransparency, cFill.Text, cFill.TextColor3, cFill.Font, cFill.TextSize, cFill.TextXAlignment, cFill.ZIndex = UDim2.new(1, -50, 0, 20), UDim2.new(0, 50, 0, 32), 1, contentText or "", Color3.fromRGB(180,180,180), Enum.Font.Gotham, 13, Enum.TextXAlignment.Left, 3
+
+    local close = Instance.new("TextButton", frame)
+    close.Size, close.Position, close.BackgroundTransparency, close.Text, close.TextColor3, close.Font, close.TextSize, close.ZIndex = UDim2.fromOffset(25,25), UDim2.new(1,-30,0,5), 1, "×", Color3.fromRGB(150,150,150), Enum.Font.GothamBold, 14, 4
+
+    close.MouseEnter:Connect(function() TweenService:Create(close, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(255, 80, 80), TextSize = 20}):Play() end)
+    close.MouseLeave:Connect(function() TweenService:Create(close, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 14}):Play() end)
+    close.MouseButton1Down:Connect(function() TweenService:Create(close, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(255, 80, 80), TextSize = 20}):Play() end)
+    close.MouseButton1Up:Connect(function() TweenService:Create(close, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 14}):Play() end)
+
+    table.insert(activeNotifies, frame)
+    local myIndex = #activeNotifies
+    
+    for i, f in ipairs(activeNotifies) do
+        TweenService:Create(f, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 1, -20 - ((i - 1) * 75))}):Play()
+    end
+    
+    TweenService:Create(bgGrad, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {Offset = Vector2.new(-1, 0)}):Play()
+    TweenService:Create(iconGrad, TweenInfo.new(1.5, Enum.EasingStyle.Linear), {Offset = Vector2.new(-1, 0)}):Play()
+    
+    local function destroy()
+        if frame:GetAttribute("Dead") then return end
+        frame:SetAttribute("Dead", true)
+        for i, f in ipairs(activeNotifies) do if f == frame then table.remove(activeNotifies, i) break end end
+        TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(1, 300, 1, frame.Position.Y.Offset)}):Play()
+        task.wait(0.3)
+        frame:Destroy()
+        for i, f in ipairs(activeNotifies) do
+            TweenService:Create(f, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 1, -20 - ((i - 1) * 75))}):Play()
+        end
+    end
+    close.MouseButton1Click:Connect(function() task.wait(0.1) destroy() end)
+    task.delay(3, destroy)
+end
+
 pcall(function()
     window:Tag({ Title = "破坏者谜团2", Radius = 5, Color = Color3.fromHex("#555555") })
     window:Tag({ Title = "服务器专属", Radius = 6, Color = Color3.fromHex("#B0B0B0") })
@@ -734,9 +824,9 @@ local function doAutoDodge(reason)
     if success and finalPos then
         hrp.CFrame = CFrame.new(finalPos)
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        window:Notify({Title = "极限闪避", Content = reason, Duration = 2})
+        showNotify("极限闪避", reason, false)
     else
-        window:Notify({Title = "闪避失败", Content = "周围全是墙或虚空", Duration = 2})
+        showNotify("闪避失败", "周围全是墙或虚空", true)
     end
 end
 
@@ -767,7 +857,6 @@ end)
 local function watchDodgePlayer(p)
     if p == LocalPlayer then return end
     local function checkKnife(char)
-       
         local myChar = LocalPlayer.Character
         if myChar and myChar:FindFirstChild("Knife") then return end
         
@@ -796,7 +885,7 @@ MainTab:Toggle({
     Callback = function(v)
         autoDodgeEnabled = v
         if v then
-            window:Notify({Title = "防秒杀已开启", Content = "杀手靠近时将自动瞬移", Duration = 3})
+            showNotify("防秒杀已开启", "杀手靠近时将自动瞬移", false)
         end
     end
 })
@@ -914,7 +1003,7 @@ RunService.Heartbeat:Connect(function()
                 if not isInLobby(myHrp) then
                     myHrp.CFrame = originCFrame
                     lastTeleportTime = tick()
-                    window:Notify({Title = "杀戮光环", Content = "无合法目标，已返回原地", Duration = 2})
+                    showNotify("杀戮光环", "无合法目标，已返回原地", false)
                 end
             end
         end
@@ -942,7 +1031,7 @@ MainTab:Toggle({
     Callback = function(v)
         killAuraEnabled = v
         if v then
-            window:Notify({Title = "杀戮光环开启", Content = "准备杀戮！", Duration = 3})
+            showNotify("杀戮光环开启", "准备杀戮！", false)
         else
             originCFrame = nil
         end
@@ -962,119 +1051,6 @@ MainTab:Slider({
     Value = {Min = 0.2, Max = 3, Default = 0.5},
     Step = 0.1,
     Callback = function(v) auraCooldown = v end
-})
-
-MainTab:Button({
-    Title = "传送到警长旁边",
-    Callback = function()
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        local target = nil
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
-                if (bp and bp:FindFirstChild("Gun")) or p.Character:FindFirstChild("Gun") then
-                    target = p break
-                end
-            end
-        end
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            hrp.CFrame = findSafePosition(target.Character.HumanoidRootPart, 5)
-            window:Notify({Title = "传送成功", Content = "已传送到警长附近", Duration = 3})
-        else
-            window:Notify({Title = "未找到警长", Content = "当前没有玩家拿到枪", Duration = 3})
-        end
-    end
-})
-
-MainTab:Button({
-    Title = "传送到杀手旁边",
-    Callback = function()
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        local target = nil
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
-                if (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") then
-                    target = p break
-                end
-            end
-        end
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            hrp.CFrame = findSafePosition(target.Character.HumanoidRootPart, 5)
-            window:Notify({Title = "传送成功", Content = "已传送到杀手附近", Duration = 3})
-        else
-            window:Notify({Title = "未找到杀手", Content = "当前没有玩家拿到刀", Duration = 3})
-        end
-    end
-})
-
-MainTab:Button({
-    Title = "传送到掉落枪械旁边",
-    Callback = function()
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        
-        local closestDrop = nil
-        local minDist = math.huge
-        
-        
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "GunDrop" and obj:FindFirstChild("Fire") then
-                local pos = nil
-                if obj:IsA("BasePart") then
-                    pos = obj.Position
-                elseif obj:IsA("Model") then
-                    local _, size = obj:GetBoundingBox()
-                    pos = obj:GetBoundingBox().Position
-                end
-                
-                if pos then
-                    local dist = (hrp.Position - pos).Magnitude
-                    if dist < minDist then
-                        minDist = dist
-                        closestDrop = obj
-                    end
-                end
-            end
-        end
-        
-        if not closestDrop then
-            window:Notify({Title = "未找到", Content = "全图没有掉落的枪械", Duration = 3})
-            return
-        end
-        
-        
-        local targetPart = nil
-        if closestDrop:IsA("BasePart") then
-            targetPart = closestDrop
-        else
-            targetPart = closestDrop.PrimaryPart or closestDrop:FindFirstChildWhichIsA("BasePart")
-        end
-        
-        if targetPart then
-            
-            local safeCFrame = findSafePosition(targetPart, 4)
-            hrp.CFrame = safeCFrame
-            window:Notify({Title = "传送成功", Content = "已传送到掉落枪械旁边", Duration = 3})
-        else
-            window:Notify({Title = "传送失败", Content = "找到了枪械但无法获取其位置", Duration = 3})
-        end
-    end
-})
-
-MainTab:Button({
-    Title = "传送到大厅",
-    Callback = function()
-        local char = LocalPlayer.Character
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.CFrame = CFrame.new(603.0, 467.8, 37.0)
-            end
-        end
-    end
 })
 
 local AimTab = window:Tab({Title="自瞄", Icon="crosshair"})
@@ -1220,6 +1196,190 @@ AimTab:Toggle({ Title = "队伍检测", Value = false, Callback = function(s) Ai
 AimTab:Slider({ Title = "圆圈大小", Value = { Min = 30, Max = 500, Default = 100 }, Callback = function(v) AimbotSettings.CircleRadius = v end })
 AimTab:Slider({ Title = "圆圈厚度", Value = { Min = 1, Max = 10, Default = 2 }, Callback = function(v) AimbotSettings.CircleThickness = v end })
 AimTab:Dropdown({ Title = "圆圈颜色", Values = { "红", "橙", "黄", "绿", "青", "蓝", "紫", "彩色" }, Value = "彩色", Callback = function(v) AimbotSettings.CircleColor = v end })
+
+local TransTab=D:Tab({Title="传送",Icon="send"})
+
+local selectedPlayer=nil
+
+local function getPlayerNames()
+    local names={}
+    for _,p in ipairs(game:GetService("Players"):GetPlayers()) do
+        if p~=game.Players.LocalPlayer then
+            table.insert(names,p.Name)
+        end
+    end
+    if #names==0 then
+        table.insert(names,"无其他玩家")
+    end
+    return names
+end
+
+local playerDropdown=TransTab:Dropdown({Title="选择玩家",Values=getPlayerNames(),Value="无其他玩家",Callback=function(v)selectedPlayer=v end})
+
+TransTab:Button({Title="刷新列表",Callback=function()
+    local newNames=getPlayerNames()
+    playerDropdown:Refresh(newNames)
+    selectedPlayer=nil
+    showNotify("已刷新", "玩家列表已更新，请重新选择玩家", false)
+end})
+
+TransTab:Button({Title="传送",Callback=function()
+    if not selectedPlayer or selectedPlayer=="无其他玩家" then
+        showNotify("错误", "请先选择一名玩家", true)
+        return
+    end
+    local target=game:GetService("Players"):FindFirstChild(selectedPlayer)
+    if not target or not target.Character then
+        showNotify("错误", "目标玩家不存在或没有角色", true)
+        return
+    end
+    local targetRoot=target.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then
+        showNotify("错误", "目标玩家没有HumanoidRootPart", true)
+        return
+    end
+    local localChar=game.Players.LocalPlayer.Character
+    if not localChar then
+        showNotify("错误", "你没有角色", true)
+        return
+    end
+    local localRoot=localChar:FindFirstChild("HumanoidRootPart")
+    if not localRoot then
+        showNotify("错误", "你没有HumanoidRootPart", true)
+        return
+    end
+    localRoot.CFrame=targetRoot.CFrame*CFrame.new(0,0,3)
+    showNotify("传送成功", "已传送到 "..selectedPlayer.." 旁边", false)
+end})
+
+TransTab:Button({
+    Title = "传送到警长旁边",
+    Callback = function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local target = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+                if (bp and bp:FindFirstChild("Gun")) or p.Character:FindFirstChild("Gun") then
+                    target = p break
+                end
+            end
+        end
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            hrp.CFrame = findSafePosition(target.Character.HumanoidRootPart, 5)
+            showNotify("传送成功", "已传送到警长附近", false)
+        else
+            showNotify("未找到警长", "当前没有玩家拿到枪", true)
+        end
+    end
+})
+
+TransTab:Button({
+    Title = "传送到杀手旁边",
+    Callback = function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local target = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local bp = p:FindFirstChild("Backpack") or p.Character:FindFirstChildOfClass("Backpack")
+                if (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") then
+                    target = p break
+                end
+            end
+        end
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            hrp.CFrame = findSafePosition(target.Character.HumanoidRootPart, 5)
+            showNotify("传送成功", "已传送到杀手附近", false)
+        else
+            showNotify("未找到杀手", "当前没有玩家拿到刀", true)
+        end
+    end
+})
+
+TransTab:Button({
+    Title = "传送到掉落枪械旁边",
+    Callback = function()
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        
+        local closestDrop = nil
+        local minDist = math.huge
+        
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "GunDrop" and obj:FindFirstChild("Fire") then
+                local pos = nil
+                if obj:IsA("BasePart") then
+                    pos = obj.Position
+                elseif obj:IsA("Model") then
+                    local _, size = obj:GetBoundingBox()
+                    pos = obj:GetBoundingBox().Position
+                end
+                
+                if pos then
+                    local dist = (hrp.Position - pos).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        closestDrop = obj
+                    end
+                end
+            end
+        end
+        
+        if not closestDrop then
+            showNotify("未找到", "全图没有掉落的枪械", true)
+            return
+        end
+        
+        local targetPart = nil
+        if closestDrop:IsA("BasePart") then
+            targetPart = closestDrop
+        else
+            targetPart = closestDrop.PrimaryPart or closestDrop:FindFirstChildWhichIsA("BasePart")
+        end
+        
+        if targetPart then
+            local safeCFrame = findSafePosition(targetPart, 4)
+            hrp.CFrame = safeCFrame
+            showNotify("传送成功", "已传送到掉落枪械旁边", false)
+        else
+            showNotify("传送失败", "找到了枪械但无法获取其位置", true)
+        end
+    end
+})
+
+TransTab:Button({
+    Title = "传送到大厅",
+    Callback = function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local distToLobby = (hrp.Position - Vector3.new(603.0, 467.8, 37.0)).Magnitude
+            if distToLobby > 100 then
+                _G.lastGameCFrame = hrp.CFrame
+                showNotify("已记录坐标", "随时可返回游戏原位置", false)
+            end
+            hrp.CFrame = CFrame.new(603.0, 467.8, 37.0)
+        end
+    end
+})
+
+TransTab:Button({
+    Title = "返回前往大厅前的位置",
+    Callback = function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            if _G.lastGameCFrame then
+                hrp.CFrame = _G.lastGameCFrame
+                showNotify("传送成功", "已返回游戏原位置", false)
+            else
+                showNotify("无法返回", "你还没记录过坐标", true)
+            end
+        end
+    end
+})
 
 local P = window:Tab({Title = "透视", Icon = "eye"})
 local categorySettings = {
@@ -1797,10 +1957,10 @@ local function updateGunDropState()
 end
 
 GunDropESPGroup:Toggle({Title = "透视掉落枪械", Value = false, Callback = function(v) gunDropSettings.esp = v; updateGunDropState() end})
-GunDropESPGroup:Colorpicker({Title = "透视文字颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.espColor = v end})
+GunDropESPGroup:Colorpicker({Title = "透视掉落枪械颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.espColor = v end})
 GunDropESPGroup:Toggle({Title = "掉落枪械轮廓", Value = false, Callback = function(v) gunDropSettings.outline = v; updateGunDropState() end})
-GunDropESPGroup:Colorpicker({Title = "轮廓颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.outlineColor = v end})
+GunDropESPGroup:Colorpicker({Title = "掉落枪械轮廓颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.outlineColor = v end})
 GunDropESPGroup:Toggle({Title = "掉落枪械追踪线", Value = false, Callback = function(v) gunDropSettings.tracer = v; updateGunDropState() end})
-GunDropESPGroup:Colorpicker({Title = "追踪线颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.tracerColor = v end})
+GunDropESPGroup:Colorpicker({Title = "掉落枪械追踪线颜色", Default = Color3.fromRGB(0, 255, 0), Callback = function(v) gunDropSettings.tracerColor = v end})
 
 print("[ink_HUB] 加载成功")
