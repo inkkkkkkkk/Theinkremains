@@ -1473,11 +1473,15 @@ RunService.Heartbeat:Connect(function()
 end)
 
 AimTab:Toggle({ Title = "开启自瞄", Value = false, Callback = function(s) AimbotSettings.Enabled = s end })
-AimTab:Toggle({ Title = "自动开枪", Value = false, Callback = function(s) isSilentFireEnabled = s end })
+AimTab:Toggle({ Title = "警长自动开枪", Value = false, Callback = function(s) isSilentFireEnabled = s end })
 AimTab:Toggle({ Title = "杀手自动飞刀", Value = false, Callback = function(s) isAutoThrowEnabled = s end })
+AimTab:Toggle({ Title = "队伍检测", Value = false, Callback = function(s) AimbotSettings.TeamCheck = s end })
 AimTab:Toggle({ Title = "自瞄圆圈", Value = false, Callback = function(s) AimbotSettings.CircleEnabled = s end })
 AimTab:Dropdown({ Title = "瞄准部位", Values = { "Head", "HumanoidRootPart" }, Value = "Head", Callback = function(v) AimbotSettings.TargetPart = v end })
-AimTab:Toggle({ Title = "墙体检测", Value = false, Callback = function(s) AimbotSettings.WallCheck =
+AimTab:Toggle({ Title = "墙体检测", Value = false, Callback = function(s) AimbotSettings.WallCheck = s end })
+AimTab:Slider({ Title = "圆圈大小", Value = { Min = 30, Max = 500, Default = 100 }, Callback = function(v) AimbotSettings.CircleRadius = v end })
+AimTab:Slider({ Title = "圆圈厚度", Value = { Min = 1, Max = 10, Default = 2 }, Callback = function(v) AimbotSettings.CircleThickness = v end })
+AimTab:Dropdown({ Title = "圆圈颜色", Values = { "红", "橙", "黄", "绿", "青", "蓝", "紫", "彩色" }, Value = "彩色", Callback = function(v) AimbotSettings.CircleColor = v end })
 
 local TransTab=window:Tab({Title="传送",Icon="send"})
 
