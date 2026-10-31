@@ -43,6 +43,8 @@ local clsB = Instance.new("TextButton", bar); clsB.Size = UDim2.fromOffset(30, 3
 
 local div = Instance.new("Frame", f); div.Size = UDim2.new(1, -30, 0, 1); div.Position = UDim2.new(0, 15, 0, 36); div.BackgroundColor3 = Color3.fromRGB(50, 50, 50); div.BorderSizePixel = 0; div.ZIndex = 5
 
+local mainElements = {div}
+
 local function createBtn(txt, yPos, color)
     local b = Instance.new("TextButton", f); b.Size = UDim2.new(1, -30, 0, 45); b.Position = UDim2.new(0, 15, 0, yPos); b.BackgroundColor3 = Color3.fromRGB(35, 35, 35); b.Text = ""; b.AutoButtonColor = false; b.ZIndex = 2
     local c = Instance.new("UICorner", b); c.CornerRadius = UDim.new(0, 8)
@@ -67,21 +69,31 @@ local function createBtn(txt, yPos, color)
             tw:Create(s, TweenInfo.new(.2), {Transparency = 1, Color = Color3.fromRGB(60, 60, 60)}):Play()
         end
     end)
+    
+    table.insert(mainElements, b)
     return function() return isOn end
 end
 
 local getShootState = createBtn("自动射击 (防友军/墙挡)", 50, Color3.fromRGB(0, 170, 255))
 local getThrowState = createBtn("自动飞刀 (防墙挡)", 105, Color3.fromRGB(255, 50, 50))
-local getAimState = createBtn("视角自瞄 (通用)", 160, Color3.fromRGB(0, 200, 100))
+local getAimState = createBtn("视角自瞄 (防墙挡)", 160, Color3.fromRGB(0, 200, 100))
 
 local wm = Instance.new("TextLabel", f); wm.Size = UDim2.new(1, -40, 0, 20); wm.Position = UDim2.new(0, 15, 1, -30); wm.BackgroundTransparency = 1; wm.Text = "BY.Theinkremains"; wm.TextColor3 = Color3.fromRGB(160, 160, 160); wm.Font = Enum.Font.SourceSansBold; wm.TextSize = 16; wm.TextXAlignment = Enum.TextXAlignment.Left; wm.ZIndex = 10
+table.insert(mainElements, wm)
 
 local rez = Instance.new("TextButton", f); rez.Size = UDim2.fromOffset(25, 25); rez.Position = UDim2.new(1, -25, 1, -25); rez.BackgroundTransparency = 1; rez.Text = "◢"; rez.TextColor3 = Color3.fromRGB(150, 150, 150); rez.Font = Enum.Font.SourceSansBold; rez.TextSize = 16; rez.ZIndex = 10
+table.insert(mainElements, rez)
 
 local minOn = false
 minB.MouseButton1Click:Connect(function()
     minOn = not minOn
-    tw:Create(f, TweenInfo.new(.3, Enum.EasingStyle.Quint), {Size = UDim2.fromOffset(280, minOn and 36 or 240)}):Play()
+    local targetHeight = minOn and 36 or 240
+    tw:Create(f, TweenInfo.new(.3, Enum.EasingStyle.Quint), {Size = UDim2.fromOffset(280, targetHeight)}):Play()
+    
+    for _, el in ipairs(mainElements) do
+        el.Visible = not minOn
+    end
+    
     minB.Text = minOn and "+" or "—"
     title.Text = minOn and "警长X杀手 (已折叠)" or "警长X杀手辅助"
 end)
@@ -251,6 +263,9 @@ end)
 
 rs.Heartbeat:Connect(function()
     if not getAimState() then return end
+    local char = lp.Character
+    if not char or not char:FindFirstChild("Head") then return end
+    
     local camera = workspace.CurrentCamera
     local centerPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
     local closestTarget, minDist = nil, 250
@@ -262,8 +277,10 @@ rs.Heartbeat:Connect(function()
             if onScreen and screenPos.Z > 0 then
                 local dist = (Vector2.new(screenPos.X, screenPos.Y) - centerPos).Magnitude
                 if dist <= 250 and dist < minDist then
-                    minDist = dist
-                    closestTarget = head
+                    if isLineClear(camera.CFrame.Position, head.Position, char, plr.Character) then
+                        minDist = dist
+                        closestTarget = head
+                    end
                 end
             end
         end
