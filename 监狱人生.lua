@@ -276,10 +276,8 @@ end)
     task.delay(0.8, function() pcall(function() recolor(CoreGui) end) end)
 end)
 
-local GunTab = window:Tab({Title = "枪械修改", Icon = "crosshair"})
-local modifyEnabled = false
-local currentWeapon = nil
-local inputRefs = {}
+local GunTab = window:Tab({Title = "枪械数值修改", Icon = "crosshair"})
+local inputValues = {}
 
 local function getEquippedGun()
     local char = LocalPlayer.Character
@@ -294,74 +292,16 @@ local function getEquippedGun()
     return nil
 end
 
-local function refreshInputPlaceholders()
-    currentWeapon = getEquippedGun()
-    
-    local function updatePlaceholder(inputObj, attrName)
-        if not inputObj then return end
-        if currentWeapon then
-            local val = currentWeapon:GetAttribute(attrName)
-            if val ~= nil then
-                inputObj.Placeholder = "当前默认值: " .. tostring(val)
-            else
-                inputObj.Placeholder = "当前枪械无此属性"
-            end
-        else
-            inputObj.Placeholder = "请先拿枪"
-        end
-    end
-
-    updatePlaceholder(inputRefs.Damage, "Damage")
-    updatePlaceholder(inputRefs.FireRate, "FireRate")
-    updatePlaceholder(inputRefs.MaxAmmo, "MaxAmmo")
-    updatePlaceholder(inputRefs.CurrentAmmo, "CurrentAmmo")
-    updatePlaceholder(inputRefs.ReloadTime, "ReloadTime")
-    updatePlaceholder(inputRefs.Range, "Range")
-    updatePlaceholder(inputRefs.AutoFire, "AutoFire")
-end
-
-local function createAttributeInput(title, attrName, isBool)
-    local input = GunTab:Input({
+local function createAttributeInput(title, attrName)
+    GunTab:Input({
         Title = title,
         Value = "",
-        Placeholder = "请先拿枪",
+        Placeholder = "请输入数值",
         Callback = function(text)
-            if not modifyEnabled then return end
-            if not currentWeapon then return end
-            
-            if isBool then
-                if text == "1" or text:lower() == "true" then
-                    currentWeapon:SetAttribute(attrName, true)
-                elseif text == "0" or text:lower() == "false" then
-                    currentWeapon:SetAttribute(attrName, false)
-                end
-            else
-                local num = tonumber(text)
-                if num then
-                    currentWeapon:SetAttribute(attrName, num)
-                end
-            end
+            inputValues[attrName] = text
         end
     })
-    inputRefs[attrName] = input
-    return input
 end
-
-GunTab:Toggle({
-    Title = "开启修改枪械属性",
-    Value = false,
-    Callback = function(v)
-        modifyEnabled = v
-        if v then 
-            showNotify("枪械修改", "已开启，输入数值即刻生效", false)
-            refreshInputPlaceholders()
-        else
-            showNotify("枪械修改", "已关闭修改", true)
-        end
-    end
-})
-
-GunTab:Divider()
 
 createAttributeInput("伤害 (Damage)", "Damage")
 createAttributeInput("射速 (FireRate) - 越小越快", "FireRate")
@@ -369,28 +309,60 @@ createAttributeInput("最大弹匣 (MaxAmmo)", "MaxAmmo")
 createAttributeInput("当前弹药 (CurrentAmmo)", "CurrentAmmo")
 createAttributeInput("换弹时间 (ReloadTime)", "ReloadTime")
 createAttributeInput("射程 (Range)", "Range")
-createAttributeInput("自动射击 (AutoFire) - 输1开,0关", "AutoFire", true)
+createAttributeInput("自动射击 (AutoFire) - 输1开,0关", "AutoFire")
+
+GunTab:Button({
+    Title = "修改",
+    Callback = function()
+        local currentWeapon = getEquippedGun()
+        if not currentWeapon then
+            showNotify("修改失败", "请先拿枪", true)
+            return
+        end
+        
+        local modifiedCount = 0
+        for attrName, valText in pairs(inputValues) do
+            if valText and valText ~= "" then
+                if attrName == "AutoFire" then
+                    if valText == "1" or valText:lower() == "true" then
+                        currentWeapon:SetAttribute(attrName, true)
+                        modifiedCount = modifiedCount + 1
+                    elseif valText == "0" or valText:lower() == "false" then
+                        currentWeapon:SetAttribute(attrName, false)
+                        modifiedCount = modifiedCount + 1
+                    end
+                else
+                    local num = tonumber(valText)
+                    if num then
+                        currentWeapon:SetAttribute(attrName, num)
+                        modifiedCount = modifiedCount + 1
+                    end
+                end
+            end
+        end
+        
+        if modifiedCount > 0 then
+            showNotify("修改成功", "已应用属性到当前武器", false)
+        else
+            showNotify("修改失败", "请至少输入一项有效数值", true)
+        end
+    end
+})
 
 local function onCharacterChanged()
     task.wait(0.5)
-    refreshInputPlaceholders()
     
     local char = LocalPlayer.Character
     if char then
         char.ChildAdded:Connect(function(child)
             if child:IsA("Tool") then
                 task.wait(0.2)
-                refreshInputPlaceholders()
-                if modifyEnabled then
-                    showNotify("检测到新武器", "属性输入框已更新", false)
-                end
             end
         end)
         
         char.ChildRemoved:Connect(function(child)
             if child:IsA("Tool") then
                 task.wait(0.1)
-                refreshInputPlaceholders()
             end
         end)
     end
