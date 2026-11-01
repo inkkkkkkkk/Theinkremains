@@ -1237,6 +1237,147 @@ MainTab:Slider({
     Callback = function(v) auraCooldown = v end
 })
 
+local autoPickupGunEnabled = false
+local isAutoPickingUp = false
+local autoPickupNoclipConn = nil
+
+local function setAutoPickupNoclip(state)
+    if state then
+        if not autoPickupNoclipConn then
+            autoPickupNoclipConn = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        if autoPickupNoclipConn then
+            autoPickupNoclipConn:Disconnect()
+            autoPickupNoclipConn = nil
+        end
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and not part.CanCollide then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+MainTab:Toggle({
+    Title = "自动捡枪",
+    Value = false,
+    Callback = function(v)
+        autoPickupGunEnabled = v
+        if v then
+            showNotify("自动捡枪", "已开启，发现掉落枪械将自动拾取", false)
+        else
+            isAutoPickingUp = false
+            setAutoPickupNoclip(false)
+        end
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.3) do
+        if not autoPickupGunEnabled or isAutoPickingUp then continue end
+        
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        
+        local backpack = LocalPlayer:FindFirstChild("Backpack") or char:FindFirstChildOfClass("Backpack")
+        local isKiller = (backpack and backpack:FindFirstChild("Knife")) or char:FindFirstChild("Knife")
+        if isKiller then continue end
+        
+        local inLobby = false
+        local lobbyCenter = Vector3.new(603.0, 467.8, 37.0)
+        local lobbyRadius = 250
+        if (hrp.Position - lobbyCenter).Magnitude <= lobbyRadius then
+            inLobby = true
+        else
+            local parent = hrp.Parent
+            while parent and parent ~= workspace do
+                if string.lower(parent.Name):find("lobby") then 
+                    inLobby = true 
+                    break 
+                end
+                parent = parent.Parent
+            end
+        end
+        if inLobby then continue end
+        
+        local targetDrop = nil
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "GunDrop" and obj:FindFirstChild("Fire") then
+                targetDrop = obj
+                break
+            end
+        end
+        
+        if targetDrop then
+            isAutoPickingUp = true
+            local originCFrame = hrp.CFrame
+            
+            showNotify("发现掉落枪械", "正在拾取...", false)
+            setAutoPickupNoclip(true)
+            
+            task.spawn(function()
+                local pickupStartTime = tick()
+                
+                while targetDrop and targetDrop.Parent and (tick() - pickupStartTime < 5) do
+                    local currentChar = LocalPlayer.Character
+                    local currentHrp = currentChar and currentChar:FindFirstChild("HumanoidRootPart")
+                    
+                    if not currentHrp then break end
+                    
+                    local targetPart = targetDrop
+                    if not targetDrop:IsA("BasePart") then
+                        targetPart = targetDrop.PrimaryPart or targetDrop:FindFirstChildWhichIsA("BasePart")
+                    end
+                    
+                    if targetPart then
+                        local abovePos = targetPart.Position + Vector3.new(0, 3, 0)
+                        currentHrp.CFrame = CFrame.new(abovePos)
+                        
+                        if firetouchinterest then
+                            pcall(function()
+                                firetouchinterest(currentHrp, targetPart, 0)
+                                task.wait(0.02)
+                                firetouchinterest(currentHrp, targetPart, 1)
+                            end)
+                        end
+                    end
+                    task.wait(0.15)
+                end
+                
+                task.wait(0.2) 
+                
+                local finalChar = LocalPlayer.Character
+                local finalHrp = finalChar and finalChar:FindFirstChild("HumanoidRootPart")
+                if finalHrp then
+                    finalHrp.CFrame = originCFrame
+                end
+                
+                task.wait(0.3)
+                setAutoPickupNoclip(false)
+                isAutoPickingUp = false
+                
+                if finalHrp then
+                    showNotify("拾取完毕", "已返回原处", false)
+                end
+            end)
+        end
+    end
+end)
+
 local AimTab = window:Tab({Title="自瞄", Icon="crosshair"})
 
 AimTab:Button({
