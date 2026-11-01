@@ -462,9 +462,8 @@ local MainTab = window:Tab({Title = "主要功能", Icon = "settings"})
 
 local Stats = game:GetService("Stats")
 
-local statusSection = MainTab:Section({Title = "实时系统状态", Opened = true})
-local statusParagraph = statusSection:Paragraph({
-    Title = "监控数据",
+local statusParagraph = MainTab:Paragraph({
+    Title = "实时系统状态",
     Desc = "正在获取数据..."
 })
 
