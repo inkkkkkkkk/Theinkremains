@@ -460,6 +460,25 @@ pcall(function()
 end)
 local MainTab = window:Tab({Title = "主要功能", Icon = "settings"})
 
+local statusParagraph = Tabs.StatusTab:Paragraph({
+    Title = "信息",
+    Desc = "生命: 0\nFPS: 0\n延迟: 0ms"
+})
+
+RunService.RenderStepped:Connect(function(dt)
+    local health = 0
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        health = math.floor(char.Humanoid.Health)
+    end
+    local fps = math.floor(1 / dt)
+    local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+    statusParagraph:SetDesc("生命: " .. health .. "\nFPS: " .. fps .. "\n延迟: " .. ping .. "ms")
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = currentwalkspeed
+    end
+end)
+
 MainTab:Button({
     Title = "飞行",
     Callback = function()
@@ -1375,6 +1394,128 @@ task.spawn(function()
                 end
             end)
         end
+    end
+end)
+
+local coinTeleportEnabled = false
+local isTeleportingCoin = false
+local coinNoclipConn = nil
+local coinScanRadius = 120
+local coinCooldown = 1.1
+
+local function setCoinNoclip(state)
+    if state then
+        if not coinNoclipConn then
+            coinNoclipConn = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        if coinNoclipConn then
+            coinNoclipConn:Disconnect()
+            coinNoclipConn = nil
+        end
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and not part.CanCollide then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+MainTab:Toggle({
+    Title = "自动捡金币",
+    Value = false,
+    Callback = function(v)
+        coinTeleportEnabled = v
+        if v then
+            showNotify("自动捡金币", "请不要移动否则你会被踢", false)
+        else
+            isTeleportingCoin = false
+            setCoinNoclip(false)
+        end
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.2) do
+        if not coinTeleportEnabled or isTeleportingCoin then continue end
+        
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        
+        local closestCoin = nil
+        local minDist = math.huge
+        
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "CoinVisual" then
+                local hasTouch = false
+                local checkObj = obj
+                for i = 1, 4 do
+                    if checkObj and (checkObj:FindFirstChild("TouchInterest") or checkObj:FindFirstChildOfClass("TouchTransmitter")) then
+                        hasTouch = true
+                        break
+                    end
+                    if checkObj then checkObj = checkObj.Parent end
+                end
+                
+                if hasTouch then
+                    local targetPart = nil
+                    if obj:IsA("BasePart") then
+                        targetPart = obj
+                    else
+                        targetPart = obj:FindFirstAncestorWhichIsA("BasePart")
+                    end
+                    
+                    if targetPart then
+                        local dist = (hrp.Position - targetPart.Position).Magnitude
+                        if dist < minDist and dist <= coinScanRadius then
+                            minDist = dist
+                            closestCoin = targetPart
+                        end
+                    end
+                end
+            end
+        end
+        
+        if closestCoin then
+            isTeleportingCoin = true
+            setCoinNoclip(true)
+            
+            local abovePos = closestCoin.Position + Vector3.new(0, 2.5, 0)
+            hrp.CFrame = CFrame.new(abovePos)
+            
+            if firetouchinterest then
+                pcall(function()
+                    firetouchinterest(hrp, closestCoin, 0)
+                    task.wait(0.1) 
+                    firetouchinterest(hrp, closestCoin, 1)
+                end)
+            end
+            
+            task.wait(coinCooldown) 
+            
+            setCoinNoclip(false)
+            isTeleportingCoin = false
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if coinTeleportEnabled then
+        isTeleportingCoin = false
+        setCoinNoclip(false)
     end
 end)
 
