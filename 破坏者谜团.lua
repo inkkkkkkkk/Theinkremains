@@ -460,25 +460,6 @@ pcall(function()
 end)
 local MainTab = window:Tab({Title = "主要功能", Icon = "settings"})
 
-local statusParagraph = Tabs.StatusTab:Paragraph({
-    Title = "信息",
-    Desc = "生命: 0\nFPS: 0\n延迟: 0ms"
-})
-
-RunService.RenderStepped:Connect(function(dt)
-    local health = 0
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        health = math.floor(char.Humanoid.Health)
-    end
-    local fps = math.floor(1 / dt)
-    local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-    statusParagraph:SetDesc("生命: " .. health .. "\nFPS: " .. fps .. "\n延迟: " .. ping .. "ms")
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.WalkSpeed = currentwalkspeed
-    end
-end)
-
 MainTab:Button({
     Title = "飞行",
     Callback = function()
