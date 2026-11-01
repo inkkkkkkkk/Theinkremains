@@ -460,6 +460,55 @@ pcall(function()
 end)
 local MainTab = window:Tab({Title = "主要功能", Icon = "settings"})
 
+local Stats = game:GetService("Stats")
+
+local statusSection = MainTab:Section({Title = "实时系统状态", Opened = true})
+local statusParagraph = statusSection:Paragraph({
+    Title = "监控数据",
+    Desc = "正在获取数据..."
+})
+
+task.spawn(function()
+    task.wait(0.2)
+    for _, obj in ipairs(statusParagraph:GetDescendants()) do
+        if obj:IsA("TextLabel") then
+            obj.TextSize = 18 
+            obj.Font = Enum.Font.GothamBold
+        end
+    end
+end)
+
+local statusFrames = 0
+local statusCurrentFps = 0
+RunService.RenderStepped:Connect(function() statusFrames = statusFrames + 1 end)
+
+task.spawn(function()
+    while task.wait(1) do
+        statusCurrentFps = statusFrames
+        statusFrames = 0
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local health = hum and math.floor(hum.Health) or 0
+        local ping = 0
+        pcall(function()
+            ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        local players = #Players:GetPlayers()
+        local displayText = string.format(
+            "生命: %d\n" ..
+            "性能: FPS %d | 延迟 %dms\n" ..
+            "环境: 当前在线 %d 人",
+            health, statusCurrentFps, ping, players
+        )
+        statusParagraph:SetDesc(displayText)
+    end
+end)
+
 MainTab:Button({
     Title = "飞行",
     Callback = function()
