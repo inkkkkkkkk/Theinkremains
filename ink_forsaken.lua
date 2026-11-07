@@ -1,6 +1,4 @@
--- 开源来自 Yuxingchen ｜ Obsidian UI 适配版｜Forsaken 自动格挡整合版
-
-local UserInputService = game:GetService("UserInputService")
+-- 开源来自 Yuxingchen ｜ Obsidian UI 适配版｜自动格挡整合版
 
 local LoaderEnvironment = (type(getgenv) == "function" and getgenv()) or _G
 local LoaderGuard = LoaderEnvironment.__KRGuard
@@ -498,21 +496,7 @@ Feng:Social({
 })
 
 
-local KillHitboxSettings = {
-    Scale = 1.0,
-    Offset = -1.4,
-    BaseSize = Vector3.new(4.5, 6, 7.5),
-    Duration = 1.5,
-    ShowVisual = true,
-    Color = Color3.fromRGB(255, 255, 255),
-    ShowOutline = true,
-    OutlineThickness = 0.01,
-    Transparency = 0.5,
-}
-local setKillHitboxVisual
-
-local autoBlockHubTab
-local buildAutoBlockHubUI
+local autoBlockHubTab = Window:Tab("自动格挡", "shield")
 
 -- 合并自 Forsaken 中文版的自动格挡模块（独立命名空间）
 do
@@ -521,13 +505,17 @@ do
     local Workspace = game:GetService("Workspace")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local Stats = game:GetService("Stats")
-        local LP = Players.LocalPlayer
+    local UserInputService = game:GetService("UserInputService")
+    local LP = Players.LocalPlayer
 
     local ABConfig = {
         AutoBlock = false,
+        AutoBlockButton = false,
         ABMode = "Guest1337",
         AimPunch = false,
-        JudgementMode = "hitbox",
+        AutoBlockCustom = false,
+        CustomABMode = "Guest1337",
+        FourthButtonTarget = "default",
         CustomDiamondLength = 8,
         CustomDiamondWidth = 4,
         CustomDiamondOffset = 3,
@@ -538,6 +526,7 @@ do
     }
     local ABToggles, ABInputs = {}, {}
     local ABSuppressCallbacks = false
+    local ABRememberedZones = {diamond = false, circle = false}
 
 local autoBlockState = {
   running = false,
@@ -553,6 +542,16 @@ local autoBlockState = {
 }
 
 local startAutoBlock, stopAutoBlock
+
+local fourthButtonState = {
+  instance = nil,
+  applyTint = nil,
+  running = false,
+  connections = {},
+  cachedPos = nil,
+  cachedSize = nil,
+  sourceName = nil,
+}
 
 local lastToggleTime = 0
 local pendingToggle = nil
@@ -650,6 +649,9 @@ local function fireClone()
 end
 
 local function getActiveBlockMode()
+  if ABConfig.AutoBlockCustom then
+    return ABConfig.CustomABMode
+  end
   return ABConfig.ABMode
 end
 
@@ -833,23 +835,6 @@ local function isLocalPlayerInZone(killer)
     or isInsideCircle(localRoot.Position, killerRoot.Position)
 end
 
-local function isLocalPlayerInActiveZone(killer)
-  if ABConfig.JudgementMode == "hitbox" then
-    if not killer or not killer.Parent then return false end
-    local killerQuery = killer:FindFirstChild("QueryHitbox")
-    local character = LP.Character
-    local localQuery = character and character:FindFirstChild("QueryHitbox")
-    if not killerQuery or not localQuery then return false end
-    local boxCFrame = killerQuery.CFrame * CFrame.new(0, 0, KillHitboxSettings.Offset)
-    local localPosition = boxCFrame:PointToObjectSpace(localQuery.Position)
-    local halfSize = (KillHitboxSettings.BaseSize * KillHitboxSettings.Scale) / 2
-    return math.abs(localPosition.X) <= halfSize.X
-      and math.abs(localPosition.Y) <= halfSize.Y
-      and math.abs(localPosition.Z) <= halfSize.Z
-  end
-  return isLocalPlayerInZone(killer)
-end
-
 local function updateZoneVisuals(visuals, killerRoot, localRoot)
   if not visuals or not visuals.model or not visuals.model.Parent then return end
   if not killerRoot or not killerRoot.Parent then return end
@@ -983,12 +968,50 @@ local function refreshCustomZones()
   end
 end
 
+local function enforceBlockModeExclusivity()
+  if ABConfig.AutoBlock and ABConfig.AutoBlockCustom then
+    ABConfig.AutoBlockCustom = false
+    if ABToggles.AutoBlockCustom then
+      ABSuppressCallbacks = true
+      pcall(function()
+        ABToggles.AutoBlockCustom:Set(false)
+      end)
+      ABSuppressCallbacks = false
+    end
+  end
+  if ABConfig.AutoBlock then
+    if ABConfig.ShowDiamond then
+      ABRememberedZones.diamond = true
+      ABConfig.ShowDiamond = false
+    end
+    if ABConfig.ShowCircle then
+      ABRememberedZones.circle = true
+      ABConfig.ShowCircle = false
+    end
+    if ABToggles.ShowDiamond then
+      ABSuppressCallbacks = true
+      pcall(function()
+        ABToggles.ShowDiamond:Set(false)
+      end)
+      ABSuppressCallbacks = false
+    end
+    if ABToggles.ShowCircle then
+      ABSuppressCallbacks = true
+      pcall(function()
+        ABToggles.ShowCircle:Set(false)
+      end)
+      ABSuppressCallbacks = false
+    end
+  end
+  refreshCustomZones()
+end
+
 local function watchKillerSounds(killer)
   if not killer then return end
 
   local function checkSound(sound)
     if not autoBlockState.running then return end
-    if not ABConfig.AutoBlock then return end
+    if not (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) then return end
     if not sound or not sound:IsA("Sound") then return end
     local soundId = sound.SoundId
     if soundId == "" then return end
@@ -999,8 +1022,8 @@ local function watchKillerSounds(killer)
     if not autoBlockState.LocalRoot then return end
     local killerRoot = killer:FindFirstChild("HumanoidRootPart")
     if not killerRoot or not killerRoot.Parent then return end
-    if ABConfig.JudgementMode ~= "default" then
-      if not isLocalPlayerInActiveZone(killer) then return end
+    if ABConfig.AutoBlockCustom then
+      if not isLocalPlayerInZone(killer) then return end
     else
       local offset = autoBlockState.LocalRoot.Position - killerRoot.Position
       local distance = offset.Magnitude
@@ -1022,7 +1045,7 @@ local function watchKillerSounds(killer)
 end
 
 local function checkKillerAbilities()
-  if not autoBlockState.running or not ABConfig.AutoBlock then return end
+  if not autoBlockState.running or not (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) then return end
   if not autoBlockState.KillersFolder or not autoBlockState.LocalRoot or not autoBlockState.LocalRoot.Parent then return end
   for _, killer in ipairs(autoBlockState.KillersFolder:GetChildren()) do
     if killer:IsA("Model") then
@@ -1041,8 +1064,8 @@ local function checkKillerAbilities()
               previous.isBait = false
             else
               local shouldBlock = false
-              if ABConfig.JudgementMode ~= "default" then
-                if isLocalPlayerInActiveZone(killer) then
+              if ABConfig.AutoBlockCustom then
+                if isLocalPlayerInZone(killer) then
                   shouldBlock = true
                 end
               else
@@ -1077,7 +1100,63 @@ end
 
 local function applyBlockToggle(request)
   if not request then return end
-  ABConfig.AutoBlock = request.value == true
+  if request.mode == "default" then
+    ABConfig.AutoBlock = request.value
+    if request.value then
+      ABConfig.AutoBlockCustom = false
+      if ABConfig.ShowDiamond then
+        ABRememberedZones.diamond = true
+        ABConfig.ShowDiamond = false
+        if ABToggles.ShowDiamond then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowDiamond:Set(false)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      if ABConfig.ShowCircle then
+        ABRememberedZones.circle = true
+        ABConfig.ShowCircle = false
+        if ABToggles.ShowCircle then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowCircle:Set(false)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      refreshCustomZones()
+    end
+  else
+    ABConfig.AutoBlockCustom = request.value
+    if request.value then
+      ABConfig.AutoBlock = false
+      if ABRememberedZones.diamond then
+        ABConfig.ShowDiamond = true
+        if ABToggles.ShowDiamond then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowDiamond:Set(true)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      if ABRememberedZones.circle then
+        ABConfig.ShowCircle = true
+        if ABToggles.ShowCircle then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowCircle:Set(true)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      ABRememberedZones.diamond = false
+      ABRememberedZones.circle = false
+      refreshCustomZones()
+    end
+  end
   if ABToggles.AutoBlock then
     ABSuppressCallbacks = true
     pcall(function()
@@ -1085,12 +1164,24 @@ local function applyBlockToggle(request)
     end)
     ABSuppressCallbacks = false
   end
-  if ABConfig.AutoBlock then
+  if ABToggles.AutoBlockCustom then
+    ABSuppressCallbacks = true
+    pcall(function()
+      ABToggles.AutoBlockCustom:Set(ABConfig.AutoBlockCustom)
+    end)
+    ABSuppressCallbacks = false
+  end
+  if ABConfig.AutoBlock or ABConfig.AutoBlockCustom then
     if not autoBlockState.running then
       pcall(startAutoBlock)
     end
-  elseif autoBlockState.running then
-    pcall(stopAutoBlock)
+  else
+    if autoBlockState.running then
+      pcall(stopAutoBlock)
+    end
+  end
+  if fourthButtonState.applyTint then
+    pcall(fourthButtonState.applyTint)
   end
 end
 
@@ -1110,9 +1201,10 @@ local function schedulePendingToggle()
   end)
 end
 
-local function requestBlockToggle(value)
+local function requestBlockToggle(value, mode)
   if value == nil then return end
-  pendingToggle = {value = value}
+  mode = mode or (ABConfig.AutoBlockCustom and "custom" or "default")
+  pendingToggle = {value = value, mode = mode}
   local now = tick()
   if lastToggleTime > 0 and now - lastToggleTime < toggleDebounce then
     schedulePendingToggle()
@@ -1126,6 +1218,248 @@ local function requestBlockToggle(value)
   local request = pendingToggle
   pendingToggle = nil
   applyBlockToggle(request)
+end
+
+local function startFourthButton()
+  if fourthButtonState.running then return end
+  fourthButtonState.running = true
+  fourthButtonState.connections = {}
+
+  do
+    local mainUI = playerGui:FindFirstChild("MainUI")
+    if mainUI then
+      local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
+      if abilityContainer then
+        local leftover = abilityContainer:FindFirstChild("FourthBlockAbility")
+        if leftover then
+          pcall(function()
+            leftover:Destroy()
+          end)
+        end
+      end
+    end
+  end
+
+  if not fourthButtonState.applyTint then
+    fourthButtonState.applyTint = function()
+      local button = fourthButtonState.instance
+      if not button or not button.Parent then return end
+      local tint = (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) and Color3.fromRGB(0, 255, 60) or Color3.fromRGB(255, 0, 0)
+      if button:IsA("ImageButton") or button:IsA("ImageLabel") then
+        button.ImageColor3 = tint
+      end
+      for _, descendant in ipairs(button:GetDescendants()) do
+        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+          descendant.ImageColor3 = tint
+        elseif descendant:IsA("Frame") and descendant.BackgroundTransparency < 1 then
+          descendant.BackgroundColor3 = tint
+        end
+      end
+    end
+  end
+
+  local lastActivation = 0
+  local activationCooldown = 0.15
+
+  local function onFourthButtonActivated()
+    local now = tick()
+    if now - lastActivation < activationCooldown then return end
+    lastActivation = now
+    local target = ABConfig.FourthButtonTarget or "default"
+    if target == "custom" then
+      if ABConfig.AutoBlockCustom then
+        requestBlockToggle(false, "custom")
+      else
+        requestBlockToggle(true, "custom")
+      end
+    else
+      if ABConfig.AutoBlock then
+        requestBlockToggle(false, "default")
+      else
+        requestBlockToggle(true, "default")
+      end
+    end
+  end
+
+  table.insert(fourthButtonState.connections, RunService.RenderStepped:Connect(function()
+    if not fourthButtonState.running then return end
+    local button = fourthButtonState.instance
+    if button and button.Parent then
+      local okPosition, position = pcall(function()
+        return button.AbsolutePosition
+      end)
+      local okSize, size = pcall(function()
+        return button.AbsoluteSize
+      end)
+      if okPosition and okSize then
+        fourthButtonState.cachedPos = position
+        fourthButtonState.cachedSize = size
+      end
+    else
+      fourthButtonState.cachedPos = nil
+      fourthButtonState.cachedSize = nil
+    end
+  end))
+
+  local function isPointOverButton(point)
+    local button = fourthButtonState.instance
+    if not button or not button.Parent then return false end
+    local ok, objects = pcall(function()
+      return UserInputService:GetGuiObjectsAtPosition(point.X, point.Y)
+    end)
+    if ok and objects and #objects > 0 then
+      local topObject = objects[1]
+      return topObject == button or topObject:IsDescendantOf(button)
+    end
+    if not fourthButtonState.cachedPos or not fourthButtonState.cachedSize then return false end
+    local position, size = fourthButtonState.cachedPos, fourthButtonState.cachedSize
+    return point.X >= position.X and point.X <= position.X + size.X
+      and point.Y >= position.Y and point.Y <= position.Y + size.Y
+  end
+
+  local pressPosition, pressTime = nil, 0
+
+  table.insert(fourthButtonState.connections, UserInputService.InputBegan:Connect(function(input)
+    if not fourthButtonState.running then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+      return
+    end
+    if not isPointOverButton(input.Position) then return end
+    pressPosition = input.Position
+    pressTime = tick()
+  end))
+
+  table.insert(fourthButtonState.connections, UserInputService.InputEnded:Connect(function(input)
+    if not fourthButtonState.running then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+      return
+    end
+    if not pressPosition then return end
+    local heldFor = tick() - pressTime
+    pressPosition = nil
+    if heldFor > 0.5 then return end
+    if not isPointOverButton(input.Position) then return end
+    onFourthButtonActivated()
+  end))
+
+  local function hookButtonInput(root)
+    if not root then return end
+    local function hookObject(object)
+      if not object then return end
+      if object:IsA("GuiButton") then
+        pcall(function()
+          object.Active = true
+          object.Selectable = true
+        end)
+        pcall(function()
+          object.MouseButton1Click:Connect(onFourthButtonActivated)
+        end)
+        pcall(function()
+          object.Activated:Connect(onFourthButtonActivated)
+        end)
+      end
+    end
+    hookObject(root)
+    for _, descendant in ipairs(root:GetDescendants()) do
+      if descendant:IsA("GuiObject") then
+        hookObject(descendant)
+      end
+    end
+  end
+
+  task.spawn(function()
+    while fourthButtonState.running do
+      task.wait(0.5)
+      if not fourthButtonState.running then break end
+      local mainUI = playerGui:FindFirstChild("MainUI")
+      if mainUI then
+        local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
+        if abilityContainer then
+          local blockButton = abilityContainer:FindFirstChild("Block")
+          local cloneButton = abilityContainer:FindFirstChild("Clone")
+          local activeMode = getActiveBlockMode()
+          local source = nil
+          if blockButton and cloneButton then
+            source = (activeMode == "007n7") and cloneButton or blockButton
+          else
+            source = blockButton or cloneButton
+          end
+          local existing = abilityContainer:FindFirstChild("FourthBlockAbility")
+          local needsRebuild = false
+          if not existing then
+            needsRebuild = (source ~= nil)
+          elseif not source then
+            needsRebuild = false
+          elseif fourthButtonState.sourceName ~= source.Name then
+            needsRebuild = true
+          elseif fourthButtonState.instance ~= existing then
+            fourthButtonState.instance = existing
+            hookButtonInput(existing)
+            if fourthButtonState.applyTint then
+              fourthButtonState.applyTint()
+            end
+          end
+          if needsRebuild and source then
+            if existing then
+              pcall(function()
+                existing:Destroy()
+              end)
+            end
+            local copy = source:Clone()
+            copy.Name = "FourthBlockAbility"
+            copy.LayoutOrder = 4
+            if copy:IsA("GuiObject") then
+              copy.ZIndex = 50
+            end
+            for _, descendant in ipairs(copy:GetDescendants()) do
+              if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                local loweredText = descendant.Text:lower()
+                if loweredText:find("block") or loweredText:find("clone") then
+                  descendant.Text = ""
+                  descendant.Visible = false
+                end
+              end
+              if descendant:IsA("GuiObject") then
+                descendant.ZIndex = math.max(descendant.ZIndex, 50)
+                descendant.Active = true
+              end
+            end
+            copy.Parent = abilityContainer
+            fourthButtonState.instance = copy
+            fourthButtonState.sourceName = source.Name
+            hookButtonInput(copy)
+            if fourthButtonState.applyTint then
+              fourthButtonState.applyTint()
+            end
+            print("[testbraken] ✅ 4th button created from:", source.Name)
+          end
+        end
+      end
+    end
+  end)
+
+  print("[testbraken] AutoBlockButton ON")
+end
+
+local function stopFourthButton()
+  if not fourthButtonState.running then return end
+  fourthButtonState.running = false
+  for _, connection in ipairs(fourthButtonState.connections) do
+    pcall(function()
+      connection:Disconnect()
+    end)
+  end
+  fourthButtonState.connections = {}
+  if fourthButtonState.instance and fourthButtonState.instance.Parent then
+    pcall(function()
+      fourthButtonState.instance:Destroy()
+    end)
+  end
+  fourthButtonState.instance = nil
+  fourthButtonState.cachedPos = nil
+  fourthButtonState.cachedSize = nil
+  fourthButtonState.sourceName = nil
+  print("[testbraken] AutoBlockButton OFF")
 end
 
 function startAutoBlock()
@@ -1187,6 +1521,9 @@ function startAutoBlock()
     checkKillerAbilities()
   end))
 
+  if fourthButtonState.applyTint then
+    fourthButtonState.applyTint()
+  end
   print("[testbraken] AutoBlock ON")
 end
 
@@ -1203,8 +1540,8 @@ function stopAutoBlock()
   print("[testbraken] AutoBlock OFF")
 end
 
-    local function makeABToggle(tab, config)
-        local option = tab:Toggle(config)
+    local function makeABToggle(config)
+        local option = autoBlockHubTab:Toggle(config)
         return {
             Set = function(_, value)
                 local ok = pcall(function() option:SetValue(value) end)
@@ -1214,14 +1551,13 @@ end
         }
     end
 
-    buildAutoBlockHubUI = function()
-    autoBlockHubTab:Section({Name = "Forsaken自动格挡"})
-    ABToggles.AutoBlock = makeABToggle(autoBlockHubTab, {
-        Name = "自动格挡",
+    autoBlockHubTab:Section({Name = "音效 / 动画识别格挡（来自 Forsaken 中文版）"})
+    ABToggles.AutoBlock = makeABToggle({
+        Name = "自动格挡（音效 / 动画识别）",
         Value = ABConfig.AutoBlock,
         Callback = function(enabled)
             if ABSuppressCallbacks then return end
-            requestBlockToggle(enabled)
+            requestBlockToggle(enabled, "default")
         end,
     })
     ABToggles.ABModeDropdown = autoBlockHubTab:Dropdown({
@@ -1239,29 +1575,54 @@ end
             ABConfig.AimPunch = enabled
         end,
     })
-
-    -- 判定设置并入自动格挡页，不再创建独立的“判定”导航页。
-    autoBlockHubTab:Section({Name = "判定区与碰撞箱设置"})
-    ABToggles.JudgementMode = autoBlockHubTab:Dropdown({
-        Name = "格挡判定方式",
-        Values = {"杀脚本显示碰撞箱", "菱形/圆形自定义判定", "Forsaken音效/动画识别"},
-        Value = "杀脚本显示碰撞箱",
-        Callback = function(selected)
-            if selected == "杀脚本显示碰撞箱" then
-                ABConfig.JudgementMode = "hitbox"
-            elseif selected == "菱形/圆形自定义判定" then
-                ABConfig.JudgementMode = "custom"
-            else
-                ABConfig.JudgementMode = "default"
-            end
+    ABToggles.AutoBlockButton = autoBlockHubTab:Toggle({
+        Name = "自动格挡按钮",
+        Value = ABConfig.AutoBlockButton,
+        Callback = function(enabled)
+            ABConfig.AutoBlockButton = enabled
+            if enabled then startFourthButton() else stopFourthButton() end
         end,
     })
-    ABToggles.ShowDiamond = makeABToggle(autoBlockHubTab, {
+    ABToggles.FourthButtonTargetDropdown = autoBlockHubTab:Dropdown({
+        Name = "第四个按钮目标",
+        Values = {"默认", "自定义"},
+        Value = (ABConfig.FourthButtonTarget == "custom") and "自定义" or "默认",
+        Callback = function(selected)
+            ABConfig.FourthButtonTarget = (selected == "自定义") and "custom" or "default"
+        end,
+    })
+
+    autoBlockHubTab:Section({Name = "自定义判定区格挡"})
+    ABToggles.AutoBlockCustom = makeABToggle({
+        Name = "自定义自动格挡",
+        Value = ABConfig.AutoBlockCustom,
+        Callback = function(enabled)
+            if ABSuppressCallbacks then return end
+            requestBlockToggle(enabled, "custom")
+        end,
+    })
+    ABToggles.CustomABModeDropdown = autoBlockHubTab:Dropdown({
+        Name = "自定义格挡模式",
+        Values = {"Guest 1337", "007n7"},
+        Value = (ABConfig.CustomABMode == "007n7") and "007n7" or "Guest 1337",
+        Callback = function(selected)
+            ABConfig.CustomABMode = (selected == "007n7") and "007n7" or "Guest1337"
+        end,
+    })
+    ABToggles.ShowDiamond = makeABToggle({
         Name = "显示菱形判定区",
         Value = ABConfig.ShowDiamond,
         Callback = function(enabled)
             if ABSuppressCallbacks then
                 ABConfig.ShowDiamond = enabled
+                refreshCustomZones()
+                return
+            end
+            if ABConfig.AutoBlock then
+                ABSuppressCallbacks = true
+                pcall(function() ABToggles.ShowDiamond:Set(false) end)
+                ABSuppressCallbacks = false
+                ABConfig.ShowDiamond = false
                 refreshCustomZones()
                 return
             end
@@ -1281,12 +1642,20 @@ end
         Name = "菱形朝向偏移", Value = tostring(ABConfig.CustomDiamondOffset), Placeholder = "3",
         Callback = function(text) ABConfig.CustomDiamondOffset = math.max(0, tonumber(text) or 3) end,
     })
-    ABToggles.ShowCircle = makeABToggle(autoBlockHubTab, {
+    ABToggles.ShowCircle = makeABToggle({
         Name = "显示圆形判定区",
         Value = ABConfig.ShowCircle,
         Callback = function(enabled)
             if ABSuppressCallbacks then
                 ABConfig.ShowCircle = enabled
+                refreshCustomZones()
+                return
+            end
+            if ABConfig.AutoBlock then
+                ABSuppressCallbacks = true
+                pcall(function() ABToggles.ShowCircle:Set(false) end)
+                ABSuppressCallbacks = false
+                ABConfig.ShowCircle = false
                 refreshCustomZones()
                 return
             end
@@ -1302,42 +1671,6 @@ end
         Name = "判定区高度", Value = tostring(ABConfig.ZoneHeight), Placeholder = "0.5",
         Callback = function(text) ABConfig.ZoneHeight = tonumber(text) or 0.5 end,
     })
-
-    autoBlockHubTab:Toggle({
-        Name = "显示碰撞箱",
-        Value = KillHitboxSettings.ShowVisual,
-        Callback = function(value)
-            KillHitboxSettings.ShowVisual = value
-            if setKillHitboxVisual then setKillHitboxVisual(value) end
-        end,
-    })
-    autoBlockHubTab:Slider({
-        Name = "碰撞箱缩放",
-        Value = {Min = 0.1, Max = 5, Default = KillHitboxSettings.Scale},
-        Rounding = 2,
-        Callback = function(value)
-            KillHitboxSettings.Scale = value
-        end,
-    })
-    autoBlockHubTab:Slider({
-        Name = "碰撞箱Z偏移",
-        Value = {Min = -5, Max = 5, Default = KillHitboxSettings.Offset},
-        Rounding = 2,
-        Callback = function(value)
-            KillHitboxSettings.Offset = value
-        end,
-    })
-    autoBlockHubTab:Slider({
-        Name = "碰撞箱持续时间",
-        Value = {Min = 0.1, Max = 5, Default = KillHitboxSettings.Duration},
-        Rounding = 2,
-        Callback = function(value)
-            KillHitboxSettings.Duration = value
-        end,
-    })
-    end
-
-
 end
 
 
@@ -1642,7 +1975,8 @@ end
 do
     local localPlayer = game:GetService("Players").LocalPlayer
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    
+    local UserInputService = game:GetService("UserInputService")
+
     local Ragdolls = require(
         ReplicatedStorage:WaitForChild("Modules")
             :WaitForChild("Rendering")
@@ -2074,7 +2408,8 @@ end
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
-        local localPlayer = Players.LocalPlayer
+    local UserInputService = game:GetService("UserInputService")
+    local localPlayer = Players.LocalPlayer
 
     local Fly = {
         enabled = false,
@@ -2549,26 +2884,15 @@ local Feng = FengYu:Section({
 
 do
     local originalDefaults = {}
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local RunService = game:GetService("RunService")
-    local sprintingModuleCache = nil
+    local SprintingModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
     local function GetModule()
-        if sprintingModuleCache then return sprintingModuleCache end
-        local systems = ReplicatedStorage:FindFirstChild("Systems")
-        local characterSystems = systems and systems:FindFirstChild("Character")
-        local gameSystems = characterSystems and characterSystems:FindFirstChild("Game")
-        local module = gameSystems and gameSystems:FindFirstChild("Sprinting")
-        if not module then return nil end
-        local ok, result = pcall(require, module)
-        if ok then
-            sprintingModuleCache = result
-            return result
-        end
-        return nil
+        return require(SprintingModule)
     end
 
     local function CaptureDefaults()
         local m = GetModule()
-        if not m then return end
         originalDefaults.MaxStamina = m.MaxStamina
         originalDefaults.StaminaGain = m.StaminaGain
         originalDefaults.StaminaLoss = m.StaminaLoss
@@ -2597,11 +2921,9 @@ do
     task.spawn(function()
         while true do
             local m = GetModule()
-            if m then
-                for key, value in pairs(StaminaSettings) do
-                    if SettingToggles[key] then
-                        m[key] = value
-                    end
+            for key, value in pairs(StaminaSettings) do
+                if SettingToggles[key] then
+                    m[key] = value
                 end
             end
             task.wait(0.5)
@@ -2614,7 +2936,6 @@ Feng.ph:Toggle({
     Callback = function(state)
         bai.Spr = state
         local Sprinting = GetModule()
-        if not Sprinting then return end
         if state then
             Sprinting.StaminaLoss = 0
             Sprinting.StaminaGain = StaminaSettings.InfiniteGain or 9999
@@ -2644,7 +2965,7 @@ Feng.ph:Toggle({
         SettingToggles.MaxStamina = v
         if not v then
             local m = GetModule()
-            if m and originalDefaults.MaxStamina ~= nil then m.MaxStamina = originalDefaults.MaxStamina end
+            m.MaxStamina = originalDefaults.MaxStamina
         end
     end
 })
@@ -2668,7 +2989,7 @@ Feng.ph:Toggle({
         SettingToggles.StaminaGain = v
         if not v then
             local m = GetModule()
-            if m and originalDefaults.StaminaGain ~= nil then m.StaminaGain = originalDefaults.StaminaGain end
+            m.StaminaGain = originalDefaults.StaminaGain
         end
     end
 })
@@ -2692,7 +3013,7 @@ Feng.ph:Toggle({
         SettingToggles.StaminaLoss = v
         if not v then
             local m = GetModule()
-            if m and originalDefaults.StaminaLoss ~= nil then m.StaminaLoss = originalDefaults.StaminaLoss end
+            m.StaminaLoss = originalDefaults.StaminaLoss
         end
     end
 })
@@ -2716,7 +3037,7 @@ Feng.ph:Toggle({
         SettingToggles.SprintSpeed = v
         if not v then
             local m = GetModule()
-            if m and originalDefaults.SprintSpeed ~= nil then m.SprintSpeed = originalDefaults.SprintSpeed end
+            m.SprintSpeed = originalDefaults.SprintSpeed
         end
     end
 })
@@ -2739,21 +3060,9 @@ do
     local RunService = game:GetService("RunService")
     local TweenService = game:GetService("TweenService")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    -- 非阻塞查找：模块尚未就绪时不阻断后续专区创建。
-    local systems = ReplicatedStorage:FindFirstChild("Systems")
-    local characterSystems = systems and systems:FindFirstChild("Character")
-    local gameSystems = characterSystems and characterSystems:FindFirstChild("Game")
-    local SprintingModule = gameSystems and gameSystems:FindFirstChild("Sprinting")
-    local sprintingModuleCache = nil
+    local SprintingModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
     local function GetSprinting()
-        if not SprintingModule then return nil end
-        if sprintingModuleCache then return sprintingModuleCache end
-        local ok, result = pcall(require, SprintingModule)
-        if ok then
-            sprintingModuleCache = result
-            return result
-        end
-        return nil
+        return require(SprintingModule)
     end
 
     local function HasAbility(name)
@@ -5559,9 +5868,6 @@ Feng.se:Slider({
 })
 end
 
-Window:TabDivider()
-autoBlockHubTab = Window:Tab("自动格挡", "shield")
-
 local FengYu = Window:Tab("幸存者功能包", "6452688833")
 
 local Feng = FengYu:Section({
@@ -6225,6 +6531,14 @@ Feng:Slider({
 })
 end
 
+local Feng = FengYu:Section({
+    Name = "访客1337",
+    SubName = "强大来自于你自己",
+    Logo = "101150016240183",
+    Collapsible = true,
+    Collapsed = true,
+})
+
 do
     local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6232,53 +6546,82 @@ do
     local Workspace = game:GetService("Workspace")
     local LP = Players.LocalPlayer
 
-    local BaseHitboxSize = KillHitboxSettings.BaseSize
+    local AutoBlockEnabled = false
+    local ShowHitboxVisual = true
+    local HitboxScale = 1.0
+    local HitboxOffset = -1.4
+    local HitboxDuration = 1.5
+    local AutoPunchEnabled = false
+    local AimPunchEnabled = false
+    local AimPunchMode = "CamChar"
 
-    local HitboxVisualConnections = {}
+    local BaseHitboxSize = Vector3.new(4.5, 6, 7.5)
+    local HitboxColor = Color3.fromRGB(255, 255, 255)
+    local ShowOutline = true
+    local OutlineThickness = 0.01
+    local HitboxTransparency = 0.5
+
+    local AutoBlockConnections = {}
     local BlockHitboxData = {}
 
-    local KillersFolder, Hitboxes
-
-    setKillHitboxVisual = function(value)
-        KillHitboxSettings.ShowVisual = value
-        for _, data in pairs(BlockHitboxData) do
-            if data.visualPart and data.visualPart.Parent then
-                data.visualPart.Transparency = value and (1 - KillHitboxSettings.Transparency) or 1
-                local outline = data.visualPart:FindFirstChildOfClass("SelectionBox")
-                if outline then
-                    outline.Visible = value and KillHitboxSettings.ShowOutline
-                end
-            end
-        end
-    end
-
+    local MainUI, KillersFolder, SurvivorsFolder, Hitboxes
 
     local function GetObjects()
+        MainUI = LP.PlayerGui:FindFirstChild("MainUI")
         local playersFolder = Workspace:FindFirstChild("Players")
         KillersFolder = playersFolder and playersFolder:FindFirstChild("Killers")
+        SurvivorsFolder = playersFolder and playersFolder:FindFirstChild("Survivors")
         Hitboxes = Workspace:FindFirstChild("Hitboxes") or Instance.new("Folder", Workspace)
         Hitboxes.Name = "Hitboxes"
     end
     GetObjects()
 
+    local function getActionButton(name)
+        if not MainUI then return nil end
+        local container = MainUI:FindFirstChild("AbilityContainer")
+        if not container then return nil end
+        return container:FindFirstChild(name)
+    end
+
+    local function getBlockButton() return getActionButton("Block") or getActionButton("Guard") end
+    local function getPunchButton() return getActionButton("Punch") or getActionButton("Attack") or getActionButton("Slap") end
+
+    local function pressButton(btn)
+        if not btn then return false end
+        local cd = btn:FindFirstChild("CooldownTime")
+        if cd and cd.Text ~= "" then return false end
+        pcall(function() btn:Activate() end)
+        local conns = nil
+        pcall(function() conns = getconnections(btn.MouseButton1Click) end)
+        if conns then
+            for _, conn in ipairs(conns) do
+                pcall(function() conn:Fire() end)
+            end
+        end
+        return true
+    end
+
+    local function pressBlock() return pressButton(getBlockButton()) end
+    local function pressPunch() return pressButton(getPunchButton()) end
+
     local function CreateBlockHitboxVisual()
         local part = Instance.new("Part")
         part.Name = "AttackHitboxVisual"
-        part.Size = BaseHitboxSize * KillHitboxSettings.Scale
-        part.Color = KillHitboxSettings.Color
+        part.Size = BaseHitboxSize * HitboxScale
+        part.Color = HitboxColor
         part.Material = Enum.Material.ForceField
-        part.Transparency = 1 - KillHitboxSettings.Transparency
+        part.Transparency = 1 - HitboxTransparency
         part.Anchored = true
         part.CanCollide = false
         part.CastShadow = false
         part.Parent = Hitboxes
-        if KillHitboxSettings.ShowOutline then
+        if ShowOutline then
             local outline = Instance.new("SelectionBox")
             outline.Adornee = part
-            outline.Color3 = KillHitboxSettings.Color
-            outline.LineThickness = KillHitboxSettings.OutlineThickness
+            outline.Color3 = HitboxColor
+            outline.LineThickness = OutlineThickness
             outline.Transparency = 0.1
-            outline.Visible = KillHitboxSettings.ShowVisual
+            outline.Visible = ShowHitboxVisual
             outline.Parent = part
         end
         return part
@@ -6286,15 +6629,15 @@ do
 
     local function UpdateBlockHitboxPosition(part, queryHitbox)
         if part and queryHitbox then
-            part.CFrame = queryHitbox.CFrame * CFrame.new(0, 0, KillHitboxSettings.Offset)
-            part.Size = BaseHitboxSize * KillHitboxSettings.Scale
-            part.Color = KillHitboxSettings.Color
-            part.Transparency = 1 - KillHitboxSettings.Transparency
+            part.CFrame = queryHitbox.CFrame * CFrame.new(0, 0, HitboxOffset)
+            part.Size = BaseHitboxSize * HitboxScale
+            part.Color = HitboxColor
+            part.Transparency = 1 - HitboxTransparency
             local outline = part:FindFirstChildOfClass("SelectionBox")
             if outline then
-                outline.Color3 = KillHitboxSettings.Color
-                outline.LineThickness = KillHitboxSettings.OutlineThickness
-                outline.Visible = KillHitboxSettings.ShowOutline and KillHitboxSettings.ShowVisual
+                outline.Color3 = HitboxColor
+                outline.LineThickness = OutlineThickness
+                outline.Visible = ShowOutline and ShowHitboxVisual
             end
         end
     end
@@ -6304,28 +6647,88 @@ do
         if data then
             if data.visualPart then data.visualPart:Destroy() end
             if data.visualConnection then data.visualConnection:Disconnect() end
+            if data.heartbeatConnection then data.heartbeatConnection:Disconnect() end
             BlockHitboxData[Killer] = nil
         end
     end
 
-    -- 仅显示杀脚本原有攻击碰撞箱；这里不再执行碰撞检测或触发格挡。
-    local function ShowKillerHitbox(Killer, queryHitbox)
+    local OverlapParamsObj = OverlapParams.new()
+    OverlapParamsObj.MaxParts = 1
+    OverlapParamsObj.FilterType = Enum.RaycastFilterType.Include
+
+    local function StartBlockDetection(Killer, queryHitbox)
         ClearKillerBlockHitbox(Killer)
-        if not KillHitboxSettings.ShowVisual or not queryHitbox then return end
         local visualPart = CreateBlockHitboxVisual()
         UpdateBlockHitboxPosition(visualPart, queryHitbox)
-        local startedAt = tick()
-        local visualConnection
-        visualConnection = RunService.Heartbeat:Connect(function()
-            if not KillHitboxSettings.ShowVisual or not visualPart.Parent or not queryHitbox.Parent
-                or tick() - startedAt >= KillHitboxSettings.Duration then
-                if visualConnection then visualConnection:Disconnect() end
+
+        local visualConnection = RunService.Heartbeat:Connect(function()
+            if visualPart and visualPart.Parent and queryHitbox and queryHitbox.Parent then
+                UpdateBlockHitboxPosition(visualPart, queryHitbox)
+            else
+                visualConnection:Disconnect()
+            end
+        end)
+
+        local data = {
+            visualPart = visualPart,
+            visualConnection = visualConnection,
+            heartbeatConnection = nil
+        }
+        BlockHitboxData[Killer] = data
+
+        local localChar = LP.Character
+        if not localChar or not SurvivorsFolder or localChar.Parent ~= SurvivorsFolder then
+            task.delay(HitboxDuration, function() ClearKillerBlockHitbox(Killer) end)
+            return
+        end
+        local localQuery = localChar:FindFirstChild("QueryHitbox")
+        if not localQuery then
+            task.delay(HitboxDuration, function() ClearKillerBlockHitbox(Killer) end)
+            return
+        end
+
+        local hitboxSize = BaseHitboxSize * HitboxScale
+        local startTime = tick()
+
+        local heartbeatPart = Instance.new("Part")
+        heartbeatPart.Size = hitboxSize
+        heartbeatPart.CanCollide = false
+        heartbeatPart.Anchored = true
+        heartbeatPart.Transparency = 1
+        heartbeatPart.Parent = Hitboxes
+
+        local heartbeatConn
+        heartbeatConn = RunService.Heartbeat:Connect(function()
+            if not AutoBlockEnabled then
+                heartbeatConn:Disconnect()
+                heartbeatPart:Destroy()
                 ClearKillerBlockHitbox(Killer)
                 return
             end
-            UpdateBlockHitboxPosition(visualPart, queryHitbox)
+            if tick() - startTime > HitboxDuration then
+                heartbeatConn:Disconnect()
+                heartbeatPart:Destroy()
+                ClearKillerBlockHitbox(Killer)
+                return
+            end
+            if not queryHitbox or not queryHitbox.Parent then
+                heartbeatConn:Disconnect()
+                heartbeatPart:Destroy()
+                ClearKillerBlockHitbox(Killer)
+                return
+            end
+
+            heartbeatPart.CFrame = queryHitbox.CFrame * CFrame.new(0, 0, HitboxOffset)
+            OverlapParamsObj.FilterDescendantsInstances = { localQuery }
+            local hits = Workspace:GetPartsInPart(heartbeatPart, OverlapParamsObj)
+            if #hits > 0 then
+                pressBlock()
+                heartbeatConn:Disconnect()
+                heartbeatPart:Destroy()
+                ClearKillerBlockHitbox(Killer)
+            end
         end)
-        BlockHitboxData[Killer] = {visualPart = visualPart, visualConnection = visualConnection}
+        data.heartbeatConnection = heartbeatConn
     end
 
     local function HandleKiller_Attribute(Killer)
@@ -6334,44 +6737,348 @@ do
         if not queryHitbox then return end
         local blockLocked = false
         local abilityConn, abilitiessConn
-        abilityConn = Killer:GetAttributeChangedSignal("AbilityLastUsed"):Connect(function()
-            if not blockLocked then
-                ShowKillerHitbox(Killer, queryHitbox)
-            else
-                blockLocked = false
+
+        local function doBlock()
+            if AutoBlockEnabled then
+                StartBlockDetection(Killer, queryHitbox)
             end
+        end
+
+        abilityConn = Killer:GetAttributeChangedSignal("AbilityLastUsed"):Connect(function()
+            if not blockLocked then doBlock() else blockLocked = false end
         end)
         abilitiessConn = Killer:GetAttributeChangedSignal("AbilitiesUsed"):Connect(function()
             blockLocked = true
         end)
-        table.insert(HitboxVisualConnections, {
+
+        table.insert(AutoBlockConnections, {
             Disconnect = function()
-                if abilityConn then abilityConn:Disconnect() end
-                if abilitiessConn then abilitiessConn:Disconnect() end
+                abilityConn:Disconnect()
+                abilitiessConn:Disconnect()
             end
         })
     end
 
-    local function StartHitboxVisualMonitor()
-        GetObjects()
-        if not KillersFolder then return end
-        for _, killer in ipairs(KillersFolder:GetChildren()) do
-            HandleKiller_Attribute(killer)
-        end
-        local childCon = KillersFolder.ChildAdded:Connect(HandleKiller_Attribute)
-        table.insert(HitboxVisualConnections, {Disconnect = function() childCon:Disconnect() end})
-    end
-    task.spawn(function()
-        for _ = 1, 30 do
+    local function EnableAutoBlock()
+        if AutoBlockEnabled then
+            for _, con in ipairs(AutoBlockConnections) do pcall(con.Disconnect, con) end
+            AutoBlockConnections = {}
             GetObjects()
             if KillersFolder then
-                StartHitboxVisualMonitor()
-                break
+                for _, killer in ipairs(KillersFolder:GetChildren()) do HandleKiller_Attribute(killer) end
+                local childCon = KillersFolder.ChildAdded:Connect(HandleKiller_Attribute)
+                table.insert(AutoBlockConnections, { Disconnect = function() childCon:Disconnect() end })
             end
-            task.wait(1)
+        end
+    end
+
+    local function DisableAutoBlock()
+        for _, con in ipairs(AutoBlockConnections) do pcall(con.Disconnect, con) end
+        AutoBlockConnections = {}
+        for killer, data in pairs(BlockHitboxData) do
+            if data.visualPart then data.visualPart:Destroy() end
+            if data.visualConnection then data.visualConnection:Disconnect() end
+            if data.heartbeatConnection then data.heartbeatConnection:Disconnect() end
+        end
+        BlockHitboxData = {}
+    end
+
+    local autoPunchRunning = true
+    task.spawn(function()
+        while autoPunchRunning do
+            task.wait(0.1)
+            if AutoPunchEnabled then
+                pcall(function()
+                    local char = LP.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    local kFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+                    if hrp and kFolder then
+                        local killerInRange = false
+                        for _, killer in ipairs(kFolder:GetChildren()) do
+                            if killer:IsA("Model") and killer:FindFirstChild("HumanoidRootPart") then
+                                local kHRP = killer.HumanoidRootPart
+                                local dist = (kHRP.Position - hrp.Position).Magnitude
+                                if dist <= 10 then
+                                    killerInRange = true
+                                    break
+                                end
+                            end
+                        end
+                        if killerInRange then
+                            local tool = char:FindFirstChildOfClass("Tool")
+                            if tool then
+                                tool:Activate()
+                            else
+                                pressPunch()
+                            end
+                        end
+                    end
+                end)
+            end
         end
     end)
 
+    local AimPunch = {
+        Distance = 100,
+        Duration = 0.6,
+        Mode = AimPunchMode,
+        Connection = nil,
+        Aiming = false,
+    }
+    local triggerModules = {}
+
+    local function registerTriggerModule(name, enableFunc, disableFunc)
+        triggerModules[name] = { enabled = false, enable = enableFunc, disable = disableFunc }
+    end
+
+    local function toggleModule(name, state)
+        local mod = triggerModules[name]
+        if not mod then return end
+        if state and not mod.enabled then
+            mod.enable()
+            mod.enabled = true
+        elseif not state and mod.enabled then
+            mod.disable()
+            mod.enabled = false
+        end
+    end
+
+    local PUNCH_ANIM_IDS = {
+        ["108911997126897"] = true,
+        ["82137285150006"] = true,
+        ["129843313690921"] = true,
+        ["140703210927645"] = true,
+        ["136007065400978"] = true,
+        ["86096387000557"] = true,
+        ["87259391926321"] = true,
+        ["86709774283672"] = true,
+        ["108807732150251"] = true,
+        ["138040001965654"] = true
+    }
+
+    local function getPredictLead(velocity)
+        local horiz = Vector3.new(velocity.X, 0, velocity.Z)
+        local speed = horiz.Magnitude
+        local t = math.clamp(0.08 + speed * 0.014, 0.08, 0.42)
+        return horiz * t
+    end
+
+    local function getClosestTarget(maxDist)
+        local char = LP.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return nil end
+
+        local kFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+        if not kFolder then return nil end
+
+        local closest, closestDist = nil, maxDist
+        for _, model in ipairs(kFolder:GetChildren()) do
+            if model:IsA("Model") and model ~= char then
+                local targetHRP = model:FindFirstChild("HumanoidRootPart")
+                local targetHum = model:FindFirstChildOfClass("Humanoid")
+                if targetHRP and targetHum and targetHum.Health > 0 then
+                    local dist = (targetHRP.Position - hrp.Position).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        closest = targetHRP
+                    end
+                end
+            end
+        end
+        return closest
+    end
+
+    local function aimAtTargetWithPrediction(targetHRP, duration)
+        if AimPunch.Aiming then return end
+        AimPunch.Aiming = true
+
+        local char = LP.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum then AimPunch.Aiming = false return end
+
+        hum.AutoRotate = false
+        local cam = Workspace.CurrentCamera
+        local startTime = tick()
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            local elapsed = tick() - startTime
+            if elapsed >= duration or not targetHRP or not targetHRP.Parent or not hrp.Parent then
+                if hum and hum.Parent then hum.AutoRotate = true end
+                AimPunch.Aiming = false
+                connection:Disconnect()
+                return
+            end
+
+            local lead = getPredictLead(targetHRP.AssemblyLinearVelocity)
+            local predictedPos = targetHRP.Position + lead
+            local bodyPos = predictedPos + Vector3.new(0, 1.2, 0)
+            local aimFlat = Vector3.new(bodyPos.X, hrp.Position.Y, bodyPos.Z)
+            local charCF = CFrame.lookAt(hrp.Position, aimFlat)
+            hrp.CFrame = hrp.CFrame:Lerp(charCF, 0.55)
+
+            if AimPunch.Mode == "CamChar" and cam then
+                local camPos = cam.CFrame.Position
+                local camLook = CFrame.lookAt(camPos, bodyPos)
+                cam.CFrame = cam.CFrame:Lerp(camLook, 0.4)
+            end
+        end)
+    end
+
+    local function setupAimPunchListener(character)
+        if AimPunch.Connection then
+            AimPunch.Connection:Disconnect()
+            AimPunch.Connection = nil
+        end
+
+        local hum = character:WaitForChild("Humanoid", 5)
+        local animator = hum and hum:WaitForChild("Animator", 5)
+        if not animator then return end
+
+        AimPunch.Connection = animator.AnimationPlayed:Connect(function(track)
+            if not AimPunchEnabled then return end
+            local animId = track.Animation and track.Animation.AnimationId:match("%d+")
+            if animId and PUNCH_ANIM_IDS[animId] then
+                local targetHRP = getClosestTarget(AimPunch.Distance)
+                if targetHRP then
+                    aimAtTargetWithPrediction(targetHRP, AimPunch.Duration)
+                end
+            end
+        end)
+    end
+
+    registerTriggerModule("Punch",
+        function()
+            if LP.Character then setupAimPunchListener(LP.Character) end
+        end,
+        function()
+            if AimPunch.Connection then
+                AimPunch.Connection:Disconnect()
+                AimPunch.Connection = nil
+            end
+            AimPunch.Aiming = false
+        end
+    )
+
+    local function onCharacterAdded(newChar)
+        if AimPunchEnabled then
+            toggleModule("Punch", false)
+            task.wait(0.1)
+            toggleModule("Punch", true)
+        end
+    end
+
+    if LP.Character then
+        task.spawn(function() onCharacterAdded(LP.Character) end)
+    end
+    LP.CharacterAdded:Connect(onCharacterAdded)
+
+    local autoBlockMonitor = true
+    task.spawn(function()
+        while autoBlockMonitor do
+            task.wait(1)
+            if not AutoBlockEnabled then continue end
+            local pf = Workspace:FindFirstChild("Players")
+            local kf = pf and pf:FindFirstChild("Killers")
+            if kf and kf ~= KillersFolder then
+                KillersFolder = kf
+                DisableAutoBlock()
+                EnableAutoBlock()
+            end
+        end
+    end)
+
+autoBlockHubTab:Section({Name = "碰撞箱识别自动格挡（来自杀脚本）"})
+
+autoBlockHubTab:Toggle({
+    Name = "自动格挡（碰撞箱识别）",
+    Value = AutoBlockEnabled,
+    Callback = function(value)
+      AutoBlockEnabled = value
+      if value then 
+          EnableAutoBlock() 
+      else 
+          DisableAutoBlock() 
+      end
+    end
+})
+
+autoBlockHubTab:Toggle({
+    Name = "显示碰撞箱",
+    Value = ShowHitboxVisual,
+    Callback = function(value)
+        ShowHitboxVisual = value
+    end
+})
+
+autoBlockHubTab:Slider({
+    Name = "碰撞箱缩放",
+    Value = { 
+        Min = 0.1, 
+        Max = 5, 
+        Default = HitboxScale 
+    },
+    Rounding = 2,
+    Callback = function(value)
+        HitboxScale = value
+    end
+})
+
+autoBlockHubTab:Slider({
+    Name = "碰撞箱Z偏移",
+    Value = { 
+        Min = -5, 
+        Max = 5, 
+        Default = HitboxOffset 
+    },
+    Rounding = 2,
+    Callback = function(value)
+        HitboxOffset = value
+    end
+})
+
+autoBlockHubTab:Slider({
+    Name = "碰撞箱持续时间",
+    Value = { 
+        Min = 0.1, 
+        Max = 5, 
+        Default = HitboxDuration 
+    },
+    Rounding = 2,
+    Callback = function(value)
+        HitboxDuration = value
+    end
+})
+
+Feng:Toggle({
+    Name = "自动出拳",
+    Value = AutoPunchEnabled,
+    Callback = function(value)
+        AutoPunchEnabled = value
+    end
+})
+
+Feng:Toggle({
+    Name = "瞄准出拳",
+    Value = AimPunchEnabled,
+    Callback = function(value)
+        AimPunchEnabled = value
+        toggleModule("Punch", value)
+    end
+})
+
+Feng:Dropdown({
+    Name = "瞄准模式",
+    Values = {
+        "相机+角色", 
+        "角色"
+    },
+    Value = (AimPunchMode == "CamChar") and "相机+角色" or "角色",
+    Callback = function(value)
+        AimPunchMode = (value == "相机+角色") and "CamChar" or "Character"
+        AimPunch.Mode = AimPunchMode
+    end
+})
 end
 
 local Feng = FengYu:Section({
@@ -6439,7 +7146,6 @@ Feng:Toggle({
     end
 })
 end
-
 
 local FengYu = Window:Tab("幸存者综合功能", "84830962019412")
 
@@ -7118,7 +7824,8 @@ local Feng = FengYu:Section({
 
 do
     local RunService = game:GetService("RunService")
-        local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
+    local Players = game:GetService("Players")
     local LP = Players.LocalPlayer
     local Camera = workspace.CurrentCamera
 
@@ -8082,6 +8789,540 @@ Feng:Slider({
     end)
 end
 
+local Feng = autoBlockHubTab:Section({
+    Name = "斩首者格挡",
+    SubName = "设置",
+    Logo = "101155610322224",
+    Collapsible = true,
+    Collapsed = true,
+})
+
+do
+    local autoBlockTriggerAnims = {
+        ["124269076578545"] = true, ["126830014841198"] = true, ["18885909645"] = true, ["105458270463374"] = true,
+        ["83829782357897"] = true, ["125403313786645"] = true, ["118298475669935"] = true, ["82113744478546"] = true,
+        ["70371667919898"] = true, ["109230267448394"] = true, ["139835501033932"] = true, ["109667959938617"] = true,
+        ["126681776859538"] = true, ["129976080405072"] = true, ["121293883585738"] = true, ["81639435858902"] = true,
+        ["137314737492715"] = true, ["92173139187970"] = true, ["122709416391"] = true, ["879895330952"] = true,
+        ["84069821282466"] = true, ["114506382930939"] = true, ["88451353906104"] = true, ["133066252175737"] = true,
+        ["99824350842479"] = true, ["132243194360714"] = true, ["91341171001824"] = true, ["120307951"] = true,
+        ["124705663396411"] = true, ["122709416391891"] = true, ["106131211773069"] = true, ["81299297965542"] = true,
+        ["138938529389204"] = true, ["70483423693126"] = true, ["114126519127454"] = true, ["130958529065375"] = true,
+        ["81803417290685"] = true, ["90620531468240"] = true, ["82691533602949"] = true, ["99829427721752"] = true,
+        ["93366464803829"] = true, ["107032335460679"] = true, ["112135252467978"] = true, ["77375846492436"] = true,
+        ["127245564598429"] = true
+    }
+
+    local autoBlockTriggerSounds = {
+        ["89004992452376"] = true, ["80516583309685"] = true, ["102228729296384"] = true, ["140242176732868"] = true,
+        ["112809109188560"] = true, ["136323728355613"] = true, ["115026634746636"] = true, ["84116622032112"] = true,
+        ["108907358619313"] = true, ["127793641088496"] = true, ["86174610237192"] = true, ["95079963655241"] = true,
+        ["101199185291628"] = true, ["119942598489800"] = true, ["84307400688050"] = true, ["113037804008732"] = true,
+        ["105200830849301"] = true, ["75330693422988"] = true, ["82221759983649"] = true, ["81702359653578"] = true,
+        ["108610718831698"] = true, ["112395455254818"] = true, ["109431876587852"] = true, ["109348678063422"] = true,
+        ["85853080745515"] = true, ["12222216"] = true, ["105840448036441"] = true, ["114742322778642"] = true,
+        ["119583605486352"] = true, ["79980897195554"] = true, ["71805956520207"] = true, ["79391273191671"] = true,
+        ["101553872555606"] = true, ["101698569375359"] = true, ["106300477136129"] = true, ["116581754553533"] = true,
+        ["117231507259853"] = true, ["119089145505438"] = true, ["121954639447247"] = true, ["125213046326879"] = true,
+        ["131406927389838"] = true, ["71834552297085"] = true, ["805165833096"] = true, ["823363523051"] = true,
+        ["120059928759346"] = true, ["82336352305186"] = true, ["104625283622511"] = true, ["126131675979001"] = true,
+        ["98675142200448"] = true
+    }
+
+    local localPunchAnims = {"87259391926321", "86096387000557", "86709774283672", "140703210927645", "136007065400978", "129843313690921", "108807732150251", "138040001965654"}
+    local oneShootAnims = {"73921036900313", "111384272984267", "90499469533503", "133491532453922"}
+    local twoTimeTriggerAnims = {
+        ["119434518007321"] = true, ["115194624791339"] = true, ["89448354637442"] = true,
+        ["100725497418533"] = true, ["107640065977686"] = true, ["112902284724598"] = true,
+        ["106086955212611"] = true, ["77119710693654"] = true
+    }
+
+    local slasherParryAnims = {
+        ["121255898612475"] = true, ["105614318732282"] = true, ["116618003477002"] = true,
+        ["111918351126361"] = true, ["98031287364865"] = true, ["119462383658044"] = true,
+        ["87259391926321"] = true, ["86096387000557"] = true, ["86709774283672"] = true,
+        ["140703210927645"] = true, ["136007065400978"] = true, ["129843313690921"] = true,
+        ["108807732150251"] = true, ["138040001965654"] = true,
+        ["119434518007321"] = true, ["115194624791339"] = true, ["89448354637442"] = true,
+        ["100725497418533"] = true, ["107640065977686"] = true, ["112902284724598"] = true,
+        ["106086955212611"] = true, ["77119710693654"] = true,
+        ["73921036900313"] = true, ["111384272984267"] = true, ["90499469533503"] = true,
+        ["133491532453922"] = true
+    }
+
+    local slasherParrySounds = {
+        ["92445809840331"] = true, ["140258770018994"] = true, ["12222225"] = true,
+        ["118234760889759"] = true, ["81714228693719"] = true, ["114486446625838"] = true,
+        ["5569523548"] = true, ["119675090901934"] = true, ["132596270805754"] = true,
+        ["127324570265084"] = true, ["129249459631748"] = true, ["12222208"] = true,
+        ["104632327472742"] = true, ["110279274881589"] = true
+    }
+
+    local SlasherSettings = {
+        EnragedEnabled   = false,
+        EnragedMultiplier = 2.111,
+        AutoParry        = false,
+        ParryRange       = 15,
+        ParryVis         = false,
+    }
+
+    local LP = game:GetService("Players").LocalPlayer
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RemoteEvent = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+
+    local function isFakeKiller(killerModel)
+        if not killerModel then return true end
+        local name = killerModel.Name
+        if string.match(name, "^Fake") or string.match(name, "Fake$") then return true end
+        local workspacePlayers = Workspace:FindFirstChild("Players")
+        local killersFolder = workspacePlayers and workspacePlayers:FindFirstChild("Killers")
+        if not killersFolder or not killerModel:IsDescendantOf(killersFolder) then return true end
+        return false
+    end
+
+    local function ShouldParry(myRoot, parryRange)
+        local shouldParry = false
+        local detectedAnim = "No"
+        local detectedSound = "No"
+        local inRange = "No"
+
+        local survivorsFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Survivors")
+        if not survivorsFolder then return false, detectedAnim, detectedSound, inRange end
+
+        for _, survModel in ipairs(survivorsFolder:GetChildren()) do
+            local sHrp = survModel:FindFirstChild("HumanoidRootPart")
+            if sHrp then
+                local dist = (sHrp.Position - myRoot.Position).Magnitude
+                if dist <= (parryRange * 3) then
+                    local isStandardRange = dist <= parryRange
+                    local hum = survModel:FindFirstChildOfClass("Humanoid")
+                    local animator = hum and hum:FindFirstChildOfClass("Animator")
+
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            local id = tostring(track.Animation and track.Animation.AnimationId or ""):match("%d+")
+                            if id then
+                                local isGuestPunch = table.find(localPunchAnims, id)
+                                local isOneShoot = table.find(oneShootAnims, id)
+                                local validDist = false
+                                if isOneShoot and dist <= (parryRange * 3) then
+                                    validDist = true
+                                elseif (slasherParryAnims[id] or autoBlockTriggerAnims[id] or isGuestPunch or twoTimeTriggerAnims[id]) and isStandardRange then
+                                    validDist = true
+                                end
+                                if validDist then
+                                    inRange = "Yes"
+                                    if track.TimePosition <= 0.45 then
+                                        shouldParry = true
+                                        detectedAnim = "Yes"
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    if (not shouldParry or detectedSound == "No") and isStandardRange then
+                        for _, desc in ipairs(survModel:GetDescendants()) do
+                            if desc:IsA("Sound") and desc.IsPlaying then
+                                local soundId = tostring(desc.SoundId):match("%d+")
+                                if soundId and (autoBlockTriggerSounds[soundId] or slasherParrySounds[soundId]) then
+                                    inRange = "Yes"
+                                    shouldParry = true
+                                    detectedSound = "Yes"
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            if shouldParry then break end
+        end
+
+        return shouldParry, detectedAnim, detectedSound, inRange
+    end
+
+    local function getSlasherRagingPaceCD()
+        local playerGui = LP:FindFirstChild("PlayerGui")
+        local mainUI = playerGui and playerGui:FindFirstChild("MainUI")
+        local abilityContainer = mainUI and mainUI:FindFirstChild("AbilityContainer")
+        local ragingPaceFrame = abilityContainer and abilityContainer:FindFirstChild("RagingPace")
+        if ragingPaceFrame then
+            local cdTime = ragingPaceFrame:FindFirstChild("CooldownTime")
+            if cdTime and cdTime.Visible and cdTime.Text ~= "" then
+                return tonumber(cdTime.Text) or 0
+            end
+        end
+        return 0
+    end
+
+    local lastSlasherParryTime = 0
+
+    task.spawn(function()
+        while task.wait(0.1) do
+            if not SlasherSettings.EnragedEnabled then
+                continue
+            end
+
+            local playersFolder = Workspace:FindFirstChild("Players")
+            if playersFolder then
+                local killersFolder = playersFolder:FindFirstChild("Killers")
+                if killersFolder then
+                    for _, killerModel in ipairs(killersFolder:GetChildren()) do
+                        if isFakeKiller(killerModel) then continue end
+                        local speedMults = killerModel:FindFirstChild("SpeedMultipliers")
+                        if speedMults then
+                            local enraged = speedMults:FindFirstChild("ENRAGED")
+                            if enraged then
+                                enraged.Value = SlasherSettings.EnragedMultiplier
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        local myChar = LP.Character
+        if not myChar then return end
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+
+        local isSlasher = string.find(myChar.Name, "Slasher") and myChar:GetAttribute("Username") == LP.Name
+        if not isSlasher then return end
+
+        if SlasherSettings.AutoParry then
+            local shouldParry = ShouldParry(myRoot, SlasherSettings.ParryRange)
+            local cd = getSlasherRagingPaceCD()
+            local now = tick()
+            if shouldParry and cd <= 0 and (now - lastSlasherParryTime) >= 0.5 then
+                lastSlasherParryTime = now
+                task.spawn(function()
+                    local args = {
+                        "UseActorAbility",
+                        { buffer.fromstring("\003\n\000\000\000RagingPace") }
+                    }
+                    for i = 1, 3 do
+                        pcall(function() RemoteEvent:FireServer(unpack(args)) end)
+                    end
+                    task.wait(0.05)
+                    for i = 1, 3 do
+                        pcall(function() RemoteEvent:FireServer(unpack(args)) end)
+                    end
+                end)
+            end
+        end
+
+        local parryVis = myRoot:FindFirstChild("ParryRangeVis")
+        if SlasherSettings.ParryVis then
+            if not parryVis then
+                parryVis = Instance.new("CylinderHandleAdornment")
+                parryVis.Name = "ParryRangeVis"
+                parryVis.Adornee = myRoot
+                parryVis.Height = 0.05
+                parryVis.Color3 = Color3.fromRGB(255, 140, 0)
+                parryVis.Transparency = 0.6
+                parryVis.ZIndex = 1
+                parryVis.Parent = myRoot
+            end
+            parryVis.Radius = SlasherSettings.ParryRange
+            parryVis.InnerRadius = math.max(0, SlasherSettings.ParryRange - 0.5)
+            parryVis.CFrame = CFrame.new(0, -myRoot.Size.Y/2, 0) * CFrame.Angles(math.rad(90), 0, 0)
+            parryVis.Visible = true
+        elseif parryVis then
+            parryVis.Visible = false
+        end
+    end)
+
+Feng:Toggle({
+    Name = "狂暴速度",
+    Value = SlasherSettings.EnragedEnabled,
+    Callback = function(val)
+        SlasherSettings.EnragedEnabled = val
+    end
+})
+
+Feng:Slider({
+    Name = "狂暴速度倍率",
+    Value = {
+        Min = 2.111,
+        Max = 3.4,
+        Default = SlasherSettings.EnragedMultiplier,
+    },
+    Rounding = 3,
+    Callback = function(val)
+        SlasherSettings.EnragedMultiplier = val
+    end
+})
+
+Feng:Toggle({
+    Name = "自动狂暴速度格挡",
+    Value = SlasherSettings.AutoParry,
+    Callback = function(val)
+        SlasherSettings.AutoParry = val
+    end
+})
+
+Feng:Slider({
+    Name = "狂暴速度格挡范围",
+    Value = {
+        Min = 5,
+        Max = 40,
+        Default = SlasherSettings.ParryRange,
+    },
+    Callback = function(val)
+        SlasherSettings.ParryRange = val
+    end
+})
+
+Feng:Toggle({
+    Name = "(可视化)狂暴速度范围",
+    Value = SlasherSettings.ParryVis,
+    Callback = function(val)
+        SlasherSettings.ParryVis = val
+    end
+})
+end
+
+local Feng = autoBlockHubTab:Section({
+    Name = "约翰.多格挡",
+    SubName = "设置",
+    Logo = "94161186262005",
+    Collapsible = true,
+    Collapsed = true,
+})
+
+do
+    local autoBlockTriggerAnims = {
+        ["124269076578545"] = true, ["126830014841198"] = true, ["18885909645"] = true, ["105458270463374"] = true,
+        ["83829782357897"] = true, ["125403313786645"] = true, ["118298475669935"] = true, ["82113744478546"] = true,
+        ["70371667919898"] = true, ["109230267448394"] = true, ["139835501033932"] = true, ["109667959938617"] = true,
+        ["126681776859538"] = true, ["129976080405072"] = true, ["121293883585738"] = true, ["81639435858902"] = true,
+        ["137314737492715"] = true, ["92173139187970"] = true, ["122709416391"] = true, ["879895330952"] = true,
+        ["84069821282466"] = true, ["114506382930939"] = true, ["88451353906104"] = true, ["133066252175737"] = true,
+        ["99824350842479"] = true, ["132243194360714"] = true, ["91341171001824"] = true, ["120307951"] = true,
+        ["124705663396411"] = true, ["122709416391891"] = true, ["106131211773069"] = true, ["81299297965542"] = true,
+        ["138938529389204"] = true, ["70483423693126"] = true, ["114126519127454"] = true, ["130958529065375"] = true,
+        ["81803417290685"] = true, ["90620531468240"] = true, ["82691533602949"] = true, ["99829427721752"] = true,
+        ["93366464803829"] = true, ["107032335460679"] = true, ["112135252467978"] = true, ["77375846492436"] = true,
+        ["127245564598429"] = true
+    }
+
+    local autoBlockTriggerSounds = {
+        ["89004992452376"] = true, ["80516583309685"] = true, ["102228729296384"] = true, ["140242176732868"] = true,
+        ["112809109188560"] = true, ["136323728355613"] = true, ["115026634746636"] = true, ["84116622032112"] = true,
+        ["108907358619313"] = true, ["127793641088496"] = true, ["86174610237192"] = true, ["95079963655241"] = true,
+        ["101199185291628"] = true, ["119942598489800"] = true, ["84307400688050"] = true, ["113037804008732"] = true,
+        ["105200830849301"] = true, ["75330693422988"] = true, ["82221759983649"] = true, ["81702359653578"] = true,
+        ["108610718831698"] = true, ["112395455254818"] = true, ["109431876587852"] = true, ["109348678063422"] = true,
+        ["85853080745515"] = true, ["12222216"] = true, ["105840448036441"] = true, ["114742322778642"] = true,
+        ["119583605486352"] = true, ["79980897195554"] = true, ["71805956520207"] = true, ["79391273191671"] = true,
+        ["101553872555606"] = true, ["101698569375359"] = true, ["106300477136129"] = true, ["116581754553533"] = true,
+        ["117231507259853"] = true, ["119089145505438"] = true, ["121954639447247"] = true, ["125213046326879"] = true,
+        ["131406927389838"] = true, ["71834552297085"] = true, ["805165833096"] = true, ["823363523051"] = true,
+        ["120059928759346"] = true, ["82336352305186"] = true, ["104625283622511"] = true, ["126131675979001"] = true,
+        ["98675142200448"] = true
+    }
+
+    local localPunchAnims = {"87259391926321", "86096387000557", "86709774283672", "140703210927645", "136007065400978", "129843313690921", "108807732150251", "138040001965654"}
+    local oneShootAnims = {"73921036900313", "111384272984267", "90499469533503", "133491532453922"}
+    local twoTimeTriggerAnims = {
+        ["119434518007321"] = true, ["115194624791339"] = true, ["89448354637442"] = true,
+        ["100725497418533"] = true, ["107640065977686"] = true, ["112902284724598"] = true,
+        ["106086955212611"] = true, ["77119710693654"] = true
+    }
+
+    local slasherParryAnims = {
+        ["121255898612475"] = true, ["105614318732282"] = true, ["116618003477002"] = true,
+        ["111918351126361"] = true, ["98031287364865"] = true, ["119462383658044"] = true,
+        ["87259391926321"] = true, ["86096387000557"] = true, ["86709774283672"] = true,
+        ["140703210927645"] = true, ["136007065400978"] = true, ["129843313690921"] = true,
+        ["108807732150251"] = true, ["138040001965654"] = true,
+        ["119434518007321"] = true, ["115194624791339"] = true, ["89448354637442"] = true,
+        ["100725497418533"] = true, ["107640065977686"] = true, ["112902284724598"] = true,
+        ["106086955212611"] = true, ["77119710693654"] = true,
+        ["73921036900313"] = true, ["111384272984267"] = true, ["90499469533503"] = true,
+        ["133491532453922"] = true
+    }
+
+    local slasherParrySounds = {
+        ["92445809840331"] = true, ["140258770018994"] = true, ["12222225"] = true,
+        ["118234760889759"] = true, ["81714228693719"] = true, ["114486446625838"] = true,
+        ["5569523548"] = true, ["119675090901934"] = true, ["132596270805754"] = true,
+        ["127324570265084"] = true, ["129249459631748"] = true, ["12222208"] = true,
+        ["104632327472742"] = true, ["110279274881589"] = true
+    }
+
+    local JohnDoeSettings = {
+        AutoParry   = false,
+        ParryRange  = 15,
+        ParryVis    = false,
+    }
+
+    local LP = game:GetService("Players").LocalPlayer
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RemoteEvent = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+
+    local function isFakeKiller(killerModel)
+        if not killerModel then return true end
+        local name = killerModel.Name
+        if string.match(name, "^Fake") or string.match(name, "Fake$") then return true end
+        local workspacePlayers = Workspace:FindFirstChild("Players")
+        local killersFolder = workspacePlayers and workspacePlayers:FindFirstChild("Killers")
+        if not killersFolder or not killerModel:IsDescendantOf(killersFolder) then return true end
+        return false
+    end
+
+    local function ShouldParry(myRoot, parryRange)
+        local shouldParry = false
+        local survivorsFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Survivors")
+        if not survivorsFolder then return false end
+
+        for _, survModel in ipairs(survivorsFolder:GetChildren()) do
+            local sHrp = survModel:FindFirstChild("HumanoidRootPart")
+            if sHrp then
+                local dist = (sHrp.Position - myRoot.Position).Magnitude
+                if dist <= (parryRange * 3) then
+                    local isStandardRange = dist <= parryRange
+                    local hum = survModel:FindFirstChildOfClass("Humanoid")
+                    local animator = hum and hum:FindFirstChildOfClass("Animator")
+
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            local id = tostring(track.Animation and track.Animation.AnimationId or ""):match("%d+")
+                            if id then
+                                local isGuestPunch = table.find(localPunchAnims, id)
+                                local isOneShoot = table.find(oneShootAnims, id)
+                                local validDist = false
+                                if isOneShoot and dist <= (parryRange * 3) then
+                                    validDist = true
+                                elseif (slasherParryAnims[id] or autoBlockTriggerAnims[id] or isGuestPunch or twoTimeTriggerAnims[id]) and isStandardRange then
+                                    validDist = true
+                                end
+                                if validDist then
+                                    if track.TimePosition <= 0.45 then
+                                        shouldParry = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    if not shouldParry and isStandardRange then
+                        for _, desc in ipairs(survModel:GetDescendants()) do
+                            if desc:IsA("Sound") and desc.IsPlaying then
+                                local soundId = tostring(desc.SoundId):match("%d+")
+                                if soundId and (autoBlockTriggerSounds[soundId] or slasherParrySounds[soundId]) then
+                                    shouldParry = true
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            if shouldParry then break end
+        end
+        return shouldParry
+    end
+
+    local function get404ErrorCooldown()
+        local playerGui = LP:FindFirstChild("PlayerGui")
+        local mainUI = playerGui and playerGui:FindFirstChild("MainUI")
+        local abilityContainer = mainUI and mainUI:FindFirstChild("AbilityContainer")
+        local errorFrame = abilityContainer and abilityContainer:FindFirstChild("404Error")
+        if errorFrame then
+            local cdTime = errorFrame:FindFirstChild("CooldownTime")
+            if cdTime and cdTime.Visible and cdTime.Text ~= "" then
+                return tonumber(cdTime.Text) or 0
+            end
+        end
+        return 0
+    end
+
+    local lastJohnDoeParryTime = 0
+
+    RunService.Heartbeat:Connect(function()
+        local myChar = LP.Character
+        if not myChar then return end
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+
+        local isJohnDoe = string.find(myChar.Name, "JohnDoe") and myChar:GetAttribute("Username") == LP.Name
+        if not isJohnDoe then return end
+
+        if JohnDoeSettings.AutoParry then
+            local shouldParry = ShouldParry(myRoot, JohnDoeSettings.ParryRange)
+            local cd = get404ErrorCooldown()
+            local now = tick()
+            if shouldParry and cd <= 0 and (now - lastJohnDoeParryTime) >= 2.0 then
+                lastJohnDoeParryTime = now
+                task.spawn(function()
+                    local args = {
+                        "UseActorAbility",
+                        { buffer.fromstring("\003\b\000\000\000404Error") }
+                    }
+                    pcall(function() RemoteEvent:FireServer(unpack(args)) end)
+                end)
+            end
+        end
+
+        local jdParryVis = myRoot:FindFirstChild("JDParryRangeVis")
+        if JohnDoeSettings.ParryVis then
+            if not jdParryVis then
+                jdParryVis = Instance.new("CylinderHandleAdornment")
+                jdParryVis.Name = "JDParryRangeVis"
+                jdParryVis.Adornee = myRoot
+                jdParryVis.Height = 0.05
+                jdParryVis.Color3 = Color3.fromRGB(0, 0, 0)
+                jdParryVis.Transparency = 0.6
+                jdParryVis.ZIndex = 1
+                jdParryVis.Parent = myRoot
+            end
+            jdParryVis.Radius = JohnDoeSettings.ParryRange
+            jdParryVis.InnerRadius = math.max(0, JohnDoeSettings.ParryRange - 0.5)
+            jdParryVis.CFrame = CFrame.new(0, -myRoot.Size.Y/2, 0) * CFrame.Angles(math.rad(90), 0, 0)
+            jdParryVis.Visible = true
+        elseif jdParryVis then
+            jdParryVis.Visible = false
+        end
+    end)
+
+Feng:Toggle({
+    Name = "自动404错误格挡",
+    Value = JohnDoeSettings.AutoParry,
+    Callback = function(val)
+        JohnDoeSettings.AutoParry = val
+    end
+})
+
+Feng:Slider({
+    Name = "404错误格挡范围",
+    Value = {
+        Min = 5,
+        Max = 40,
+        Default = JohnDoeSettings.ParryRange,
+    },
+    Callback = function(val)
+        JohnDoeSettings.ParryRange = val
+    end
+})
+
+Feng:Toggle({
+    Name = "(可视化)404错误范围",
+    Value = JohnDoeSettings.ParryVis,
+    Callback = function(val)
+        JohnDoeSettings.ParryVis = val
+    end
+})
+end
 
 Window:TabDivider()
 
@@ -8227,12 +9468,4 @@ Feng:Input({
         end)
     end
 })
-end
-
--- 延后创建自动格挡控件：先完成后续所有功能页的创建，避免自动格挡 UI 控件异常中断其余专区。
-if buildAutoBlockHubUI then
-    local ok, err = pcall(buildAutoBlockHubUI)
-    if not ok then
-        warn("[自动格挡 UI] 创建失败：" .. tostring(err))
-    end
 end
