@@ -311,8 +311,34 @@ local function makeTabAdapter(tab)
             end
         end
 
+        self._currentGroup = section
         return section
     end
+
+    -- 兼容旧脚本直接在 Tab 上创建控件的写法：Tab:Toggle/Dropdown/Input 等。
+    -- 自动格挡模块大量使用这种写法，因此必须转发到最近创建的 Groupbox。
+    local function forwardToCurrentGroup(methodName)
+        return function(self, config)
+            local group = self._currentGroup
+            if not group then
+                group = self:Section({Name = "功能"})
+            end
+            local method = group[methodName]
+            if type(method) ~= "function" then
+                error("当前分区不支持控件类型: " .. tostring(methodName))
+            end
+            return method(group, config)
+        end
+    end
+
+    adapter.Toggle = forwardToCurrentGroup("Toggle")
+    adapter.Slider = forwardToCurrentGroup("Slider")
+    adapter.Dropdown = forwardToCurrentGroup("Dropdown")
+    adapter.Button = forwardToCurrentGroup("Button")
+    adapter.Input = forwardToCurrentGroup("Input")
+    adapter.Textbox = forwardToCurrentGroup("Textbox")
+    adapter.Colorpicker = forwardToCurrentGroup("Colorpicker")
+    adapter.Social = forwardToCurrentGroup("Social")
 
     function adapter:Divider(config)
         local title = type(config) == "table" and (config.Name or config.Title) or config
