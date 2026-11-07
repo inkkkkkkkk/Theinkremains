@@ -495,7 +495,7 @@ Feng:Social({
 })
 
 
-Window:Tab("服务器", "132419977785712")
+local FengYu = Window:Tab("服务器", "132419977785712")
 
 local Feng = FengYu:Section({
     Name = "服务器列表",
