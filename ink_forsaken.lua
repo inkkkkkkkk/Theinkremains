@@ -5552,7 +5552,7 @@ Feng:Toggle({
 })
 end
 
-local FengYu = Window:Tab("幸存者综合功能", "84830962019412")
+-- 幸存者综合功能并入上方“幸存者功能包”标签页，继续使用同一个 FengYu。
 
 local Feng = FengYu:Section({
     Name = "其他功能",
@@ -6840,7 +6840,7 @@ Feng:Slider({
 })
 end
 
-local FengYu = Window:Tab("杀手综合功能", "84830962019412")
+-- 杀手综合功能并入上方“杀手功能包”标签页，继续使用同一个 FengYu。
 
 local Feng = FengYu:Section({
     Name = "杀死全部人",
