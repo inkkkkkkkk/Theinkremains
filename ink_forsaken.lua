@@ -5560,6 +5560,7 @@ end
 
 Window:TabDivider()
 autoBlockHubTab = Window:Tab("自动格挡", "shield")
+buildAutoBlockHubUI()
 
 local FengYu = Window:Tab("幸存者功能包", "6452688833")
 
@@ -8226,12 +8227,4 @@ Feng:Input({
         end)
     end
 })
-end
-
--- 延后创建自动格挡控件：先完成后续所有功能页的创建，避免自动格挡 UI 控件异常中断其余专区。
-if buildAutoBlockHubUI then
-    local ok, err = pcall(buildAutoBlockHubUI)
-    if not ok then
-        warn("[自动格挡 UI] 创建失败：" .. tostring(err))
-    end
 end
