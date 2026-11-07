@@ -1500,17 +1500,8 @@ end
 
 local FengYu = Window:Tab("体力区", "130874893373683")
 
-local Feng = FengYu:Section({
-    Name = "体力设置",
-    {
-        Key = "ph",
-        Name = "体力设置",
-    },
-    {
-        Key = "vu",
-        Name = "安全漏洞",
-    },
-})
+local Feng = FengYu:Section({ Name = "体力设置" })
+local FengVu = FengYu:Section({ Name = "安全漏洞" })
 
 do
     local originalDefaults = {}
@@ -1560,7 +1551,7 @@ do
         end
     end)
 
-Feng.ph:Toggle({
+Feng:Toggle({
     Name = "无限体力",
     Value = false,
     Callback = function(state)
@@ -1588,7 +1579,7 @@ Feng.ph:Toggle({
     end
 })
 
-Feng.ph:Toggle({
+Feng:Toggle({
     Name = "启用体力大小",
     Value = false,
     Callback = function(v)
@@ -1600,7 +1591,7 @@ Feng.ph:Toggle({
     end
 })
 
-Feng.ph:Slider({
+Feng:Slider({
     Name = "体力大小",
     Value = {
         Min = 0,
@@ -1612,7 +1603,7 @@ Feng.ph:Slider({
     end
 })
 
-Feng.ph:Toggle({
+Feng:Toggle({
     Name = "启用体力恢复",
     Value = false,
     Callback = function(v)
@@ -1624,7 +1615,7 @@ Feng.ph:Toggle({
     end
 })
 
-Feng.ph:Slider({
+Feng:Slider({
     Name = "体力恢复",
     Value = {
         Min = 0,
@@ -1636,7 +1627,7 @@ Feng.ph:Slider({
     end
 })
 
-Feng.ph:Toggle({
+Feng:Toggle({
     Name = "启用体力消耗",
     Value = false,
     Callback = function(v)
@@ -1648,7 +1639,7 @@ Feng.ph:Toggle({
     end
 })
 
-Feng.ph:Slider({
+Feng:Slider({
     Name = "体力消耗",
     Value = {
         Min = 0,
@@ -1660,7 +1651,7 @@ Feng.ph:Slider({
     end
 })
 
-Feng.ph:Toggle({
+Feng:Toggle({
     Name = "启用奔跑速度",
     Value = false,
     Callback = function(v)
@@ -1672,7 +1663,7 @@ Feng.ph:Toggle({
     end
 })
 
-Feng.ph:Slider({
+Feng:Slider({
     Name = "奔跑速度",
     Value = {
         Min = 0,
@@ -1706,7 +1697,7 @@ do
     end
 
     local autoUnsprintEnabled = false
-Feng.vu:Toggle({
+FengVu:Toggle({
     Name = "自动停止冲刺",
     Value = false,
     Callback = function(state)
@@ -1729,7 +1720,7 @@ Feng.vu:Toggle({
 })
 
     local autoSprintEnabled = false
-Feng.vu:Toggle({
+FengVu:Toggle({
     Name = "始终启用冲刺",
     Value = false,
     Callback = function(state)
@@ -1759,7 +1750,7 @@ Feng.vu:Toggle({
 
     local noSprintTweenEnabled = false
     local hookedNamecall = false
-Feng.vu:Toggle({
+FengVu:Toggle({
     Name = "无冲刺过渡",
     Value = false,
     Callback = function(state)
@@ -1784,7 +1775,7 @@ Feng.vu:Toggle({
 })
 
     local noSlowdownEnabled = false
-Feng.vu:Toggle({
+FengVu:Toggle({
     Name = "无减速",
     Value = false,
     Callback = function(state)
@@ -1811,7 +1802,7 @@ Feng.vu:Toggle({
 })
 
     local noAbilitySlowdownEnabled = false
-Feng.vu:Toggle({
+FengVu:Toggle({
     Name = "无技能减速",
     Value = false,
     Callback = function(state)
@@ -5091,7 +5082,7 @@ end
     })
 end
 
-local FengYu = Window:Tab("幸存者功能包", "6452688833")
+local FengYu = Window:Tab("幸存者功能", "6452688833")
 
 local Feng = FengYu:Section({
     Name = "机会",
@@ -6283,20 +6274,10 @@ Feng:Toggle({
 })
 end
 
-local FengYu = Window:Tab("杀手功能包", "10953967587")
+local FengYu = Window:Tab("杀手功能", "10953967587")
 
-local Feng = FengYu:Section({
-    Name = "碰撞箱设置",
-    SubName = "听说你要当长臂猿？",
-    {
-        Key = "ex",
-        Name = "扩展",
-    },
-    {
-        Key = "tr",
-        Name = "追踪",
-    },
-})
+local Feng = FengYu:Section({ Name = "扩展" })
+local FengTr = FengYu:Section({ Name = "追踪" })
 
 do
     local Players = game:GetService("Players")
@@ -6356,7 +6337,7 @@ do
         end
     end)
 
-Feng.ex:Toggle({
+Feng:Toggle({
     Name = "启用碰撞箱扩展",
     Value = false,
     Callback = function(v)
@@ -6364,7 +6345,7 @@ Feng.ex:Toggle({
     end
 })
 
-Feng.ex:Slider({
+Feng:Slider({
     Name = "碰撞箱长度",
     Value = {
         Min = 0,
@@ -6443,7 +6424,7 @@ do
         end
     end)
 
-Feng.tr:Toggle({
+FengTr:Toggle({
     Name = "启用碰撞箱追踪",
     Value = false,
     Callback = function(v)
@@ -6451,7 +6432,7 @@ Feng.tr:Toggle({
     end
 })
 
-Feng.tr:Slider({
+FengTr:Slider({
     Name = "追踪距离",
     Value = {
         Min = 10,
