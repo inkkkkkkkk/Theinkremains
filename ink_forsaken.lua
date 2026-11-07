@@ -1,5 +1,3 @@
--- 开源来自 Yuxingchen ｜ Obsidian UI 适配版｜自动格挡整合版
-
 local LoaderEnvironment = (type(getgenv) == "function" and getgenv()) or _G
 local LoaderGuard = LoaderEnvironment.__KRGuard
 
@@ -79,7 +77,7 @@ local success, library = pcall(function()
 end)
 
 if not success then
-    print("欢迎使用")  
+    print("欢迎使用")
     return
 end
 
@@ -87,12 +85,6 @@ local function protectInterface(target)
     return target
 end
 
-
---[[
-    Obsidian UI compatibility layer
-    UI source: DevSloPo/obsidian_UI (fork of deividcomsono/Obsidian)
-    Original Kill Hub feature callbacks below are connected through this adapter.
-]]
 local ObsidianLibrary = library
 local CompatWindow
 
@@ -222,8 +214,6 @@ local function makeGroupAdapter(groupbox, locked)
     function adapter:Colorpicker(config)
         config = config or {}
         local title = config.Name or config.Title or "颜色"
-        -- Obsidian exposes color pickers as toggle addons. This host toggle keeps
-        -- the original standalone color-picker callback and default color.
         local host = self._groupbox:AddToggle(nextUiId("ColorHost", title), {
             Text = title,
             Default = true,
@@ -292,8 +282,6 @@ local function makeTabAdapter(tab)
 
         local section = makeGroupAdapter(groupbox, config.Locked == true)
 
-        -- Legacy sections can expose keyed sub-sections such as .ge, .se, .ph.
-        -- Map those to additional Obsidian groupboxes in the same tab.
         if type(config) == "table" then
             for _, child in ipairs(config) do
                 if type(child) == "table" and child.Key and child.Name then
@@ -315,8 +303,6 @@ local function makeTabAdapter(tab)
         return section
     end
 
-    -- 兼容旧脚本直接在 Tab 上创建控件的写法：Tab:Toggle/Dropdown/Input 等。
-    -- 自动格挡模块大量使用这种写法，因此必须转发到最近创建的 Groupbox。
     local function forwardToCurrentGroup(methodName)
         return function(self, config)
             local group = self._currentGroup
@@ -373,10 +359,6 @@ local function makeWindowAdapter(rawWindow, libraryObject)
         return makeTabAdapter(tab)
     end
 
-    function window:TabDivider()
-        -- Obsidian separates tabs visually by its native tab navigation.
-    end
-
     function window:CreateHomeTab(config)
         config = config or {}
         local tab = self._window:AddTab(tostring(config.Name or "主页"), "layout-dashboard")
@@ -392,7 +374,6 @@ local function makeWindowAdapter(rawWindow, libraryObject)
     end
 
     function window:ToggleSidebarButtons()
-        -- No equivalent sidebar control is exposed by Obsidian.
     end
 
     return window
@@ -425,11 +406,8 @@ local Window = protectInterface(RawWindow)
 
 Window.CurrentConfig = "None"
 
-Window:TabDivider()
-
 local HomeTab = Window:CreateHomeTab({
     Name = "主页",
-    Logo = "84830962019412",
     DiscordInvite = "",
       SupportedExecutors = { "Delta", "Synapse X", "Krnl", "Codex", "Arceus X" },
       UnsupportedExecutors = { "Roblox Studio" },
@@ -453,9 +431,6 @@ local FengYu = HomeTab
 
 local Feng = FengYu:Section({
     Name = "开发者卡片",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 Feng:Social({
@@ -494,15 +469,11 @@ Feng:Social({
     Logo = "rbxassetid://70743990637031"
 })
 
-
 local FengYu = Window:Tab("服务器", "132419977785712")
 
 local Feng = FengYu:Section({
     Name = "服务器列表",
     SubName = "选择你需要的服务器",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 Feng:Button({
@@ -771,9 +742,6 @@ local FengYu = Window:Tab("通用区", "73542239032835")
 local Feng = FengYu:Section({
     Name = "主要列表",
     SubName = "本地修改阶段",
-    Logo = "73542239032835",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -784,8 +752,8 @@ Feng:Button({
     Callback = function()
         local char = localPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then 
-            hum.Health = 0 
+        if hum then
+            hum.Health = 0
         end
     end
 })
@@ -919,7 +887,6 @@ Feng:Toggle({
     end
 })
 end
-
 
 do
     local Players = game:GetService("Players")
@@ -1064,8 +1031,6 @@ Feng:Toggle({
     end
 })
 end
-
-
 
 do
     local Players = game:GetService("Players")
@@ -1266,20 +1231,20 @@ Feng:Toggle({
     Value = false,
     Callback = function(value)
         Fly.enabled = value
-        if value then 
-            startFly() 
-        else 
-            stopFly() 
+        if value then
+            startFly()
+        else
+            stopFly()
         end
     end
 })
 
 Feng:Slider({
     Name = "飞行速度",
-    Value = { 
-        Min = 5, 
-        Max = 150, 
-        Default = 50 
+    Value = {
+        Min = 5,
+        Max = 150,
+        Default = 50
     },
     Callback = function(value)
         Fly.speed = value
@@ -1290,9 +1255,6 @@ end
 local Feng = FengYu:Section({
     Name = "保存点",
     SubName = "标记位置并传送",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -1429,9 +1391,6 @@ end
 local Feng = FengYu:Section({
     Name = "场景设置",
     SubName = "地图上的视觉效果",
-    Logo = "100851815815313",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -1505,10 +1464,10 @@ do
 
 Feng:Slider({
     Name = "亮度数值",
-    Value = { 
-        Min = 0, 
-        Max = 3, 
-        Default = 0 
+    Value = {
+        Min = 0,
+        Max = 3,
+        Default = 0
     },
     Callback = function(value)
         _env.Brightness = value
@@ -1543,14 +1502,349 @@ end
 
 local FengYu = Window:Tab("体力区", "130874893373683")
 
+local Feng = FengYu:Section({
+    Name = "体力设置",
+    {
+        Key = "ph",
+        Name = "体力设置",
+    },
+    {
+        Key = "vu",
+        Name = "安全漏洞",
+    },
+})
+
+do
+    local originalDefaults = {}
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RunService = game:GetService("RunService")
+    local SprintingModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+    local function GetModule()
+        return require(SprintingModule)
+    end
+
+    local function CaptureDefaults()
+        local m = GetModule()
+        originalDefaults.MaxStamina = m.MaxStamina
+        originalDefaults.StaminaGain = m.StaminaGain
+        originalDefaults.StaminaLoss = m.StaminaLoss
+        originalDefaults.SprintSpeed = m.SprintSpeed
+    end
+    CaptureDefaults()
+
+    local StaminaSettings = {
+        MaxStamina = 100,
+        StaminaGain = 25,
+        StaminaLoss = 10,
+        SprintSpeed = 28,
+        InfiniteGain = 9999
+    }
+
+    local SettingToggles = {
+        MaxStamina = false,
+        StaminaGain = false,
+        StaminaLoss = false,
+        SprintSpeed = false
+    }
+
+    local bai = { Spr = false }
+    local connection = nil
+
+    task.spawn(function()
+        while true do
+            local m = GetModule()
+            for key, value in pairs(StaminaSettings) do
+                if SettingToggles[key] then
+                    m[key] = value
+                end
+            end
+            task.wait(0.5)
+        end
+    end)
+
+Feng.ph:Toggle({
+    Name = "无限体力",
+    Value = false,
+    Callback = function(state)
+        bai.Spr = state
+        local Sprinting = GetModule()
+        if state then
+            Sprinting.StaminaLoss = 0
+            Sprinting.StaminaGain = StaminaSettings.InfiniteGain or 9999
+            if connection then
+                connection:Disconnect()
+            end
+            connection = RunService.Heartbeat:Connect(function()
+                if not bai.Spr then return end
+                Sprinting.StaminaLoss = 0
+                Sprinting.StaminaGain = StaminaSettings.InfiniteGain or 9999
+            end)
+        else
+            Sprinting.StaminaLoss = originalDefaults.StaminaLoss
+            Sprinting.StaminaGain = originalDefaults.StaminaGain
+            if connection then
+                connection:Disconnect()
+                connection = nil
+            end
+        end
+    end
+})
+
+Feng.ph:Toggle({
+    Name = "启用体力大小",
+    Value = false,
+    Callback = function(v)
+        SettingToggles.MaxStamina = v
+        if not v then
+            local m = GetModule()
+            m.MaxStamina = originalDefaults.MaxStamina
+        end
+    end
+})
+
+Feng.ph:Slider({
+    Name = "体力大小",
+    Value = {
+        Min = 0,
+        Max = 99999,
+        Default = 100
+    },
+    Callback = function(v)
+        StaminaSettings.MaxStamina = v
+    end
+})
+
+Feng.ph:Toggle({
+    Name = "启用体力恢复",
+    Value = false,
+    Callback = function(v)
+        SettingToggles.StaminaGain = v
+        if not v then
+            local m = GetModule()
+            m.StaminaGain = originalDefaults.StaminaGain
+        end
+    end
+})
+
+Feng.ph:Slider({
+    Name = "体力恢复",
+    Value = {
+        Min = 0,
+        Max = 250,
+        Default = 25
+    },
+    Callback = function(v)
+        StaminaSettings.StaminaGain = v
+    end
+})
+
+Feng.ph:Toggle({
+    Name = "启用体力消耗",
+    Value = false,
+    Callback = function(v)
+        SettingToggles.StaminaLoss = v
+        if not v then
+            local m = GetModule()
+            m.StaminaLoss = originalDefaults.StaminaLoss
+        end
+    end
+})
+
+Feng.ph:Slider({
+    Name = "体力消耗",
+    Value = {
+        Min = 0,
+        Max = 100,
+        Default = 10
+    },
+    Callback = function(v)
+        StaminaSettings.StaminaLoss = v
+    end
+})
+
+Feng.ph:Toggle({
+    Name = "启用奔跑速度",
+    Value = false,
+    Callback = function(v)
+        SettingToggles.SprintSpeed = v
+        if not v then
+            local m = GetModule()
+            m.SprintSpeed = originalDefaults.SprintSpeed
+        end
+    end
+})
+
+Feng.ph:Slider({
+    Name = "奔跑速度",
+    Value = {
+        Min = 0,
+        Max = 200,
+        Default = 28
+    },
+    Callback = function(v)
+        StaminaSettings.SprintSpeed = v
+    end
+})
+end
+
+do
+    local LP = game:GetService("Players").LocalPlayer
+    local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local SprintingModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+    local function GetSprinting()
+        return require(SprintingModule)
+    end
+
+    local function HasAbility(name)
+        local playerGui = LP:FindFirstChild("PlayerGui")
+        if not playerGui then return false end
+        local mainUI = playerGui:FindFirstChild("MainUI")
+        if not mainUI then return false end
+        local abilityContainer = mainUI:FindFirstChild("AbilityContainer")
+        if not abilityContainer then return false end
+        return abilityContainer:FindFirstChild(name) ~= nil
+    end
+
+    local autoUnsprintEnabled = false
+Feng.vu:Toggle({
+    Name = "自动停止冲刺",
+    Value = false,
+    Callback = function(state)
+        autoUnsprintEnabled = state
+        if state then
+            task.spawn(function()
+                while autoUnsprintEnabled do
+                    local sprinting = GetSprinting()
+                    if sprinting and sprinting.Stamina < 3 then
+                        sprinting.IsSprinting = false
+                        if sprinting.__sprintedEvent then
+                            sprinting.__sprintedEvent:Fire(false)
+                        end
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end
+})
+
+    local autoSprintEnabled = false
+Feng.vu:Toggle({
+    Name = "始终启用冲刺",
+    Value = false,
+    Callback = function(state)
+        autoSprintEnabled = state
+        if state then
+            task.spawn(function()
+                while autoSprintEnabled do
+                    local sprinting = GetSprinting()
+                    if sprinting then
+                        if autoUnsprintEnabled and sprinting.Stamina ~= 100 then
+                            task.wait()
+                            continue
+                        end
+                        if not sprinting.IsSprinting then
+                            sprinting.IsSprinting = true
+                            if sprinting.__sprintedEvent then
+                                sprinting.__sprintedEvent:Fire(true)
+                            end
+                        end
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end
+})
+
+    local noSprintTweenEnabled = false
+    local hookedNamecall = false
+Feng.vu:Toggle({
+    Name = "无冲刺过渡",
+    Value = false,
+    Callback = function(state)
+        noSprintTweenEnabled = state
+        if state and not hookedNamecall then
+            hookedNamecall = true
+            local oldNamecall
+            oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+                local method = getnamecallmethod()
+                if noSprintTweenEnabled and not checkcaller() and self == TweenService and method == "Create" then
+                    local args = {...}
+                    local sprinting = GetSprinting()
+                    if sprinting and args[1] == sprinting.__speedMultiplier then
+                        args[2] = TweenInfo.new(0)
+                    end
+                    return oldNamecall(self, unpack(args))
+                end
+                return oldNamecall(self, ...)
+            end)
+        end
+    end
+})
+
+    local noSlowdownEnabled = false
+Feng.vu:Toggle({
+    Name = "无减速",
+    Value = false,
+    Callback = function(state)
+        noSlowdownEnabled = state
+        if state then
+            task.spawn(function()
+                while noSlowdownEnabled do
+                    local char = LP.Character
+                    if char then
+                        local speedMultipliers = char:FindFirstChild("SpeedMultipliers")
+                        if speedMultipliers then
+                            for _, v in ipairs(speedMultipliers:GetChildren()) do
+                                if v:IsA("NumberValue") and not HasAbility(v.Name) and v.Value < 1 then
+                                    v.Value = 1
+                                end
+                            end
+                        end
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end
+})
+
+    local noAbilitySlowdownEnabled = false
+Feng.vu:Toggle({
+    Name = "无技能减速",
+    Value = false,
+    Callback = function(state)
+        noAbilitySlowdownEnabled = state
+        if state then
+            task.spawn(function()
+                while noAbilitySlowdownEnabled do
+                    local char = LP.Character
+                    if char then
+                        local speedMultipliers = char:FindFirstChild("SpeedMultipliers")
+                        if speedMultipliers then
+                            for _, v in ipairs(speedMultipliers:GetChildren()) do
+                                if v:IsA("NumberValue") and HasAbility(v.Name) and v.Value < 1 then
+                                    v.Value = 1
+                                end
+                            end
+                        end
+                    end
+                    task.wait()
+                end
+            end)
+        end
+    end
+})
+end
+
 local FengYu = Window:Tab("透视区", "126418616428157")
 
 local Feng = FengYu:Section({
     Name = "发电机透视",
     SubName = "透视神秘发电机",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -1808,14 +2102,11 @@ end
 local Feng = FengYu:Section({
     Name = "幸存者透视",
     SubName = "幸存者Survivor",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
-    { 
+    {
         Key = "ma",
         Name = "透视基本要素",
     },
-    { 
+    {
         Key = "se",
         Name = "透视设置",
     },
@@ -2441,7 +2732,7 @@ local DirValues = {
     "顶部",
     "底部",
     "左侧",
-    "右侧" 
+    "右侧"
 }
 
 Feng.se:Dropdown({
@@ -2504,14 +2795,11 @@ end
 local Feng = FengYu:Section({
     Name = "杀手透视",
     SubName = "杀手killer",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
-    { 
+    {
         Key = "ma",
         Name = "透视基本要素",
     },
-    { 
+    {
         Key = "se",
         Name = "透视设置",
     },
@@ -3158,7 +3446,7 @@ local DirValues = {
     "顶部",
     "底部",
     "左侧",
-    "右侧" 
+    "右侧"
 }
 
 Feng.se:Dropdown({
@@ -3221,9 +3509,6 @@ end
 local Feng = FengYu:Section({
     Name = "物品透视",
     SubName = "物品item",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -3466,9 +3751,6 @@ local FengYu = Window:Tab("物品区", "140005402255916")
 
 local Feng = FengYu:Section({
     Name = "物品互动",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -3635,13 +3917,8 @@ Feng:Toggle({
 })
 end
 
-Window:TabDivider()
-
-Window:TabDivider()
-
 local autoBlockHubTab = Window:Tab("自动格挡", "shield")
 
--- 合并自 Forsaken 中文版的自动格挡模块（独立命名空间）
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -4816,21 +5093,11 @@ end
     })
 end
 
-
-Window:TabDivider()
-
-
-
-Window:TabDivider()
-
 local FengYu = Window:Tab("幸存者功能包", "6452688833")
 
 local Feng = FengYu:Section({
     Name = "机会",
     SubName = "这是你最后的机会",
-    Logo = "110279261246303",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -5041,10 +5308,10 @@ Feng:Toggle({
 
 Feng:Slider({
     Name = "射击半径",
-    Value = { 
-        Min = 20, 
-        Max = 1000, 
-        Default = 100 
+    Value = {
+        Min = 20,
+        Max = 1000,
+        Default = 100
     },
     Callback = function(v)
         ChanceAimbot.Range = v
@@ -5075,9 +5342,6 @@ end
 local Feng = FengYu:Section({
     Name = "两次",
     SubName = "蚊子来了！！！",
-    Logo = "86434410365514",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -5374,16 +5638,16 @@ do
 Feng:Toggle({
     Name = "自动背刺",
     Value = false,
-    Callback = function(state) 
-        enabled = state 
+    Callback = function(state)
+        enabled = state
     end
 })
 
 Feng:Toggle({
     Name = "背刺时自动攻击",
     Value = false,
-    Callback = function(state) 
-        daggerEnabled = state 
+    Callback = function(state)
+        daggerEnabled = state
     end
 })
 
@@ -5392,8 +5656,8 @@ Feng:Toggle({
     Value = true,
     Callback = function(state)
       DEBUG_LINE = state
-      if not state then 
-          removeDebugLine() 
+      if not state then
+          removeDebugLine()
       end
     end
 })
@@ -5401,15 +5665,15 @@ Feng:Toggle({
 Feng:Dropdown({
     Name = "背刺类型",
     Values = {
-        "缓动位移", 
-        "瞬移", 
+        "缓动位移",
+        "瞬移",
         "锁定瞄准"
     },
     Value   = "缓动位移",
     Callback = function(value)
       if value == "缓动位移" then backstabType = "Lerp"
           elseif value == "瞬移" then backstabType = "Teleport"
-          elseif value == "锁定瞄准" then backstabType = "Aim" 
+          elseif value == "锁定瞄准" then backstabType = "Aim"
       end
     end
 })
@@ -5420,68 +5684,68 @@ Feng:Dropdown({
     Value = "背后",
     Callback = function(value)
       if value == "全范围" then rangeMode = "Around"
-         else rangeMode = "Behind" 
+         else rangeMode = "Behind"
       end
     end
 })
 
 Feng:Slider({
     Name = "检测范围",
-    Value = { 
-        Min = 1, 
-        Max = 30, 
-        Default = DEFAULT_PROXIMITY 
+    Value = {
+        Min = 1,
+        Max = 30,
+        Default = DEFAULT_PROXIMITY
     },
     Callback = function(value)
-        proximity = value 
+        proximity = value
     end
 })
 
 Feng:Slider({
     Name = "背后瞬移距离",
-    Value = { 
-        Min = 0.5, 
-        Max = 10, 
-        Default = BEHIND_DISTANCE 
+    Value = {
+        Min = 0.5,
+        Max = 10,
+        Default = BEHIND_DISTANCE
     },
     Callback = function(value)
-        BEHIND_DISTANCE = value 
+        BEHIND_DISTANCE = value
     end
 })
 
 Feng:Slider({
     Name = "背后判定锥角",
-    Value = { 
-        Min = 10, 
-        Max = 180, 
-        Default = BEHIND_CONE_DEGREES 
+    Value = {
+        Min = 10,
+        Max = 180,
+        Default = BEHIND_CONE_DEGREES
     },
     Callback = function(value)
-        BEHIND_CONE_DEGREES = value 
+        BEHIND_CONE_DEGREES = value
     end
 })
 
 Feng:Slider({
     Name = "远程触发延迟",
-    Value = { 
-        Min = 0.00, 
-        Max = 0.50, 
-        Default = REMOTE_FIRE_DELAY 
+    Value = {
+        Min = 0.00,
+        Max = 0.50,
+        Default = REMOTE_FIRE_DELAY
     },
     Callback = function(value)
-        REMOTE_FIRE_DELAY = value 
+        REMOTE_FIRE_DELAY = value
     end
 })
 
 Feng:Slider({
     Name = "瞄准硬锁定延迟",
-    Value = { 
-        Min = 0.00, 
-        Max = 0.30, 
-        Default = AIM_SNAP_DELAY 
+    Value = {
+        Min = 0.00,
+        Max = 0.30,
+        Default = AIM_SNAP_DELAY
     },
     Callback = function(value)
-        AIM_SNAP_DELAY = value 
+        AIM_SNAP_DELAY = value
     end
 })
 end
@@ -5489,9 +5753,6 @@ end
 local Feng = FengYu:Section({
     Name = "维罗妮卡",
     SubName = "过来一起看电视",
-    Logo = "98580998849514",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -5552,14 +5813,9 @@ Feng:Toggle({
 })
 end
 
--- 幸存者综合功能并入上方“幸存者功能包”标签页，继续使用同一个 FengYu。
-
 local Feng = FengYu:Section({
     Name = "其他功能",
     SubName = "不一样的体验设置",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -5630,10 +5886,10 @@ Feng:Toggle({
 
 Feng:Slider({
     Name = "间隔",
-    Value = { 
-        Min = 0.1, 
-        Max = 1.5, 
-        Default = 0.5 
+    Value = {
+        Min = 0.1,
+        Max = 1.5,
+        Default = 0.5
     },
     Rounding = 1,
     Callback = function(val)
@@ -6033,21 +6289,16 @@ Feng:Toggle({
 })
 end
 
-Window:TabDivider()
-
 local FengYu = Window:Tab("杀手功能包", "10953967587")
 
 local Feng = FengYu:Section({
     Name = "碰撞箱设置",
     SubName = "听说你要当长臂猿？",
-    Logo = "84082094395188",
-    Collapsible = true,
-    Collapsed = true,
-    { 
+    {
         Key = "ex",
         Name = "扩展",
     },
-    { 
+    {
         Key = "tr",
         Name = "追踪",
     },
@@ -6222,9 +6473,6 @@ end
 local Feng = FengYu:Section({
     Name = "汽车拐弯",
     SubName = "打开[准心]才有效果",
-    Logo = "104851651453042",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -6390,9 +6638,6 @@ end
 local Feng = FengYu:Section({
     Name = "自瞄",
     SubName = "靠近幸存者自动瞄准",
-    Logo = "79416567520364",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -6607,9 +6852,6 @@ end
 local Feng = FengYu:Section({
     Name = "有蚊子！",
     SubName = "免疫一些偷袭你的蚊子",
-    Logo = "127607227470291",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -6804,7 +7046,7 @@ Feng:Toggle({
         pcall(function()
             abs.on = state
             if state then absStart() else
-                absStop() 
+                absStop()
             end
         end)
     end
@@ -6812,10 +7054,10 @@ Feng:Toggle({
 
 Feng:Slider({
     Name = "检测范围",
-    Value = { 
-        Min = 10, 
-        Max = 120, 
-        Default = abs.range 
+    Value = {
+        Min = 10,
+        Max = 120,
+        Default = abs.range
     },
     Callback = function(value)
         pcall(function()
@@ -6827,27 +7069,22 @@ Feng:Slider({
 
 Feng:Slider({
     Name = "注视时间",
-    Value = { 
-        Min = 0.3, 
-        Max = 5.0, 
-        Default = abs.duration 
+    Value = {
+        Min = 0.3,
+        Max = 5.0,
+        Default = abs.duration
     },
     Callback = function(value)
-        pcall(function() 
-            abs.duration = value 
+        pcall(function()
+            abs.duration = value
         end)
     end
 })
 end
 
--- 杀手综合功能并入上方“杀手功能包”标签页，继续使用同一个 FengYu。
-
 local Feng = FengYu:Section({
     Name = "杀死全部人",
     SubName = "就像疯子一样",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -7018,7 +7255,7 @@ Feng:Toggle({
     Value = false,
     Callback = function(val)
         if val then startKillAll() else
-            stopKillAll() 
+            stopKillAll()
         end
     end
 })
@@ -7028,7 +7265,7 @@ Feng:Toggle({
     Value = false,
     Callback = function(val)
         u2.killAllTeleport = val
-             if val then u2.killAllFly = false 
+             if val then u2.killAllFly = false
         end
     end
 })
@@ -7052,9 +7289,6 @@ end
 local Feng = FengYu:Section({
     Name = "吸力",
     SubName = "变成磁铁吸在幸存者上",
-    Logo = "98092096704459",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -7156,33 +7390,33 @@ Feng:Toggle({
     Value = false,
     Callback = function(state)
         suction.enabled = state
-        if state then startSuction() 
-        else stopSuction() 
+        if state then startSuction()
+        else stopSuction()
         end
     end
 })
 
 Feng:Slider({
     Name = "吸力强度",
-    Value = { 
-        Min = 5, 
-        Max = 100, 
-        Default = 50 
+    Value = {
+        Min = 5,
+        Max = 100,
+        Default = 50
     },
-    Callback = function(v) 
-        suction.strength = v 
+    Callback = function(v)
+        suction.strength = v
     end
 })
 
 Feng:Slider({
     Name = "最大搜索距离",
-    Value = { 
-        Min = 20, 
-        Max = 200, 
-        Default = 100 
+    Value = {
+        Min = 20,
+        Max = 200,
+        Default = 100
     },
-    Callback = function(v) 
-        suction.maxDist = v 
+    Callback = function(v)
+        suction.maxDist = v
     end
 })
 
@@ -7197,9 +7431,6 @@ end
 local Feng = autoBlockHubTab:Section({
     Name = "斩首者格挡",
     SubName = "设置",
-    Logo = "101155610322224",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -7496,9 +7727,6 @@ end
 local Feng = autoBlockHubTab:Section({
     Name = "约翰.多格挡",
     SubName = "设置",
-    Logo = "94161186262005",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 do
@@ -7729,15 +7957,10 @@ Feng:Toggle({
 })
 end
 
-Window:TabDivider()
-
 local FengYu = Window:Tab("娱乐区", "108446823535062")
 
 local Feng = FengYu:Section({
     Name = "权限设置",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 Feng:Button({
@@ -7746,7 +7969,7 @@ Feng:Button({
         task.spawn(function()
             local player = game.Players.LocalPlayer
             local purchased = player:WaitForChild("PlayerData"):WaitForChild("Purchased")
-            
+
             local killersFolder = purchased:FindFirstChild("Killers") or Instance.new("Folder", purchased)
             killersFolder.Name = "Killers"
             local survivorsFolder = purchased:FindFirstChild("Survivors") or Instance.new("Folder", purchased)
@@ -7759,13 +7982,13 @@ Feng:Button({
                     Instance.new("StringValue", killersFolder).Name = killer.Name
                 end
             end
-            
+
             for _, survivor in ipairs(game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Survivors"):GetChildren()) do
                 if not survivorsFolder:FindFirstChild(survivor.Name) then
                     Instance.new("StringValue", survivorsFolder).Name = survivor.Name
                 end
             end
-            
+
             local skinsRoot = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Skins")
             for _, skin in ipairs(skinsRoot:GetDescendants()) do
                 if (skin:IsA("Folder") or skin:IsA("Model")) and not skinsFolder:FindFirstChild(skin.Name) then
@@ -7782,10 +8005,10 @@ Feng:Button({
         task.spawn(function()
             local player = game.Players.LocalPlayer
             local purchased = player:WaitForChild("PlayerData"):WaitForChild("Purchased")
-            
+
             local emotesFolder = purchased:FindFirstChild("Emotes") or Instance.new("Folder", purchased)
             emotesFolder.Name = "Emotes"
-            
+
             local emotesAssets = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Emotes")
             for _, module in ipairs(emotesAssets:GetDescendants()) do
                 if module:IsA("ModuleScript") and not emotesFolder:FindFirstChild(module.Name) then
@@ -7801,7 +8024,7 @@ Feng:Button({
     Callback = function()
         local localPlayer = game.Players.LocalPlayer
         localPlayer:SetAttribute("VIP", true)
-        
+
         local pData = localPlayer:WaitForChild("PlayerData")
         local vVal = pData:FindFirstChild("VIP")
         if not vVal then
@@ -7815,9 +8038,6 @@ Feng:Button({
 
 local Feng = FengYu:Section({
     Name = "修改系统",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
 })
 
 local statsFields = {
@@ -7831,7 +8051,7 @@ local statsFields = {
     ObjectivesCompleted = "任务完成数"
 }
 
-for statName, displayName in pairs(statsFields) 
+for statName, displayName in pairs(statsFields)
 do
 Feng:Input({
     Name = "设置 " .. displayName,
