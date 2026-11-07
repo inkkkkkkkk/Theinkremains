@@ -1,3 +1,6 @@
+-- =========================================================
+-- BY.Rebzyyx  有些功能是用的杀脚本的源码  你开源我脚本没什么意义
+-- =========================================================
 local LoaderEnvironment = (type(getgenv) == "function" and getgenv()) or _G
 local LoaderGuard = LoaderEnvironment.__KRGuard
 
@@ -72,14 +75,44 @@ local function LoadRemoteRequest(options)
     return result
 end
 
+local ThemeManager, SaveManager
 local success, library = pcall(function()
-    return LoadRemote("https://raw.githubusercontent.com/DevSloPo/obsidian_UI/main/Library.lua")
+    local repo = "https://raw.githubusercontent.com/DevSloPo/obsidian_UI/main/"
+    local lib = LoadRemote(repo .. "Library.lua")
+    ThemeManager = LoadRemote(repo .. "addons/ThemeManager.lua")
+    SaveManager = LoadRemote(repo .. "addons/SaveManager.lua")
+    return lib
 end)
 
 if not success then
     print("欢迎使用")
     return
 end
+
+task.spawn(function()
+    local loadTime = string.format("%.2f", os.clock()) 
+    
+    task.wait(0.5) 
+    
+    if ObsidianLibrary and ObsidianLibrary.Notify then
+        ObsidianLibrary:Notify({
+            Title = "ink|forsaken 提示",
+            Description = "脚本加载完成！耗时: " .. loadTime .. " 秒",
+            Time = 5
+        })
+        
+        task.spawn(function()
+            pcall(function()
+                local s = Instance.new("Sound", game.SoundService)
+                s.SoundId = "rbxassetid://4590662766" 
+                s.Volume = 3
+                s:Play()
+                s.Ended:Wait()
+                s:Destroy()
+            end)
+        end)
+    end
+end)
 
 local function protectInterface(target)
     return target
@@ -354,7 +387,9 @@ local function makeWindowAdapter(rawWindow, libraryObject)
             ["杀手功能"] = "users",
         }
         local tab = self._window:AddTab(title, iconMap[title] or "layout-dashboard")
-        return makeTabAdapter(tab)
+        local adapter = makeTabAdapter(tab)
+        adapter._rawTab = tab
+        return adapter
     end
 
     function window:CreateHomeTab(config)
@@ -403,6 +438,34 @@ local RawWindow = createCompatWindow({
 local Window = protectInterface(RawWindow)
 
 Window.CurrentConfig = "None"
+
+local SettingsTab = Window:Tab("界面设置", "settings")
+local ThemeGroup = SettingsTab:Section({ Name = "界面设置" })
+
+ThemeGroup:Toggle({ Name = "快捷菜单", Value = true, Callback = function(v) ObsidianLibrary.KeybindFrame.Visible = v end })
+ThemeGroup:Toggle({ Name = "自定义光标", Value = true, Callback = function(v) ObsidianLibrary.ShowCustomCursor = v end })
+ThemeGroup:Dropdown({
+    Name = "通知位置", Values = {"左", "右"}, Value = "右",
+    Callback = function(v) ObsidianLibrary:SetNotifySide(v) end
+})
+ThemeGroup:Dropdown({
+    Name = "UI大小", Values = {"75%", "100%", "125%", "150%"}, Value = "100%",
+    Callback = function(v) ObsidianLibrary:SetDPIScale(tonumber(v:gsub("%%",""))) end
+})
+
+if ThemeManager and SaveManager then
+    ThemeManager:SetLibrary(ObsidianLibrary)
+    SaveManager:SetLibrary(ObsidianLibrary)
+    SaveManager:IgnoreThemeSettings()
+    
+    ThemeManager:SetFolder("ink_forsaken_Themes")
+    SaveManager:SetFolder("ink_forsaken_Configs")
+    
+    SaveManager:BuildConfigSection(SettingsTab._rawTab)
+    ThemeManager:ApplyToTab(SettingsTab._rawTab)
+    
+    pcall(function() SaveManager:LoadAutoloadConfig() end)
+end
 
 local HomeTab = Window:CreateHomeTab({
     Name = "主页",
