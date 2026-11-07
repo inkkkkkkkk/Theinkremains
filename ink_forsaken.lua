@@ -495,1187 +495,7 @@ Feng:Social({
 })
 
 
-local autoBlockHubTab = Window:Tab("自动格挡", "shield")
-
--- 合并自 Forsaken 中文版的自动格挡模块（独立命名空间）
-do
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local Workspace = game:GetService("Workspace")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Stats = game:GetService("Stats")
-    local UserInputService = game:GetService("UserInputService")
-    local LP = Players.LocalPlayer
-
-    local ABConfig = {
-        AutoBlock = false,
-        AutoBlockButton = false,
-        ABMode = "Guest1337",
-        AimPunch = false,
-        AutoBlockCustom = false,
-        CustomABMode = "Guest1337",
-        FourthButtonTarget = "default",
-        CustomDiamondLength = 8,
-        CustomDiamondWidth = 4,
-        CustomDiamondOffset = 3,
-        CustomCircleRadius = 5,
-        ShowDiamond = false,
-        ShowCircle = false,
-        ZoneHeight = 0.5,
-    }
-    local ABToggles, ABInputs = {}, {}
-    local ABSuppressCallbacks = false
-    local ABRememberedZones = {diamond = false, circle = false}
-
-local autoBlockState = {
-  running = false,
-  connections = {},
-  attrStates = {},
-  attrDebounce = 0,
-  blueDebounce = 0,
-  punchDebounce = 0,
-  generation = 0,
-  RemoteEvent = nil,
-  KillersFolder = nil,
-  LocalRoot = nil,
-}
-
-local startAutoBlock, stopAutoBlock
-
-local fourthButtonState = {
-  instance = nil,
-  applyTint = nil,
-  running = false,
-  connections = {},
-  cachedPos = nil,
-  cachedSize = nil,
-  sourceName = nil,
-}
-
-local lastToggleTime = 0
-local pendingToggle = nil
-local pendingToggleTask = nil
-local toggleDebounce = 0.08
-
-do
-  local modules = ReplicatedStorage:FindFirstChild("Modules")
-  local outerNetwork = modules and modules:FindFirstChild("Network", true)
-  local innerNetwork = outerNetwork and outerNetwork:FindFirstChild("Network", true)
-  autoBlockState.RemoteEvent = innerNetwork and innerNetwork:FindFirstChild("RemoteEvent")
-  if not autoBlockState.RemoteEvent then
-    autoBlockState.RemoteEvent = ReplicatedStorage:FindFirstChild("RemoteEvent", true)
-  end
-end
-
-local function getPingSeconds()
-  local ping = 0.05
-  pcall(function()
-    local network = Stats:FindFirstChild("Network")
-    local serverStatsItem = network and network:FindFirstChild("ServerStatsItem")
-    local dataPing = serverStatsItem and serverStatsItem:FindFirstChild("Data Ping")
-    if dataPing then
-      ping = dataPing:GetValue() / 1000
-    end
-  end)
-  return math.clamp(ping, 0.05, 0.35)
-end
-
-local blockSoundIdList = {
-  "102228729296384", "140242176732868", "112809109188560", "136323728355613",
-  "115026634746636", "84116622032112", "108907358619313", "127793641088496",
-  "86174610237192", "95079963655241", "101199185291628", "119942598489800",
-  "84307400688050", "113037804008732", "105200830849301", "75330693422988",
-  "82221759983649", "81702359653578", "108610718831698", "112395455254818",
-  "109431876587852", "109348678063422", "85853080745515", "98733709078792",
-  "105840448036441", "114742322778642", "119583605486352", "79980897195554",
-  "71805956520207", "79391273191671", "89004992452376", "101553872555606",
-  "101698569375359", "105415540898010", "106300477136129", "80516583309685",
-  "116581754553533", "117231507259853", "119089145505438", "71834552297085",
-  "117173212095661", "104910828105172", "140412278320643", "85544168523099",
-  "114506382930939", "116527305931161", "131406927389838", "94317217837143",
-  "121954639447247", "125213046326879", "128856426573270", "128195973631079",
-  "124903763333174", "98111231282218", "136728245733659", "131123355704017",
-  "107444859834748", "76959687420003", "72425554233832", "96594507550917",
-  "139996647355899", "107345261604889", "127557531826290", "108651070773439",
-  "74842815979546", "124397369810639", "76467993976301", "118493324723683",
-  "78298577002481", "5148302439", "98675142200448", "128367348686124",
-  "103684883268194", "109246041199659", "80540530406270", "139523195429581",
-  "105204810054381", "116468089135195", "133709029886490", "124234993291213",
-  "99856718263455", "74809026448465", "86833981571073", "110372418055226",
-  "86494585504534", "99829427721752", "120059928759346", "104625283622511",
-  "105316545074913", "126131675979001", "82336352305186", "93366464803829",
-  "84069821282466",
-}
-
-local blockSoundIds = {}
-for _, soundId in ipairs(blockSoundIdList) do
-  blockSoundIds["rbxassetid://" .. soundId] = true
-  blockSoundIds[soundId] = true
-end
-
-local punchSoundIdList = {
-  "132298811847315", "81114852524420", "123825742002486", "116616310968045",
-  "102808968188291", "117828699507982", "125854302746190", "18568553101",
-  "95135835034592", "135209101640984", "91165993312513", "82772022662025",
-}
-
-local punchSoundIds = {}
-for _, soundId in ipairs(punchSoundIdList) do
-  punchSoundIds["rbxassetid://" .. soundId] = true
-end
-
-local function isPunchSound(soundId)
-  if not soundId or soundId == "" then return false end
-  if punchSoundIds[soundId] then return true end
-  local numericId = soundId:match("rbxassetid://(%d+)") or soundId:match("^(%d+)$")
-  return numericId and punchSoundIds["rbxassetid://" .. numericId] or false
-end
-
-local function fireAbility(abilityName)
-  if autoBlockState.RemoteEvent then
-    pcall(function()
-      autoBlockState.RemoteEvent:FireServer("UseActorAbility", {abilityName})
-    end)
-  end
-end
-
-local function fireBlock()
-  fireAbility("Block")
-end
-
-local function fireClone()
-  fireAbility("Clone")
-end
-
-local function getActiveBlockMode()
-  if ABConfig.AutoBlockCustom then
-    return ABConfig.CustomABMode
-  end
-  return ABConfig.ABMode
-end
-
-local function performBlock()
-  if getActiveBlockMode() == "007n7" then
-    fireClone()
-  else
-    fireBlock()
-  end
-end
-
-local function getNearestKiller()
-  local killersFolder = autoBlockState.KillersFolder
-  if not killersFolder or not killersFolder.Parent then
-    local playersFolder = Workspace:FindFirstChild("Players")
-    killersFolder = playersFolder and playersFolder:FindFirstChild("Killers")
-  end
-  local localRoot = autoBlockState.LocalRoot
-  if not localRoot or not localRoot.Parent then
-    local character = LP.Character
-    localRoot = character and character:FindFirstChild("HumanoidRootPart")
-  end
-  if not killersFolder or not localRoot then
-    return nil, nil
-  end
-  local nearestRoot, nearestModel, nearestDistance = nil, nil, 30
-  for _, killer in pairs(killersFolder:GetChildren()) do
-    local killerRoot = killer:FindFirstChild("HumanoidRootPart")
-    if killerRoot then
-      local distance = (localRoot.Position - killerRoot.Position).Magnitude
-      if distance < nearestDistance then
-        nearestDistance = distance
-        nearestRoot = killerRoot
-        nearestModel = killer
-      end
-    end
-  end
-  return nearestRoot, nearestModel
-end
-
-local function aimAtKiller()
-  local killerRoot, killerModel = getNearestKiller()
-  if not (killerRoot and autoBlockState.LocalRoot and killerModel) then return end
-  local killerHumanoid = killerModel:FindFirstChildOfClass("Humanoid")
-  local startTime = tick()
-  local lastKillerPosition = killerRoot.Position
-  local connection
-  connection = RunService.RenderStepped:Connect(function(deltaTime)
-    if not autoBlockState.running or tick() - startTime > 0.6 or not autoBlockState.LocalRoot or not killerRoot then
-      connection:Disconnect()
-      return
-    end
-    local myPosition = autoBlockState.LocalRoot.Position
-    local killerPosition = killerRoot.Position
-    local velocity = (killerPosition - lastKillerPosition) / math.max(deltaTime, 0.001)
-    lastKillerPosition = killerPosition
-    local moveDirection = killerHumanoid and killerHumanoid.MoveDirection or Vector3.new()
-    local walkSpeed = killerHumanoid and killerHumanoid.WalkSpeed or 16
-    local leadTime = 0.24 + getPingSeconds()
-    local predictedPosition = killerPosition
-      + moveDirection * walkSpeed * leadTime
-      + Vector3.new(velocity.X, 0, velocity.Z) * 0.08
-    autoBlockState.LocalRoot.CFrame = CFrame.lookAt(
-      myPosition,
-      Vector3.new(predictedPosition.X, myPosition.Y, predictedPosition.Z)
-    )
-  end)
-end
-
-local function aimAndPunch()
-  if not autoBlockState.running or not ABConfig.AimPunch then return end
-  if getActiveBlockMode() == "007n7" then return end
-  local now = tick()
-  if now - autoBlockState.punchDebounce < 0.2 then return end
-  autoBlockState.punchDebounce = now
-  task.spawn(function()
-    aimAtKiller()
-    fireAbility("Punch")
-  end)
-end
-
-local function watchPunchSounds(character)
-  if not character then return end
-  local function checkSound(instance)
-    if instance:IsA("Sound") and isPunchSound(instance.SoundId) then
-      aimAndPunch()
-    end
-  end
-  for _, descendant in pairs(character:GetDescendants()) do
-    checkSound(descendant)
-  end
-  table.insert(autoBlockState.connections, character.DescendantAdded:Connect(checkSound))
-end
-
-local customZoneState = {running = false, connections = {}, folder = nil, killerZones = {}}
-local zonePadding = 1.5
-
-local function getZoneCFrame(killerRoot)
-  local raycastParams = RaycastParams.new()
-  raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-  raycastParams.FilterDescendantsInstances = {killerRoot.Parent, LP.Character}
-  raycastParams.IgnoreWater = true
-  local result = Workspace:Raycast(killerRoot.Position, Vector3.new(0, -30, 0), raycastParams)
-  local groundY = result and (killerRoot.Position.Y - result.Distance) or (killerRoot.Position.Y - 3)
-  return CFrame.new(killerRoot.Position.X, groundY + (ABConfig.ZoneHeight or 0.5), killerRoot.Position.Z)
-    * killerRoot.CFrame.Rotation
-end
-
-local function createZoneVisuals(killer)
-  local zoneModel = Instance.new("Model")
-  zoneModel.Name = "ABCustomZone_" .. killer.Name
-  zoneModel.Parent = customZoneState.folder
-  local edges = {}
-  for index = 1, 4 do
-    local edge = Instance.new("Part")
-    edge.Name = "Edge" .. index
-    edge.Anchored = true
-    edge.CanCollide = false
-    edge.CanQuery = false
-    edge.CanTouch = false
-    edge.CastShadow = false
-    edge.Material = Enum.Material.Neon
-    edge.Color = Color3.fromRGB(255, 0, 0)
-    edge.Transparency = 0.3
-    edge.Size = Vector3.new(0.35, 0.08, 1)
-    edge.CFrame = CFrame.new(0, -5000, 0)
-    edge.Parent = zoneModel
-    edges[index] = edge
-  end
-  local circle = Instance.new("Part")
-  circle.Shape = Enum.PartType.Cylinder
-  circle.Name = "Circle"
-  circle.Anchored = true
-  circle.CanCollide = false
-  circle.CanQuery = false
-  circle.CanTouch = false
-  circle.CastShadow = false
-  circle.Material = Enum.Material.Neon
-  circle.Color = Color3.fromRGB(255, 0, 0)
-  circle.Transparency = 0.65
-  circle.Size = Vector3.new(0.08, 10, 10)
-  circle.CFrame = CFrame.new(0, -5000, 0)
-  circle.Parent = zoneModel
-  return {model = zoneModel, edges = edges, circle = circle, killer = killer}
-end
-
-local function isInsideDiamond(position, killerCFrame, killerPosition)
-  if not ABConfig.ShowDiamond then return false end
-  local lookVector = killerCFrame.LookVector
-  local rightVector = killerCFrame.RightVector
-  local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
-  local right = Vector3.new(rightVector.X, 0, rightVector.Z)
-  if forward.Magnitude < 0.01 or right.Magnitude < 0.01 then return false end
-  forward = forward.Unit
-  right = right.Unit
-  local offset = Vector3.new(position.X - killerPosition.X, 0, position.Z - killerPosition.Z)
-  local forwardDistance = offset:Dot(forward)
-  local rightDistance = offset:Dot(right)
-  local diamondCenter = ABConfig.CustomDiamondOffset + ABConfig.CustomDiamondLength / 2
-  local forwardFromCenter = forwardDistance - diamondCenter
-  local halfWidth = ABConfig.CustomDiamondWidth / 2 + zonePadding
-  local halfLength = ABConfig.CustomDiamondLength / 2 + zonePadding
-  return math.abs(rightDistance) / halfWidth + math.abs(forwardFromCenter) / halfLength <= 1
-end
-
-local function isInsideCircle(position, center)
-  if not ABConfig.ShowCircle then return false end
-  local dx = position.X - center.X
-  local dz = position.Z - center.Z
-  local radius = ABConfig.CustomCircleRadius + zonePadding
-  return dx * dx + dz * dz <= radius * radius
-end
-
-local function isLocalPlayerInZone(killer)
-  if not killer or not killer.Parent then return false end
-  local killerRoot = killer:FindFirstChild("HumanoidRootPart")
-  local character = LP.Character
-  local localRoot = character and character:FindFirstChild("HumanoidRootPart")
-  if not killerRoot or not localRoot then return false end
-  return isInsideDiamond(localRoot.Position, killerRoot.CFrame, killerRoot.Position)
-    or isInsideCircle(localRoot.Position, killerRoot.Position)
-end
-
-local function updateZoneVisuals(visuals, killerRoot, localRoot)
-  if not visuals or not visuals.model or not visuals.model.Parent then return end
-  if not killerRoot or not killerRoot.Parent then return end
-  local zoneCFrame = getZoneCFrame(killerRoot)
-  local faceOffset = ABConfig.CustomDiamondOffset
-  local diamondLength = ABConfig.CustomDiamondLength
-  local diamondWidth = ABConfig.CustomDiamondWidth
-  local nearPoint = zoneCFrame:PointToWorldSpace(Vector3.new(0, 0, -faceOffset))
-  local farPoint = zoneCFrame:PointToWorldSpace(Vector3.new(0, 0, -(faceOffset + diamondLength)))
-  local leftPoint = zoneCFrame:PointToWorldSpace(Vector3.new(-diamondWidth / 2, 0, -(faceOffset + diamondLength / 2)))
-  local rightPoint = zoneCFrame:PointToWorldSpace(Vector3.new(diamondWidth / 2, 0, -(faceOffset + diamondLength / 2)))
-  local segments = {
-    {nearPoint, leftPoint},
-    {nearPoint, rightPoint},
-    {farPoint, leftPoint},
-    {farPoint, rightPoint},
-  }
-  for index, segment in ipairs(segments) do
-    local startPoint, endPoint = segment[1], segment[2]
-    local midpoint = (startPoint + endPoint) / 2
-    local delta = endPoint - startPoint
-    local length = delta.Magnitude
-    if length > 0.01 then
-      local direction = delta.Unit
-      local edge = visuals.edges[index]
-      if edge then
-        edge.Size = Vector3.new(0.35, 0.08, length)
-        edge.CFrame = CFrame.lookAt(midpoint, midpoint + direction)
-        edge.Transparency = ABConfig.ShowDiamond and 0.3 or 1
-      end
-    end
-  end
-  if visuals.circle then
-    local circleCenter = Vector3.new(zoneCFrame.Position.X, zoneCFrame.Position.Y + 0.04, zoneCFrame.Position.Z)
-    visuals.circle.Size = Vector3.new(0.08, ABConfig.CustomCircleRadius * 2, ABConfig.CustomCircleRadius * 2)
-    visuals.circle.CFrame = CFrame.new(circleCenter) * CFrame.Angles(0, 0, math.rad(90))
-    visuals.circle.Transparency = ABConfig.ShowCircle and 0.65 or 1
-  end
-  local insideDiamond = localRoot and isInsideDiamond(localRoot.Position, killerRoot.CFrame, killerRoot.Position) or false
-  local insideCircle = localRoot and isInsideCircle(localRoot.Position, killerRoot.Position) or false
-  local diamondColor = insideDiamond and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-  local circleColor = insideCircle and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-  for _, edge in ipairs(visuals.edges) do
-    if edge and edge.Parent then
-      edge.Color = diamondColor
-    end
-  end
-  if visuals.circle and visuals.circle.Parent then
-    visuals.circle.Color = circleColor
-  end
-end
-
-local function startCustomZones()
-  if customZoneState.running then return end
-  customZoneState.running = true
-  customZoneState.connections = {}
-  customZoneState.killerZones = {}
-  customZoneState.folder = Instance.new("Folder")
-  customZoneState.folder.Name = "ABCustomZoneVisuals"
-  customZoneState.folder.Parent = Workspace
-  table.insert(customZoneState.connections, RunService.RenderStepped:Connect(function()
-    if not customZoneState.running then return end
-    local killersFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
-    if not killersFolder then return end
-    local character = LP.Character
-    local localRoot = character and character:FindFirstChild("HumanoidRootPart")
-    for _, killer in ipairs(killersFolder:GetChildren()) do
-      if killer:IsA("Model") then
-        local killerRoot = killer:FindFirstChild("HumanoidRootPart")
-        if killerRoot then
-          local visuals = customZoneState.killerZones[killer]
-          if not visuals or not visuals.model or not visuals.model.Parent then
-            if visuals and visuals.model then
-              pcall(function()
-                visuals.model:Destroy()
-              end)
-            end
-            visuals = createZoneVisuals(killer)
-            customZoneState.killerZones[killer] = visuals
-          end
-          updateZoneVisuals(visuals, killerRoot, localRoot)
-        end
-      end
-    end
-    for killer, visuals in pairs(customZoneState.killerZones) do
-      if not killer.Parent or not killer:IsDescendantOf(Workspace) then
-        if visuals.model then
-          pcall(function()
-            visuals.model:Destroy()
-          end)
-        end
-        customZoneState.killerZones[killer] = nil
-      end
-    end
-  end))
-  print("[testbraken] Custom Zone ON")
-end
-
-local function stopCustomZones()
-  if not customZoneState.running then return end
-  customZoneState.running = false
-  for _, connection in ipairs(customZoneState.connections) do
-    pcall(function()
-      connection:Disconnect()
-    end)
-  end
-  customZoneState.connections = {}
-  for _, visuals in pairs(customZoneState.killerZones) do
-    if visuals.model then
-      pcall(function()
-        visuals.model:Destroy()
-      end)
-    end
-  end
-  customZoneState.killerZones = {}
-  if customZoneState.folder then
-    pcall(function()
-      customZoneState.folder:Destroy()
-    end)
-    customZoneState.folder = nil
-  end
-  print("[testbraken] Custom Zone OFF")
-end
-
-local function refreshCustomZones()
-  local wanted = ABConfig.ShowDiamond or ABConfig.ShowCircle
-  if wanted and not customZoneState.running then
-    startCustomZones()
-  elseif not wanted and customZoneState.running then
-    stopCustomZones()
-  end
-end
-
-local function enforceBlockModeExclusivity()
-  if ABConfig.AutoBlock and ABConfig.AutoBlockCustom then
-    ABConfig.AutoBlockCustom = false
-    if ABToggles.AutoBlockCustom then
-      ABSuppressCallbacks = true
-      pcall(function()
-        ABToggles.AutoBlockCustom:Set(false)
-      end)
-      ABSuppressCallbacks = false
-    end
-  end
-  if ABConfig.AutoBlock then
-    if ABConfig.ShowDiamond then
-      ABRememberedZones.diamond = true
-      ABConfig.ShowDiamond = false
-    end
-    if ABConfig.ShowCircle then
-      ABRememberedZones.circle = true
-      ABConfig.ShowCircle = false
-    end
-    if ABToggles.ShowDiamond then
-      ABSuppressCallbacks = true
-      pcall(function()
-        ABToggles.ShowDiamond:Set(false)
-      end)
-      ABSuppressCallbacks = false
-    end
-    if ABToggles.ShowCircle then
-      ABSuppressCallbacks = true
-      pcall(function()
-        ABToggles.ShowCircle:Set(false)
-      end)
-      ABSuppressCallbacks = false
-    end
-  end
-  refreshCustomZones()
-end
-
-local function watchKillerSounds(killer)
-  if not killer then return end
-
-  local function checkSound(sound)
-    if not autoBlockState.running then return end
-    if not (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) then return end
-    if not sound or not sound:IsA("Sound") then return end
-    local soundId = sound.SoundId
-    if soundId == "" then return end
-    local numericId = soundId:match("rbxassetid://(%d+)") or soundId:match("://(%d+)") or soundId:match("^(%d+)$")
-    local isBlockSound = blockSoundIds[soundId]
-      or (numericId and (blockSoundIds["rbxassetid://" .. numericId] or blockSoundIds[numericId]))
-    if not isBlockSound then return end
-    if not autoBlockState.LocalRoot then return end
-    local killerRoot = killer:FindFirstChild("HumanoidRootPart")
-    if not killerRoot or not killerRoot.Parent then return end
-    if ABConfig.AutoBlockCustom then
-      if not isLocalPlayerInZone(killer) then return end
-    else
-      local offset = autoBlockState.LocalRoot.Position - killerRoot.Position
-      local distance = offset.Magnitude
-      if distance > 15 then return end
-      if distance > 0 and killerRoot.CFrame.LookVector:Dot(offset.Unit) < 0.3 then return end
-    end
-    local now = tick()
-    if now - autoBlockState.blueDebounce < 0.15 then return end
-    autoBlockState.blueDebounce = now
-    performBlock()
-  end
-
-  for _, descendant in ipairs(killer:GetDescendants()) do
-    if descendant:IsA("Sound") then
-      checkSound(descendant)
-    end
-  end
-  table.insert(autoBlockState.connections, killer.DescendantAdded:Connect(checkSound))
-end
-
-local function checkKillerAbilities()
-  if not autoBlockState.running or not (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) then return end
-  if not autoBlockState.KillersFolder or not autoBlockState.LocalRoot or not autoBlockState.LocalRoot.Parent then return end
-  for _, killer in ipairs(autoBlockState.KillersFolder:GetChildren()) do
-    if killer:IsA("Model") then
-      local killerRoot = killer:FindFirstChild("HumanoidRootPart")
-      if killerRoot then
-        local abilityLastUsed = killer:GetAttribute("AbilityLastUsed") or 0
-        local abilitiesUsed = killer:GetAttribute("AbilitiesUsed") or 0
-        local previous = autoBlockState.attrStates[killer]
-        if previous then
-          local abilityChanged = abilityLastUsed > previous.lastAbility
-          if abilitiesUsed > previous.lastUsed then
-            previous.isBait = true
-          end
-          if abilityChanged then
-            if previous.isBait then
-              previous.isBait = false
-            else
-              local shouldBlock = false
-              if ABConfig.AutoBlockCustom then
-                if isLocalPlayerInZone(killer) then
-                  shouldBlock = true
-                end
-              else
-                local offset = autoBlockState.LocalRoot.Position - killerRoot.Position
-                local distance = offset.Magnitude
-                if distance <= 15 and distance > 0 and killerRoot.CFrame.LookVector:Dot(offset.Unit) >= 0.3 then
-                  shouldBlock = true
-                end
-              end
-              if shouldBlock then
-                local now = tick()
-                if now - autoBlockState.attrDebounce >= 0.15 then
-                  autoBlockState.attrDebounce = now
-                  performBlock()
-                end
-              end
-            end
-          end
-          previous.lastAbility = abilityLastUsed
-          previous.lastUsed = abilitiesUsed
-        else
-          autoBlockState.attrStates[killer] = {
-            lastAbility = abilityLastUsed,
-            lastUsed = abilitiesUsed,
-            isBait = false,
-          }
-        end
-      end
-    end
-  end
-end
-
-local function applyBlockToggle(request)
-  if not request then return end
-  if request.mode == "default" then
-    ABConfig.AutoBlock = request.value
-    if request.value then
-      ABConfig.AutoBlockCustom = false
-      if ABConfig.ShowDiamond then
-        ABRememberedZones.diamond = true
-        ABConfig.ShowDiamond = false
-        if ABToggles.ShowDiamond then
-          ABSuppressCallbacks = true
-          pcall(function()
-            ABToggles.ShowDiamond:Set(false)
-          end)
-          ABSuppressCallbacks = false
-        end
-      end
-      if ABConfig.ShowCircle then
-        ABRememberedZones.circle = true
-        ABConfig.ShowCircle = false
-        if ABToggles.ShowCircle then
-          ABSuppressCallbacks = true
-          pcall(function()
-            ABToggles.ShowCircle:Set(false)
-          end)
-          ABSuppressCallbacks = false
-        end
-      end
-      refreshCustomZones()
-    end
-  else
-    ABConfig.AutoBlockCustom = request.value
-    if request.value then
-      ABConfig.AutoBlock = false
-      if ABRememberedZones.diamond then
-        ABConfig.ShowDiamond = true
-        if ABToggles.ShowDiamond then
-          ABSuppressCallbacks = true
-          pcall(function()
-            ABToggles.ShowDiamond:Set(true)
-          end)
-          ABSuppressCallbacks = false
-        end
-      end
-      if ABRememberedZones.circle then
-        ABConfig.ShowCircle = true
-        if ABToggles.ShowCircle then
-          ABSuppressCallbacks = true
-          pcall(function()
-            ABToggles.ShowCircle:Set(true)
-          end)
-          ABSuppressCallbacks = false
-        end
-      end
-      ABRememberedZones.diamond = false
-      ABRememberedZones.circle = false
-      refreshCustomZones()
-    end
-  end
-  if ABToggles.AutoBlock then
-    ABSuppressCallbacks = true
-    pcall(function()
-      ABToggles.AutoBlock:Set(ABConfig.AutoBlock)
-    end)
-    ABSuppressCallbacks = false
-  end
-  if ABToggles.AutoBlockCustom then
-    ABSuppressCallbacks = true
-    pcall(function()
-      ABToggles.AutoBlockCustom:Set(ABConfig.AutoBlockCustom)
-    end)
-    ABSuppressCallbacks = false
-  end
-  if ABConfig.AutoBlock or ABConfig.AutoBlockCustom then
-    if not autoBlockState.running then
-      pcall(startAutoBlock)
-    end
-  else
-    if autoBlockState.running then
-      pcall(stopAutoBlock)
-    end
-  end
-  if fourthButtonState.applyTint then
-    pcall(fourthButtonState.applyTint)
-  end
-end
-
-local function schedulePendingToggle()
-  if pendingToggleTask then
-    pcall(task.cancel, pendingToggleTask)
-    pendingToggleTask = nil
-  end
-  pendingToggleTask = task.delay(toggleDebounce, function()
-    pendingToggleTask = nil
-    local request = pendingToggle
-    pendingToggle = nil
-    if request ~= nil then
-      lastToggleTime = tick()
-      applyBlockToggle(request)
-    end
-  end)
-end
-
-local function requestBlockToggle(value, mode)
-  if value == nil then return end
-  mode = mode or (ABConfig.AutoBlockCustom and "custom" or "default")
-  pendingToggle = {value = value, mode = mode}
-  local now = tick()
-  if lastToggleTime > 0 and now - lastToggleTime < toggleDebounce then
-    schedulePendingToggle()
-    return
-  end
-  if pendingToggleTask then
-    pcall(task.cancel, pendingToggleTask)
-    pendingToggleTask = nil
-  end
-  lastToggleTime = now
-  local request = pendingToggle
-  pendingToggle = nil
-  applyBlockToggle(request)
-end
-
-local function startFourthButton()
-  if fourthButtonState.running then return end
-  fourthButtonState.running = true
-  fourthButtonState.connections = {}
-
-  do
-    local mainUI = playerGui:FindFirstChild("MainUI")
-    if mainUI then
-      local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
-      if abilityContainer then
-        local leftover = abilityContainer:FindFirstChild("FourthBlockAbility")
-        if leftover then
-          pcall(function()
-            leftover:Destroy()
-          end)
-        end
-      end
-    end
-  end
-
-  if not fourthButtonState.applyTint then
-    fourthButtonState.applyTint = function()
-      local button = fourthButtonState.instance
-      if not button or not button.Parent then return end
-      local tint = (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) and Color3.fromRGB(0, 255, 60) or Color3.fromRGB(255, 0, 0)
-      if button:IsA("ImageButton") or button:IsA("ImageLabel") then
-        button.ImageColor3 = tint
-      end
-      for _, descendant in ipairs(button:GetDescendants()) do
-        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
-          descendant.ImageColor3 = tint
-        elseif descendant:IsA("Frame") and descendant.BackgroundTransparency < 1 then
-          descendant.BackgroundColor3 = tint
-        end
-      end
-    end
-  end
-
-  local lastActivation = 0
-  local activationCooldown = 0.15
-
-  local function onFourthButtonActivated()
-    local now = tick()
-    if now - lastActivation < activationCooldown then return end
-    lastActivation = now
-    local target = ABConfig.FourthButtonTarget or "default"
-    if target == "custom" then
-      if ABConfig.AutoBlockCustom then
-        requestBlockToggle(false, "custom")
-      else
-        requestBlockToggle(true, "custom")
-      end
-    else
-      if ABConfig.AutoBlock then
-        requestBlockToggle(false, "default")
-      else
-        requestBlockToggle(true, "default")
-      end
-    end
-  end
-
-  table.insert(fourthButtonState.connections, RunService.RenderStepped:Connect(function()
-    if not fourthButtonState.running then return end
-    local button = fourthButtonState.instance
-    if button and button.Parent then
-      local okPosition, position = pcall(function()
-        return button.AbsolutePosition
-      end)
-      local okSize, size = pcall(function()
-        return button.AbsoluteSize
-      end)
-      if okPosition and okSize then
-        fourthButtonState.cachedPos = position
-        fourthButtonState.cachedSize = size
-      end
-    else
-      fourthButtonState.cachedPos = nil
-      fourthButtonState.cachedSize = nil
-    end
-  end))
-
-  local function isPointOverButton(point)
-    local button = fourthButtonState.instance
-    if not button or not button.Parent then return false end
-    local ok, objects = pcall(function()
-      return UserInputService:GetGuiObjectsAtPosition(point.X, point.Y)
-    end)
-    if ok and objects and #objects > 0 then
-      local topObject = objects[1]
-      return topObject == button or topObject:IsDescendantOf(button)
-    end
-    if not fourthButtonState.cachedPos or not fourthButtonState.cachedSize then return false end
-    local position, size = fourthButtonState.cachedPos, fourthButtonState.cachedSize
-    return point.X >= position.X and point.X <= position.X + size.X
-      and point.Y >= position.Y and point.Y <= position.Y + size.Y
-  end
-
-  local pressPosition, pressTime = nil, 0
-
-  table.insert(fourthButtonState.connections, UserInputService.InputBegan:Connect(function(input)
-    if not fourthButtonState.running then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-      return
-    end
-    if not isPointOverButton(input.Position) then return end
-    pressPosition = input.Position
-    pressTime = tick()
-  end))
-
-  table.insert(fourthButtonState.connections, UserInputService.InputEnded:Connect(function(input)
-    if not fourthButtonState.running then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-      return
-    end
-    if not pressPosition then return end
-    local heldFor = tick() - pressTime
-    pressPosition = nil
-    if heldFor > 0.5 then return end
-    if not isPointOverButton(input.Position) then return end
-    onFourthButtonActivated()
-  end))
-
-  local function hookButtonInput(root)
-    if not root then return end
-    local function hookObject(object)
-      if not object then return end
-      if object:IsA("GuiButton") then
-        pcall(function()
-          object.Active = true
-          object.Selectable = true
-        end)
-        pcall(function()
-          object.MouseButton1Click:Connect(onFourthButtonActivated)
-        end)
-        pcall(function()
-          object.Activated:Connect(onFourthButtonActivated)
-        end)
-      end
-    end
-    hookObject(root)
-    for _, descendant in ipairs(root:GetDescendants()) do
-      if descendant:IsA("GuiObject") then
-        hookObject(descendant)
-      end
-    end
-  end
-
-  task.spawn(function()
-    while fourthButtonState.running do
-      task.wait(0.5)
-      if not fourthButtonState.running then break end
-      local mainUI = playerGui:FindFirstChild("MainUI")
-      if mainUI then
-        local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
-        if abilityContainer then
-          local blockButton = abilityContainer:FindFirstChild("Block")
-          local cloneButton = abilityContainer:FindFirstChild("Clone")
-          local activeMode = getActiveBlockMode()
-          local source = nil
-          if blockButton and cloneButton then
-            source = (activeMode == "007n7") and cloneButton or blockButton
-          else
-            source = blockButton or cloneButton
-          end
-          local existing = abilityContainer:FindFirstChild("FourthBlockAbility")
-          local needsRebuild = false
-          if not existing then
-            needsRebuild = (source ~= nil)
-          elseif not source then
-            needsRebuild = false
-          elseif fourthButtonState.sourceName ~= source.Name then
-            needsRebuild = true
-          elseif fourthButtonState.instance ~= existing then
-            fourthButtonState.instance = existing
-            hookButtonInput(existing)
-            if fourthButtonState.applyTint then
-              fourthButtonState.applyTint()
-            end
-          end
-          if needsRebuild and source then
-            if existing then
-              pcall(function()
-                existing:Destroy()
-              end)
-            end
-            local copy = source:Clone()
-            copy.Name = "FourthBlockAbility"
-            copy.LayoutOrder = 4
-            if copy:IsA("GuiObject") then
-              copy.ZIndex = 50
-            end
-            for _, descendant in ipairs(copy:GetDescendants()) do
-              if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                local loweredText = descendant.Text:lower()
-                if loweredText:find("block") or loweredText:find("clone") then
-                  descendant.Text = ""
-                  descendant.Visible = false
-                end
-              end
-              if descendant:IsA("GuiObject") then
-                descendant.ZIndex = math.max(descendant.ZIndex, 50)
-                descendant.Active = true
-              end
-            end
-            copy.Parent = abilityContainer
-            fourthButtonState.instance = copy
-            fourthButtonState.sourceName = source.Name
-            hookButtonInput(copy)
-            if fourthButtonState.applyTint then
-              fourthButtonState.applyTint()
-            end
-            print("[testbraken] ✅ 4th button created from:", source.Name)
-          end
-        end
-      end
-    end
-  end)
-
-  print("[testbraken] AutoBlockButton ON")
-end
-
-local function stopFourthButton()
-  if not fourthButtonState.running then return end
-  fourthButtonState.running = false
-  for _, connection in ipairs(fourthButtonState.connections) do
-    pcall(function()
-      connection:Disconnect()
-    end)
-  end
-  fourthButtonState.connections = {}
-  if fourthButtonState.instance and fourthButtonState.instance.Parent then
-    pcall(function()
-      fourthButtonState.instance:Destroy()
-    end)
-  end
-  fourthButtonState.instance = nil
-  fourthButtonState.cachedPos = nil
-  fourthButtonState.cachedSize = nil
-  fourthButtonState.sourceName = nil
-  print("[testbraken] AutoBlockButton OFF")
-end
-
-function startAutoBlock()
-  if autoBlockState.running then return end
-  autoBlockState.running = true
-  autoBlockState.generation = autoBlockState.generation + 1
-  local generation = autoBlockState.generation
-  autoBlockState.attrStates = {}
-
-  local character = LP.Character
-  if character then
-    autoBlockState.LocalRoot = character:FindFirstChild("HumanoidRootPart")
-    watchPunchSounds(character)
-  end
-  table.insert(autoBlockState.connections, LP.CharacterAdded:Connect(function(newCharacter)
-    autoBlockState.LocalRoot = newCharacter:WaitForChild("HumanoidRootPart", 5)
-    watchPunchSounds(newCharacter)
-  end))
-
-  local function watchKiller(killer)
-    if not killer or not killer:IsA("Model") then return end
-    watchKillerSounds(killer)
-  end
-
-  local function attachToKillersFolder(folder)
-    if not folder then return false end
-    autoBlockState.KillersFolder = folder
-    table.insert(autoBlockState.connections, folder.ChildAdded:Connect(function(child)
-      if autoBlockState.running and autoBlockState.generation == generation then
-        task.wait(0.1)
-        watchKiller(child)
-      end
-    end))
-    for _, child in ipairs(folder:GetChildren()) do
-      watchKiller(child)
-    end
-    return true
-  end
-
-  local playersFolder = Workspace:FindFirstChild("Players")
-  local killersFolder = playersFolder and playersFolder:FindFirstChild("Killers")
-  if not attachToKillersFolder(killersFolder) then
-    task.spawn(function()
-      local attempts = 0
-      while autoBlockState.running and autoBlockState.generation == generation and attempts < 60 do
-        attempts = attempts + 1
-        task.wait(1)
-        local retryPlayers = Workspace:FindFirstChild("Players")
-        local retryKillers = retryPlayers and retryPlayers:FindFirstChild("Killers")
-        if retryKillers and attachToKillersFolder(retryKillers) then
-          break
-        end
-      end
-    end)
-  end
-
-  table.insert(autoBlockState.connections, RunService.Heartbeat:Connect(function()
-    if not autoBlockState.running or autoBlockState.generation ~= generation then return end
-    checkKillerAbilities()
-  end))
-
-  if fourthButtonState.applyTint then
-    fourthButtonState.applyTint()
-  end
-  print("[testbraken] AutoBlock ON")
-end
-
-function stopAutoBlock()
-  autoBlockState.running = false
-  autoBlockState.generation = autoBlockState.generation + 1
-  autoBlockState.attrStates = {}
-  for _, connection in ipairs(autoBlockState.connections) do
-    pcall(function()
-      connection:Disconnect()
-    end)
-  end
-  autoBlockState.connections = {}
-  print("[testbraken] AutoBlock OFF")
-end
-
-    local function makeABToggle(config)
-        local option = autoBlockHubTab:Toggle(config)
-        return {
-            Set = function(_, value)
-                local ok = pcall(function() option:SetValue(value) end)
-                if not ok then pcall(function() option:Set(value) end) end
-            end,
-            Get = function() return option.Value end,
-        }
-    end
-
-    autoBlockHubTab:Section({Name = "音效 / 动画识别格挡（来自 Forsaken 中文版）"})
-    ABToggles.AutoBlock = makeABToggle({
-        Name = "自动格挡（音效 / 动画识别）",
-        Value = ABConfig.AutoBlock,
-        Callback = function(enabled)
-            if ABSuppressCallbacks then return end
-            requestBlockToggle(enabled, "default")
-        end,
-    })
-    ABToggles.ABModeDropdown = autoBlockHubTab:Dropdown({
-        Name = "格挡模式",
-        Values = {"Guest 1337", "007n7"},
-        Value = (ABConfig.ABMode == "007n7") and "007n7" or "Guest 1337",
-        Callback = function(selected)
-            ABConfig.ABMode = (selected == "007n7") and "007n7" or "Guest1337"
-        end,
-    })
-    ABToggles.AimPunch = autoBlockHubTab:Toggle({
-        Name = "自动瞄准并出拳",
-        Value = ABConfig.AimPunch,
-        Callback = function(enabled)
-            ABConfig.AimPunch = enabled
-        end,
-    })
-    ABToggles.AutoBlockButton = autoBlockHubTab:Toggle({
-        Name = "自动格挡按钮",
-        Value = ABConfig.AutoBlockButton,
-        Callback = function(enabled)
-            ABConfig.AutoBlockButton = enabled
-            if enabled then startFourthButton() else stopFourthButton() end
-        end,
-    })
-    ABToggles.FourthButtonTargetDropdown = autoBlockHubTab:Dropdown({
-        Name = "第四个按钮目标",
-        Values = {"默认", "自定义"},
-        Value = (ABConfig.FourthButtonTarget == "custom") and "自定义" or "默认",
-        Callback = function(selected)
-            ABConfig.FourthButtonTarget = (selected == "自定义") and "custom" or "default"
-        end,
-    })
-
-    autoBlockHubTab:Section({Name = "自定义判定区格挡"})
-    ABToggles.AutoBlockCustom = makeABToggle({
-        Name = "自定义自动格挡",
-        Value = ABConfig.AutoBlockCustom,
-        Callback = function(enabled)
-            if ABSuppressCallbacks then return end
-            requestBlockToggle(enabled, "custom")
-        end,
-    })
-    ABToggles.CustomABModeDropdown = autoBlockHubTab:Dropdown({
-        Name = "自定义格挡模式",
-        Values = {"Guest 1337", "007n7"},
-        Value = (ABConfig.CustomABMode == "007n7") and "007n7" or "Guest 1337",
-        Callback = function(selected)
-            ABConfig.CustomABMode = (selected == "007n7") and "007n7" or "Guest1337"
-        end,
-    })
-    ABToggles.ShowDiamond = makeABToggle({
-        Name = "显示菱形判定区",
-        Value = ABConfig.ShowDiamond,
-        Callback = function(enabled)
-            if ABSuppressCallbacks then
-                ABConfig.ShowDiamond = enabled
-                refreshCustomZones()
-                return
-            end
-            if ABConfig.AutoBlock then
-                ABSuppressCallbacks = true
-                pcall(function() ABToggles.ShowDiamond:Set(false) end)
-                ABSuppressCallbacks = false
-                ABConfig.ShowDiamond = false
-                refreshCustomZones()
-                return
-            end
-            ABConfig.ShowDiamond = enabled
-            refreshCustomZones()
-        end,
-    })
-    ABInputs.CustomDiamondLength = autoBlockHubTab:Input({
-        Name = "菱形长度", Value = tostring(ABConfig.CustomDiamondLength), Placeholder = "8",
-        Callback = function(text) ABConfig.CustomDiamondLength = math.max(1, tonumber(text) or 8) end,
-    })
-    ABInputs.CustomDiamondWidth = autoBlockHubTab:Input({
-        Name = "菱形宽度", Value = tostring(ABConfig.CustomDiamondWidth), Placeholder = "4",
-        Callback = function(text) ABConfig.CustomDiamondWidth = math.max(1, tonumber(text) or 4) end,
-    })
-    ABInputs.CustomDiamondOffset = autoBlockHubTab:Input({
-        Name = "菱形朝向偏移", Value = tostring(ABConfig.CustomDiamondOffset), Placeholder = "3",
-        Callback = function(text) ABConfig.CustomDiamondOffset = math.max(0, tonumber(text) or 3) end,
-    })
-    ABToggles.ShowCircle = makeABToggle({
-        Name = "显示圆形判定区",
-        Value = ABConfig.ShowCircle,
-        Callback = function(enabled)
-            if ABSuppressCallbacks then
-                ABConfig.ShowCircle = enabled
-                refreshCustomZones()
-                return
-            end
-            if ABConfig.AutoBlock then
-                ABSuppressCallbacks = true
-                pcall(function() ABToggles.ShowCircle:Set(false) end)
-                ABSuppressCallbacks = false
-                ABConfig.ShowCircle = false
-                refreshCustomZones()
-                return
-            end
-            ABConfig.ShowCircle = enabled
-            refreshCustomZones()
-        end,
-    })
-    ABInputs.CustomCircleRadius = autoBlockHubTab:Input({
-        Name = "圆形半径", Value = tostring(ABConfig.CustomCircleRadius), Placeholder = "5",
-        Callback = function(text) ABConfig.CustomCircleRadius = math.max(1, tonumber(text) or 5) end,
-    })
-    ABInputs.ZoneHeight = autoBlockHubTab:Input({
-        Name = "判定区高度", Value = tostring(ABConfig.ZoneHeight), Placeholder = "0.5",
-        Callback = function(text) ABConfig.ZoneHeight = tonumber(text) or 0.5 end,
-    })
-end
-
-
-Window:TabDivider()
-
-local FengYu = Window:Tab("服务器", "132419977785712")
+Window:Tab("服务器", "132419977785712")
 
 local Feng = FengYu:Section({
     Name = "服务器列表",
@@ -2748,122 +1568,7 @@ Feng:Toggle({
 })
 end
 
-local FengYu = Window:Tab("渲染", "74798041009051")
-
-local Feng = FengYu:Section({
-    Name = "碰撞箱材质",
-    SubName = "无用处用不好直接变板砖",
-    Logo = "84830962019412",
-    Collapsible = true,
-    Collapsed = true,
-})
-
-do
-    local HitboxVisual = {
-        Enabled = false,
-        Material = "Plastic",
-        Color = Color3.fromRGB(255, 64, 64),
-        HitColor = Color3.fromRGB(128, 255, 128),
-        Transparency = 1,
-        HitTransparency = 1,
-    }
-
-Feng:Toggle({
-    Name = "启用可视化修改",
-    Value = false,
-    Callback = function(v)
-        HitboxVisual.Enabled = v
-    end
-})
-
-    local materialList = {}
-    for _, m in ipairs(Enum.Material:GetEnumItems()) do
-        materialList[#materialList + 1] = tostring(m):split(".")[3]
-    end
-    table.sort(materialList)
-
-Feng:Dropdown({
-    Name = "材质",
-    Values = materialList,
-    Value = "Plastic",
-    Callback = function(v)
-        HitboxVisual.Material = v
-    end
-})
-
-Feng:Colorpicker({
-    Name = "碰撞箱颜色",
-    Default = HitboxVisual.Color,
-    Transparency = 0.2,
-    Callback = function(color, transparency)
-        HitboxVisual.Color = color
-    end
-})
-
-Feng:Colorpicker({
-    Name = "碰撞箱颜色 (命中)",
-    Default = HitboxVisual.HitColor,
-    Transparency = 0.2,
-    Callback = function(color, transparency)
-        HitboxVisual.HitColor = color
-    end
-})
-
-Feng:Slider({
-    Name = "碰撞箱透明度",
-    Value = { 
-        Min = 0, 
-        Max = 1, 
-        Default = 1 
-    },
-    Rounding = 2,
-    Callback = function(v)
-        HitboxVisual.Transparency = v
-    end
-})
-
-Feng:Slider({
-    Name = "碰撞箱透明度 (命中)",
-    Value = { 
-        Min = 0, 
-        Max = 1, 
-        Default = 1 
-    },
-    Rounding = 2,
-    Callback = function(v)
-        HitboxVisual.HitTransparency = v
-    end
-})
-
-    task.spawn(function()
-        local hitboxesFolder = workspace:WaitForChild("Hitboxes", 30)
-        if not hitboxesFolder then
-            return
-        end
-
-        hitboxesFolder.ChildAdded:Connect(function(part)
-            if not HitboxVisual.Enabled then return end
-            local mat = Enum.Material[HitboxVisual.Material]
-            local originColor = part.Color
-
-            while part and part.Parent do
-                part.Material = mat
-                if originColor.R ~= 1 then
-                    part.Color        = HitboxVisual.HitColor
-                    part.Transparency = HitboxVisual.HitTransparency
-                else
-                    part.Color        = HitboxVisual.Color
-                    part.Transparency = HitboxVisual.Transparency
-                end
-                task.wait()
-            end
-        end)
-    end)
-end
-
-Window:TabDivider()
-
-local FengYu = Window:Tab("体力区", "130874893373683")
+Window:Tab("体力区", "130874893373683")
 
 local Feng = FengYu:Section({
     Name = "体力管理",
@@ -5300,574 +4005,1190 @@ Feng:Toggle({
 })
 end
 
-Window:TabDivider()
+local autoBlockHubTab = Window:Tab("自动格挡", "shield")
 
-local FengYu = Window:Tab("发电机", "105433515091179")
+-- 合并自 Forsaken 中文版的自动格挡模块（独立命名空间）
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Stats = game:GetService("Stats")
+    local UserInputService = game:GetService("UserInputService")
+    local LP = Players.LocalPlayer
 
-local Feng = FengYu:Section({
-    Name = "发电机系统",
-    SubName = "里程碑的开始",
-    Logo = "105433515091179",
-    Collapsible = true,
-    Collapsed = true,
-    { 
-        Key = "ge",
-        Name = "基础发电机功能",
-    },
-    { 
-        Key = "se",
-        Name = "发电机设置",
-    },
-})
+    local ABConfig = {
+        AutoBlock = false,
+        AutoBlockButton = false,
+        ABMode = "Guest1337",
+        AimPunch = false,
+        AutoBlockCustom = false,
+        CustomABMode = "Guest1337",
+        FourthButtonTarget = "default",
+        CustomDiamondLength = 8,
+        CustomDiamondWidth = 4,
+        CustomDiamondOffset = 3,
+        CustomCircleRadius = 5,
+        ShowDiamond = false,
+        ShowCircle = false,
+        ZoneHeight = 0.5,
+    }
+    local ABToggles, ABInputs = {}, {}
+    local ABSuppressCallbacks = false
+    local ABRememberedZones = {diamond = false, circle = false}
 
-local vu2 = {
-    autoRepairActive = false
+local autoBlockState = {
+  running = false,
+  connections = {},
+  attrStates = {},
+  attrDebounce = 0,
+  blueDebounce = 0,
+  punchDebounce = 0,
+  generation = 0,
+  RemoteEvent = nil,
+  KillersFolder = nil,
+  LocalRoot = nil,
 }
-local vu4 = {
-    repairCheckInterval = 1.5
+
+local startAutoBlock, stopAutoBlock
+
+local fourthButtonState = {
+  instance = nil,
+  applyTint = nil,
+  running = false,
+  connections = {},
+  cachedPos = nil,
+  cachedSize = nil,
+  sourceName = nil,
 }
 
-Feng.ge:Toggle({
-    Name = "（旧）自动修复发电机",
-    Value = false,
-    Callback = function(value)
-        vu2.autoRepairActive = value
-    end
-})
+local lastToggleTime = 0
+local pendingToggle = nil
+local pendingToggleTask = nil
+local toggleDebounce = 0.08
 
 do
-    local function findNearestGenerator()
-        local character = game.Players.LocalPlayer.Character
-        if not character then return nil end
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if not root then return nil end
-
-        local generators = {}
-        local map = workspace:FindFirstChild("Map")
-        if map then
-            local ingame = map:FindFirstChild("Ingame")
-            if ingame then
-                local mapFolder = ingame:FindFirstChild("Map")
-                if mapFolder then
-                    for _, obj in pairs(mapFolder:GetChildren()) do
-                        if obj.Name == "Generator" then
-                            table.insert(generators, obj)
-                        end
-                    end
-                end
-            end
-        end
-
-        local nearest, nearestDist = nil, math.huge
-        for _, gen in pairs(generators) do
-            local part = gen:FindFirstChildWhichIsA("BasePart")
-            if part then
-                local dist = (root.Position - part.Position).Magnitude
-                if dist < nearestDist then
-                    nearest, nearestDist = gen, dist
-                end
-            end
-        end
-        return nearest
-    end
-
-    local function repairGenerator(generator)
-        if not generator then return false end
-        local remotes = generator:FindFirstChild("Remotes")
-        if remotes then
-            local re = remotes:FindFirstChild("RE")
-            if re and re:IsA("RemoteEvent") then
-                re:FireServer()
-                return true
-            end
-        end
-        return false
-    end
-
-    spawn(function()
-        while wait() do
-            if vu2.autoRepairActive then
-                local generator = findNearestGenerator()
-                if generator then
-                    repairGenerator(generator)
-                    wait(vu4.repairCheckInterval)
-                end
-            end
-            wait(0.1)
-        end
-    end)
+  local modules = ReplicatedStorage:FindFirstChild("Modules")
+  local outerNetwork = modules and modules:FindFirstChild("Network", true)
+  local innerNetwork = outerNetwork and outerNetwork:FindFirstChild("Network", true)
+  autoBlockState.RemoteEvent = innerNetwork and innerNetwork:FindFirstChild("RemoteEvent")
+  if not autoBlockState.RemoteEvent then
+    autoBlockState.RemoteEvent = ReplicatedStorage:FindFirstChild("RemoteEvent", true)
+  end
 end
 
-do
-    local Players           = game:GetService("Players")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Workspace         = game:GetService("Workspace")
-    local LocalPlayer       = Players.LocalPlayer
-
-    local GameState       = 0
-    local RoundGenerators = {}
-    local CurrentPuzzle   = nil
-    local CompletingAll   = false
-
-    local Config = {
-        AutoCompleteGenerators  = false,
-        GeneratorHelper         = false,
-        InstantlyEnterGenerator = false,
-        AutoGeneratorFarm       = false,
-        PuzzleDelay             = 0.08,
-        LegitPuzzles            = false,
-        LegitPuzzleDelay        = 0.08,
-        SelectedGenerator       = 1,
-    }
-
-    local function IsKiller()
-        local char = LocalPlayer.Character
-        if not char then return false end
-        local pf = Workspace:FindFirstChild("Players")
-        local kf = pf and pf:FindFirstChild("Killers")
-        return kf ~= nil and char.Parent == kf
+local function getPingSeconds()
+  local ping = 0.05
+  pcall(function()
+    local network = Stats:FindFirstChild("Network")
+    local serverStatsItem = network and network:FindFirstChild("ServerStatsItem")
+    local dataPing = serverStatsItem and serverStatsItem:FindFirstChild("Data Ping")
+    if dataPing then
+      ping = dataPing:GetValue() / 1000
     end
+  end)
+  return math.clamp(ping, 0.05, 0.35)
+end
 
-    local function GetPlayersFolder()
-        return Workspace:FindFirstChild("Players")
-    end
+local blockSoundIdList = {
+  "102228729296384", "140242176732868", "112809109188560", "136323728355613",
+  "115026634746636", "84116622032112", "108907358619313", "127793641088496",
+  "86174610237192", "95079963655241", "101199185291628", "119942598489800",
+  "84307400688050", "113037804008732", "105200830849301", "75330693422988",
+  "82221759983649", "81702359653578", "108610718831698", "112395455254818",
+  "109431876587852", "109348678063422", "85853080745515", "98733709078792",
+  "105840448036441", "114742322778642", "119583605486352", "79980897195554",
+  "71805956520207", "79391273191671", "89004992452376", "101553872555606",
+  "101698569375359", "105415540898010", "106300477136129", "80516583309685",
+  "116581754553533", "117231507259853", "119089145505438", "71834552297085",
+  "117173212095661", "104910828105172", "140412278320643", "85544168523099",
+  "114506382930939", "116527305931161", "131406927389838", "94317217837143",
+  "121954639447247", "125213046326879", "128856426573270", "128195973631079",
+  "124903763333174", "98111231282218", "136728245733659", "131123355704017",
+  "107444859834748", "76959687420003", "72425554233832", "96594507550917",
+  "139996647355899", "107345261604889", "127557531826290", "108651070773439",
+  "74842815979546", "124397369810639", "76467993976301", "118493324723683",
+  "78298577002481", "5148302439", "98675142200448", "128367348686124",
+  "103684883268194", "109246041199659", "80540530406270", "139523195429581",
+  "105204810054381", "116468089135195", "133709029886490", "124234993291213",
+  "99856718263455", "74809026448465", "86833981571073", "110372418055226",
+  "86494585504534", "99829427721752", "120059928759346", "104625283622511",
+  "105316545074913", "126131675979001", "82336352305186", "93366464803829",
+  "84069821282466",
+}
 
-    local function GetSurvivorsFolder()
-        local pf = GetPlayersFolder()
-        return pf and pf:FindFirstChild("Survivors")
-    end
+local blockSoundIds = {}
+for _, soundId in ipairs(blockSoundIdList) do
+  blockSoundIds["rbxassetid://" .. soundId] = true
+  blockSoundIds[soundId] = true
+end
 
-    local function GetKillersFolder()
-        local pf = GetPlayersFolder()
-        return pf and pf:FindFirstChild("Killers")
-    end
+local punchSoundIdList = {
+  "132298811847315", "81114852524420", "123825742002486", "116616310968045",
+  "102808968188291", "117828699507982", "125854302746190", "18568553101",
+  "95135835034592", "135209101640984", "91165993312513", "82772022662025",
+}
 
-    local function GetGameMap()
-        local map    = Workspace:FindFirstChild("Map")
-        local ingame = map and map:FindFirstChild("Ingame")
-        return ingame and ingame:FindFirstChild("Map")
-    end
+local punchSoundIds = {}
+for _, soundId in ipairs(punchSoundIdList) do
+  punchSoundIds["rbxassetid://" .. soundId] = true
+end
 
-    local function UpdateGenerators()
-        local gameMap = GetGameMap()
-        if not gameMap then
-            RoundGenerators = {}
-            return
-        end
-        local gens = {}
-        for _, obj in ipairs(gameMap:GetChildren()) do
-            if obj.Name == "Generator" then
-                table.insert(gens, obj)
-            end
-        end
-        RoundGenerators = gens
-    end
+local function isPunchSound(soundId)
+  if not soundId or soundId == "" then return false end
+  if punchSoundIds[soundId] then return true end
+  local numericId = soundId:match("rbxassetid://(%d+)") or soundId:match("^(%d+)$")
+  return numericId and punchSoundIds["rbxassetid://" .. numericId] or false
+end
 
-    task.spawn(function()
-        while task.wait(0.3) do
-            UpdateGenerators()
-        end
-    end)
-
-    local function WaitGenerators(timeout)
-        local t0 = tick()
-        timeout = timeout or 15
-        while tick() - t0 < timeout do
-            if #RoundGenerators >= 5 then return true end
-            task.wait(0.3)
-        end
-        return #RoundGenerators > 0
-    end
-
-    local function GetClosestGenerator(returnIndex)
-        local char = LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        if not root then return nil end
-        for i, gen in ipairs(RoundGenerators) do
-            local pos    = gen:FindFirstChild("Positions")
-            local center = pos and pos:FindFirstChild("Center")
-            if center and (center.Position - root.Position).Magnitude <= 7 then
-                return returnIndex and i or gen
-            end
-        end
-        return nil
-    end
-
-    local function IsPlayerNearGenerator(gen)
-        if not gen then return false end
-        local pos    = gen:FindFirstChild("Positions")
-        local center = pos and pos:FindFirstChild("Center")
-        if not center then return false end
-        local function scan(folder)
-            if not folder then return false end
-            for _, p in ipairs(folder:GetChildren()) do
-                if p:GetAttribute("Username") ~= LocalPlayer.Name then
-                    local root = p:FindFirstChild("HumanoidRootPart")
-                    if root and (center.Position - root.Position).Magnitude <= 40 then
-                        return true
-                    end
-                end
-            end
-            return false
-        end
-        return scan(GetSurvivorsFolder()) or scan(GetKillersFolder())
-    end
-
-    task.spawn(function()
-        while task.wait(0.3) do
-            local pf = GetPlayersFolder()
-            local spec = pf and pf:FindFirstChild("Spectating")
-            if spec and spec:FindFirstChild(LocalPlayer.Name) then
-                GameState = 0
-            elseif LocalPlayer.Character and LocalPlayer.Character.Parent then
-                GameState = 1
-            end
-        end
-    end)
-
-    local function IsNeighbour(r1, c1, r2, c2)
-        return (r2 == r1 - 1 and c2 == c1) or (r2 == r1 + 1 and c2 == c1)
-            or (r2 == r1 and c2 == c1 - 1) or (r2 == r1 and c2 == c1 + 1)
-    end
-
-    local function KeyOf(p) return p.row .. '-' .. p.col end
-
-    local function OrderPath(path, startPair)
-        if not path or #path == 0 then return path end
-        local start = (startPair and startPair[1]) or path[1]
-        local lookup = {}
-        for _, p in ipairs(path) do
-            lookup[KeyOf(p)] = { row = p.row, col = p.col }
-        end
-        local ordered = {}
-        local cur = { row = start.row, col = start.col }
-        table.insert(ordered, cur)
-        lookup[KeyOf(cur)] = nil
-        while next(lookup) do
-            local advanced = false
-            for k, v in pairs(lookup) do
-                if IsNeighbour(cur.row, cur.col, v.row, v.col) then
-                    table.insert(ordered, v)
-                    lookup[k] = nil
-                    cur = v
-                    advanced = true
-                    break
-                end
-            end
-            if not advanced then break end
-        end
-        return ordered
-    end
-
-    local function AutoGenerator(puzzle, force)
-        if not puzzle or not puzzle.Solution then return end
-        for i = 1, #puzzle.Solution do
-            local path       = puzzle.Solution[i]
-            local targetPair = puzzle.targetPairs and puzzle.targetPairs[i]
-            local ordered    = OrderPath(path, targetPair)
-            puzzle.paths[i]  = {}
-            for _, p in ipairs(ordered) do
-                if not force and not Config.AutoCompleteGenerators then return end
-                table.insert(puzzle.paths[i], { row = p.row, col = p.col })
-                pcall(function() puzzle:updateGui() end)
-                if Config.LegitPuzzles then
-                    local g = GetClosestGenerator()
-                    if g and IsPlayerNearGenerator(g) then
-                        task.wait(Config.LegitPuzzleDelay)
-                    else
-                        task.wait(Config.PuzzleDelay)
-                    end
-                else
-                    task.wait(Config.PuzzleDelay)
-                end
-            end
-            pcall(function() puzzle:checkForWin() end)
-        end
-    end
-
-    local function DrawSolutions(puzzle)
-        local gridFrame = puzzle.gridFrame
-        if not gridFrame then return end
-        local overlay = Instance.new("Frame", gridFrame.Parent)
-        overlay.ZIndex                 = 6
-        overlay.BackgroundTransparency = 1
-        overlay.Size                   = gridFrame.Size
-        overlay.AnchorPoint            = Vector2.new(0.5, 0.5)
-        overlay.Position               = UDim2.fromScale(0.5, 0.5)
-        local cellSize = 0.1
-        pcall(function()
-            cellSize = LocalPlayer.PlayerGui.PuzzleUI.Container.GridHolder.Grid.UIGridLayout.CellSize.X.Scale
-        end)
-        for i = 1, #puzzle.Solution do
-            local path       = puzzle.Solution[i]
-            local targetPair = puzzle.targetPairs and puzzle.targetPairs[i]
-            local ordered    = OrderPath(path, targetPair)
-            for _, p in ipairs(ordered) do
-                local cell = Instance.new("Frame", overlay)
-                cell.BorderSizePixel        = 0
-                cell.BackgroundTransparency = 0.7
-                cell.Size                   = UDim2.fromScale(cellSize, cellSize)
-                cell.ZIndex                 = 7
-                local col = (puzzle.colors and puzzle.colors[i]) or Color3.new(1, 1, 1)
-                cell.BackgroundColor3       = Color3.new(col.R / 1.2, col.G / 1.2, col.B / 1.2)
-                cell.Position               = UDim2.fromScale(cellSize * (p.col - 1), cellSize * (p.row - 1))
-            end
-            pcall(function() puzzle:checkForWin() end)
-        end
-    end
-
+local function fireAbility(abilityName)
+  if autoBlockState.RemoteEvent then
     pcall(function()
-        local FlowGameMod = require(ReplicatedStorage.Modules.Minigames.FlowGameManager.FlowGame)
-        local original    = FlowGameMod.new
-        local hooked
-        hooked = hookfunction(original, newcclosure(function(...)
-            local puzzle  = hooked(...)
-            CurrentPuzzle = puzzle
-            if Config.GeneratorHelper then
-                pcall(DrawSolutions, puzzle)
-            end
-            if Config.AutoCompleteGenerators then
-                task.spawn(function()
-                    pcall(AutoGenerator, puzzle)
-                end)
-            end
-            return puzzle
-        end))
+      autoBlockState.RemoteEvent:FireServer("UseActorAbility", {abilityName})
     end)
+  end
+end
 
-    task.spawn(function()
-        while task.wait(0.1) do
-            for _, gen in ipairs(RoundGenerators) do
-                local main   = gen:FindFirstChild("Main")
-                local prompt = main and main:FindFirstChild("Prompt")
-                if prompt then
-                    prompt.HoldDuration = Config.InstantlyEnterGenerator and 0 or 0.25
-                end
+local function fireBlock()
+  fireAbility("Block")
+end
+
+local function fireClone()
+  fireAbility("Clone")
+end
+
+local function getActiveBlockMode()
+  if ABConfig.AutoBlockCustom then
+    return ABConfig.CustomABMode
+  end
+  return ABConfig.ABMode
+end
+
+local function performBlock()
+  if getActiveBlockMode() == "007n7" then
+    fireClone()
+  else
+    fireBlock()
+  end
+end
+
+local function getNearestKiller()
+  local killersFolder = autoBlockState.KillersFolder
+  if not killersFolder or not killersFolder.Parent then
+    local playersFolder = Workspace:FindFirstChild("Players")
+    killersFolder = playersFolder and playersFolder:FindFirstChild("Killers")
+  end
+  local localRoot = autoBlockState.LocalRoot
+  if not localRoot or not localRoot.Parent then
+    local character = LP.Character
+    localRoot = character and character:FindFirstChild("HumanoidRootPart")
+  end
+  if not killersFolder or not localRoot then
+    return nil, nil
+  end
+  local nearestRoot, nearestModel, nearestDistance = nil, nil, 30
+  for _, killer in pairs(killersFolder:GetChildren()) do
+    local killerRoot = killer:FindFirstChild("HumanoidRootPart")
+    if killerRoot then
+      local distance = (localRoot.Position - killerRoot.Position).Magnitude
+      if distance < nearestDistance then
+        nearestDistance = distance
+        nearestRoot = killerRoot
+        nearestModel = killer
+      end
+    end
+  end
+  return nearestRoot, nearestModel
+end
+
+local function aimAtKiller()
+  local killerRoot, killerModel = getNearestKiller()
+  if not (killerRoot and autoBlockState.LocalRoot and killerModel) then return end
+  local killerHumanoid = killerModel:FindFirstChildOfClass("Humanoid")
+  local startTime = tick()
+  local lastKillerPosition = killerRoot.Position
+  local connection
+  connection = RunService.RenderStepped:Connect(function(deltaTime)
+    if not autoBlockState.running or tick() - startTime > 0.6 or not autoBlockState.LocalRoot or not killerRoot then
+      connection:Disconnect()
+      return
+    end
+    local myPosition = autoBlockState.LocalRoot.Position
+    local killerPosition = killerRoot.Position
+    local velocity = (killerPosition - lastKillerPosition) / math.max(deltaTime, 0.001)
+    lastKillerPosition = killerPosition
+    local moveDirection = killerHumanoid and killerHumanoid.MoveDirection or Vector3.new()
+    local walkSpeed = killerHumanoid and killerHumanoid.WalkSpeed or 16
+    local leadTime = 0.24 + getPingSeconds()
+    local predictedPosition = killerPosition
+      + moveDirection * walkSpeed * leadTime
+      + Vector3.new(velocity.X, 0, velocity.Z) * 0.08
+    autoBlockState.LocalRoot.CFrame = CFrame.lookAt(
+      myPosition,
+      Vector3.new(predictedPosition.X, myPosition.Y, predictedPosition.Z)
+    )
+  end)
+end
+
+local function aimAndPunch()
+  if not autoBlockState.running or not ABConfig.AimPunch then return end
+  if getActiveBlockMode() == "007n7" then return end
+  local now = tick()
+  if now - autoBlockState.punchDebounce < 0.2 then return end
+  autoBlockState.punchDebounce = now
+  task.spawn(function()
+    aimAtKiller()
+    fireAbility("Punch")
+  end)
+end
+
+local function watchPunchSounds(character)
+  if not character then return end
+  local function checkSound(instance)
+    if instance:IsA("Sound") and isPunchSound(instance.SoundId) then
+      aimAndPunch()
+    end
+  end
+  for _, descendant in pairs(character:GetDescendants()) do
+    checkSound(descendant)
+  end
+  table.insert(autoBlockState.connections, character.DescendantAdded:Connect(checkSound))
+end
+
+local customZoneState = {running = false, connections = {}, folder = nil, killerZones = {}}
+local zonePadding = 1.5
+
+local function getZoneCFrame(killerRoot)
+  local raycastParams = RaycastParams.new()
+  raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+  raycastParams.FilterDescendantsInstances = {killerRoot.Parent, LP.Character}
+  raycastParams.IgnoreWater = true
+  local result = Workspace:Raycast(killerRoot.Position, Vector3.new(0, -30, 0), raycastParams)
+  local groundY = result and (killerRoot.Position.Y - result.Distance) or (killerRoot.Position.Y - 3)
+  return CFrame.new(killerRoot.Position.X, groundY + (ABConfig.ZoneHeight or 0.5), killerRoot.Position.Z)
+    * killerRoot.CFrame.Rotation
+end
+
+local function createZoneVisuals(killer)
+  local zoneModel = Instance.new("Model")
+  zoneModel.Name = "ABCustomZone_" .. killer.Name
+  zoneModel.Parent = customZoneState.folder
+  local edges = {}
+  for index = 1, 4 do
+    local edge = Instance.new("Part")
+    edge.Name = "Edge" .. index
+    edge.Anchored = true
+    edge.CanCollide = false
+    edge.CanQuery = false
+    edge.CanTouch = false
+    edge.CastShadow = false
+    edge.Material = Enum.Material.Neon
+    edge.Color = Color3.fromRGB(255, 0, 0)
+    edge.Transparency = 0.3
+    edge.Size = Vector3.new(0.35, 0.08, 1)
+    edge.CFrame = CFrame.new(0, -5000, 0)
+    edge.Parent = zoneModel
+    edges[index] = edge
+  end
+  local circle = Instance.new("Part")
+  circle.Shape = Enum.PartType.Cylinder
+  circle.Name = "Circle"
+  circle.Anchored = true
+  circle.CanCollide = false
+  circle.CanQuery = false
+  circle.CanTouch = false
+  circle.CastShadow = false
+  circle.Material = Enum.Material.Neon
+  circle.Color = Color3.fromRGB(255, 0, 0)
+  circle.Transparency = 0.65
+  circle.Size = Vector3.new(0.08, 10, 10)
+  circle.CFrame = CFrame.new(0, -5000, 0)
+  circle.Parent = zoneModel
+  return {model = zoneModel, edges = edges, circle = circle, killer = killer}
+end
+
+local function isInsideDiamond(position, killerCFrame, killerPosition)
+  if not ABConfig.ShowDiamond then return false end
+  local lookVector = killerCFrame.LookVector
+  local rightVector = killerCFrame.RightVector
+  local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
+  local right = Vector3.new(rightVector.X, 0, rightVector.Z)
+  if forward.Magnitude < 0.01 or right.Magnitude < 0.01 then return false end
+  forward = forward.Unit
+  right = right.Unit
+  local offset = Vector3.new(position.X - killerPosition.X, 0, position.Z - killerPosition.Z)
+  local forwardDistance = offset:Dot(forward)
+  local rightDistance = offset:Dot(right)
+  local diamondCenter = ABConfig.CustomDiamondOffset + ABConfig.CustomDiamondLength / 2
+  local forwardFromCenter = forwardDistance - diamondCenter
+  local halfWidth = ABConfig.CustomDiamondWidth / 2 + zonePadding
+  local halfLength = ABConfig.CustomDiamondLength / 2 + zonePadding
+  return math.abs(rightDistance) / halfWidth + math.abs(forwardFromCenter) / halfLength <= 1
+end
+
+local function isInsideCircle(position, center)
+  if not ABConfig.ShowCircle then return false end
+  local dx = position.X - center.X
+  local dz = position.Z - center.Z
+  local radius = ABConfig.CustomCircleRadius + zonePadding
+  return dx * dx + dz * dz <= radius * radius
+end
+
+local function isLocalPlayerInZone(killer)
+  if not killer or not killer.Parent then return false end
+  local killerRoot = killer:FindFirstChild("HumanoidRootPart")
+  local character = LP.Character
+  local localRoot = character and character:FindFirstChild("HumanoidRootPart")
+  if not killerRoot or not localRoot then return false end
+  return isInsideDiamond(localRoot.Position, killerRoot.CFrame, killerRoot.Position)
+    or isInsideCircle(localRoot.Position, killerRoot.Position)
+end
+
+local function updateZoneVisuals(visuals, killerRoot, localRoot)
+  if not visuals or not visuals.model or not visuals.model.Parent then return end
+  if not killerRoot or not killerRoot.Parent then return end
+  local zoneCFrame = getZoneCFrame(killerRoot)
+  local faceOffset = ABConfig.CustomDiamondOffset
+  local diamondLength = ABConfig.CustomDiamondLength
+  local diamondWidth = ABConfig.CustomDiamondWidth
+  local nearPoint = zoneCFrame:PointToWorldSpace(Vector3.new(0, 0, -faceOffset))
+  local farPoint = zoneCFrame:PointToWorldSpace(Vector3.new(0, 0, -(faceOffset + diamondLength)))
+  local leftPoint = zoneCFrame:PointToWorldSpace(Vector3.new(-diamondWidth / 2, 0, -(faceOffset + diamondLength / 2)))
+  local rightPoint = zoneCFrame:PointToWorldSpace(Vector3.new(diamondWidth / 2, 0, -(faceOffset + diamondLength / 2)))
+  local segments = {
+    {nearPoint, leftPoint},
+    {nearPoint, rightPoint},
+    {farPoint, leftPoint},
+    {farPoint, rightPoint},
+  }
+  for index, segment in ipairs(segments) do
+    local startPoint, endPoint = segment[1], segment[2]
+    local midpoint = (startPoint + endPoint) / 2
+    local delta = endPoint - startPoint
+    local length = delta.Magnitude
+    if length > 0.01 then
+      local direction = delta.Unit
+      local edge = visuals.edges[index]
+      if edge then
+        edge.Size = Vector3.new(0.35, 0.08, length)
+        edge.CFrame = CFrame.lookAt(midpoint, midpoint + direction)
+        edge.Transparency = ABConfig.ShowDiamond and 0.3 or 1
+      end
+    end
+  end
+  if visuals.circle then
+    local circleCenter = Vector3.new(zoneCFrame.Position.X, zoneCFrame.Position.Y + 0.04, zoneCFrame.Position.Z)
+    visuals.circle.Size = Vector3.new(0.08, ABConfig.CustomCircleRadius * 2, ABConfig.CustomCircleRadius * 2)
+    visuals.circle.CFrame = CFrame.new(circleCenter) * CFrame.Angles(0, 0, math.rad(90))
+    visuals.circle.Transparency = ABConfig.ShowCircle and 0.65 or 1
+  end
+  local insideDiamond = localRoot and isInsideDiamond(localRoot.Position, killerRoot.CFrame, killerRoot.Position) or false
+  local insideCircle = localRoot and isInsideCircle(localRoot.Position, killerRoot.Position) or false
+  local diamondColor = insideDiamond and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+  local circleColor = insideCircle and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+  for _, edge in ipairs(visuals.edges) do
+    if edge and edge.Parent then
+      edge.Color = diamondColor
+    end
+  end
+  if visuals.circle and visuals.circle.Parent then
+    visuals.circle.Color = circleColor
+  end
+end
+
+local function startCustomZones()
+  if customZoneState.running then return end
+  customZoneState.running = true
+  customZoneState.connections = {}
+  customZoneState.killerZones = {}
+  customZoneState.folder = Instance.new("Folder")
+  customZoneState.folder.Name = "ABCustomZoneVisuals"
+  customZoneState.folder.Parent = Workspace
+  table.insert(customZoneState.connections, RunService.RenderStepped:Connect(function()
+    if not customZoneState.running then return end
+    local killersFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+    if not killersFolder then return end
+    local character = LP.Character
+    local localRoot = character and character:FindFirstChild("HumanoidRootPart")
+    for _, killer in ipairs(killersFolder:GetChildren()) do
+      if killer:IsA("Model") then
+        local killerRoot = killer:FindFirstChild("HumanoidRootPart")
+        if killerRoot then
+          local visuals = customZoneState.killerZones[killer]
+          if not visuals or not visuals.model or not visuals.model.Parent then
+            if visuals and visuals.model then
+              pcall(function()
+                visuals.model:Destroy()
+              end)
             end
+            visuals = createZoneVisuals(killer)
+            customZoneState.killerZones[killer] = visuals
+          end
+          updateZoneVisuals(visuals, killerRoot, localRoot)
         end
-    end)
+      end
+    end
+    for killer, visuals in pairs(customZoneState.killerZones) do
+      if not killer.Parent or not killer:IsDescendantOf(Workspace) then
+        if visuals.model then
+          pcall(function()
+            visuals.model:Destroy()
+          end)
+        end
+        customZoneState.killerZones[killer] = nil
+      end
+    end
+  end))
+  print("[testbraken] Custom Zone ON")
+end
 
-    local function CompleteGenerators()
-        if CompletingAll then return end
-        if IsKiller() then return end
-        CompletingAll = true
-        task.spawn(function()
-            WaitGenerators(20)
-            if #RoundGenerators == 0 then
-                CompletingAll = false
+local function stopCustomZones()
+  if not customZoneState.running then return end
+  customZoneState.running = false
+  for _, connection in ipairs(customZoneState.connections) do
+    pcall(function()
+      connection:Disconnect()
+    end)
+  end
+  customZoneState.connections = {}
+  for _, visuals in pairs(customZoneState.killerZones) do
+    if visuals.model then
+      pcall(function()
+        visuals.model:Destroy()
+      end)
+    end
+  end
+  customZoneState.killerZones = {}
+  if customZoneState.folder then
+    pcall(function()
+      customZoneState.folder:Destroy()
+    end)
+    customZoneState.folder = nil
+  end
+  print("[testbraken] Custom Zone OFF")
+end
+
+local function refreshCustomZones()
+  local wanted = ABConfig.ShowDiamond or ABConfig.ShowCircle
+  if wanted and not customZoneState.running then
+    startCustomZones()
+  elseif not wanted and customZoneState.running then
+    stopCustomZones()
+  end
+end
+
+local function enforceBlockModeExclusivity()
+  if ABConfig.AutoBlock and ABConfig.AutoBlockCustom then
+    ABConfig.AutoBlockCustom = false
+    if ABToggles.AutoBlockCustom then
+      ABSuppressCallbacks = true
+      pcall(function()
+        ABToggles.AutoBlockCustom:Set(false)
+      end)
+      ABSuppressCallbacks = false
+    end
+  end
+  if ABConfig.AutoBlock then
+    if ABConfig.ShowDiamond then
+      ABRememberedZones.diamond = true
+      ABConfig.ShowDiamond = false
+    end
+    if ABConfig.ShowCircle then
+      ABRememberedZones.circle = true
+      ABConfig.ShowCircle = false
+    end
+    if ABToggles.ShowDiamond then
+      ABSuppressCallbacks = true
+      pcall(function()
+        ABToggles.ShowDiamond:Set(false)
+      end)
+      ABSuppressCallbacks = false
+    end
+    if ABToggles.ShowCircle then
+      ABSuppressCallbacks = true
+      pcall(function()
+        ABToggles.ShowCircle:Set(false)
+      end)
+      ABSuppressCallbacks = false
+    end
+  end
+  refreshCustomZones()
+end
+
+local function watchKillerSounds(killer)
+  if not killer then return end
+
+  local function checkSound(sound)
+    if not autoBlockState.running then return end
+    if not (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) then return end
+    if not sound or not sound:IsA("Sound") then return end
+    local soundId = sound.SoundId
+    if soundId == "" then return end
+    local numericId = soundId:match("rbxassetid://(%d+)") or soundId:match("://(%d+)") or soundId:match("^(%d+)$")
+    local isBlockSound = blockSoundIds[soundId]
+      or (numericId and (blockSoundIds["rbxassetid://" .. numericId] or blockSoundIds[numericId]))
+    if not isBlockSound then return end
+    if not autoBlockState.LocalRoot then return end
+    local killerRoot = killer:FindFirstChild("HumanoidRootPart")
+    if not killerRoot or not killerRoot.Parent then return end
+    if ABConfig.AutoBlockCustom then
+      if not isLocalPlayerInZone(killer) then return end
+    else
+      local offset = autoBlockState.LocalRoot.Position - killerRoot.Position
+      local distance = offset.Magnitude
+      if distance > 15 then return end
+      if distance > 0 and killerRoot.CFrame.LookVector:Dot(offset.Unit) < 0.3 then return end
+    end
+    local now = tick()
+    if now - autoBlockState.blueDebounce < 0.15 then return end
+    autoBlockState.blueDebounce = now
+    performBlock()
+  end
+
+  for _, descendant in ipairs(killer:GetDescendants()) do
+    if descendant:IsA("Sound") then
+      checkSound(descendant)
+    end
+  end
+  table.insert(autoBlockState.connections, killer.DescendantAdded:Connect(checkSound))
+end
+
+local function checkKillerAbilities()
+  if not autoBlockState.running or not (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) then return end
+  if not autoBlockState.KillersFolder or not autoBlockState.LocalRoot or not autoBlockState.LocalRoot.Parent then return end
+  for _, killer in ipairs(autoBlockState.KillersFolder:GetChildren()) do
+    if killer:IsA("Model") then
+      local killerRoot = killer:FindFirstChild("HumanoidRootPart")
+      if killerRoot then
+        local abilityLastUsed = killer:GetAttribute("AbilityLastUsed") or 0
+        local abilitiesUsed = killer:GetAttribute("AbilitiesUsed") or 0
+        local previous = autoBlockState.attrStates[killer]
+        if previous then
+          local abilityChanged = abilityLastUsed > previous.lastAbility
+          if abilitiesUsed > previous.lastUsed then
+            previous.isBait = true
+          end
+          if abilityChanged then
+            if previous.isBait then
+              previous.isBait = false
+            else
+              local shouldBlock = false
+              if ABConfig.AutoBlockCustom then
+                if isLocalPlayerInZone(killer) then
+                  shouldBlock = true
+                end
+              else
+                local offset = autoBlockState.LocalRoot.Position - killerRoot.Position
+                local distance = offset.Magnitude
+                if distance <= 15 and distance > 0 and killerRoot.CFrame.LookVector:Dot(offset.Unit) >= 0.3 then
+                  shouldBlock = true
+                end
+              end
+              if shouldBlock then
+                local now = tick()
+                if now - autoBlockState.attrDebounce >= 0.15 then
+                  autoBlockState.attrDebounce = now
+                  performBlock()
+                end
+              end
+            end
+          end
+          previous.lastAbility = abilityLastUsed
+          previous.lastUsed = abilitiesUsed
+        else
+          autoBlockState.attrStates[killer] = {
+            lastAbility = abilityLastUsed,
+            lastUsed = abilitiesUsed,
+            isBait = false,
+          }
+        end
+      end
+    end
+  end
+end
+
+local function applyBlockToggle(request)
+  if not request then return end
+  if request.mode == "default" then
+    ABConfig.AutoBlock = request.value
+    if request.value then
+      ABConfig.AutoBlockCustom = false
+      if ABConfig.ShowDiamond then
+        ABRememberedZones.diamond = true
+        ABConfig.ShowDiamond = false
+        if ABToggles.ShowDiamond then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowDiamond:Set(false)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      if ABConfig.ShowCircle then
+        ABRememberedZones.circle = true
+        ABConfig.ShowCircle = false
+        if ABToggles.ShowCircle then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowCircle:Set(false)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      refreshCustomZones()
+    end
+  else
+    ABConfig.AutoBlockCustom = request.value
+    if request.value then
+      ABConfig.AutoBlock = false
+      if ABRememberedZones.diamond then
+        ABConfig.ShowDiamond = true
+        if ABToggles.ShowDiamond then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowDiamond:Set(true)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      if ABRememberedZones.circle then
+        ABConfig.ShowCircle = true
+        if ABToggles.ShowCircle then
+          ABSuppressCallbacks = true
+          pcall(function()
+            ABToggles.ShowCircle:Set(true)
+          end)
+          ABSuppressCallbacks = false
+        end
+      end
+      ABRememberedZones.diamond = false
+      ABRememberedZones.circle = false
+      refreshCustomZones()
+    end
+  end
+  if ABToggles.AutoBlock then
+    ABSuppressCallbacks = true
+    pcall(function()
+      ABToggles.AutoBlock:Set(ABConfig.AutoBlock)
+    end)
+    ABSuppressCallbacks = false
+  end
+  if ABToggles.AutoBlockCustom then
+    ABSuppressCallbacks = true
+    pcall(function()
+      ABToggles.AutoBlockCustom:Set(ABConfig.AutoBlockCustom)
+    end)
+    ABSuppressCallbacks = false
+  end
+  if ABConfig.AutoBlock or ABConfig.AutoBlockCustom then
+    if not autoBlockState.running then
+      pcall(startAutoBlock)
+    end
+  else
+    if autoBlockState.running then
+      pcall(stopAutoBlock)
+    end
+  end
+  if fourthButtonState.applyTint then
+    pcall(fourthButtonState.applyTint)
+  end
+end
+
+local function schedulePendingToggle()
+  if pendingToggleTask then
+    pcall(task.cancel, pendingToggleTask)
+    pendingToggleTask = nil
+  end
+  pendingToggleTask = task.delay(toggleDebounce, function()
+    pendingToggleTask = nil
+    local request = pendingToggle
+    pendingToggle = nil
+    if request ~= nil then
+      lastToggleTime = tick()
+      applyBlockToggle(request)
+    end
+  end)
+end
+
+local function requestBlockToggle(value, mode)
+  if value == nil then return end
+  mode = mode or (ABConfig.AutoBlockCustom and "custom" or "default")
+  pendingToggle = {value = value, mode = mode}
+  local now = tick()
+  if lastToggleTime > 0 and now - lastToggleTime < toggleDebounce then
+    schedulePendingToggle()
+    return
+  end
+  if pendingToggleTask then
+    pcall(task.cancel, pendingToggleTask)
+    pendingToggleTask = nil
+  end
+  lastToggleTime = now
+  local request = pendingToggle
+  pendingToggle = nil
+  applyBlockToggle(request)
+end
+
+local function startFourthButton()
+  if fourthButtonState.running then return end
+  fourthButtonState.running = true
+  fourthButtonState.connections = {}
+
+  do
+    local mainUI = playerGui:FindFirstChild("MainUI")
+    if mainUI then
+      local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
+      if abilityContainer then
+        local leftover = abilityContainer:FindFirstChild("FourthBlockAbility")
+        if leftover then
+          pcall(function()
+            leftover:Destroy()
+          end)
+        end
+      end
+    end
+  end
+
+  if not fourthButtonState.applyTint then
+    fourthButtonState.applyTint = function()
+      local button = fourthButtonState.instance
+      if not button or not button.Parent then return end
+      local tint = (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) and Color3.fromRGB(0, 255, 60) or Color3.fromRGB(255, 0, 0)
+      if button:IsA("ImageButton") or button:IsA("ImageLabel") then
+        button.ImageColor3 = tint
+      end
+      for _, descendant in ipairs(button:GetDescendants()) do
+        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+          descendant.ImageColor3 = tint
+        elseif descendant:IsA("Frame") and descendant.BackgroundTransparency < 1 then
+          descendant.BackgroundColor3 = tint
+        end
+      end
+    end
+  end
+
+  local lastActivation = 0
+  local activationCooldown = 0.15
+
+  local function onFourthButtonActivated()
+    local now = tick()
+    if now - lastActivation < activationCooldown then return end
+    lastActivation = now
+    local target = ABConfig.FourthButtonTarget or "default"
+    if target == "custom" then
+      if ABConfig.AutoBlockCustom then
+        requestBlockToggle(false, "custom")
+      else
+        requestBlockToggle(true, "custom")
+      end
+    else
+      if ABConfig.AutoBlock then
+        requestBlockToggle(false, "default")
+      else
+        requestBlockToggle(true, "default")
+      end
+    end
+  end
+
+  table.insert(fourthButtonState.connections, RunService.RenderStepped:Connect(function()
+    if not fourthButtonState.running then return end
+    local button = fourthButtonState.instance
+    if button and button.Parent then
+      local okPosition, position = pcall(function()
+        return button.AbsolutePosition
+      end)
+      local okSize, size = pcall(function()
+        return button.AbsoluteSize
+      end)
+      if okPosition and okSize then
+        fourthButtonState.cachedPos = position
+        fourthButtonState.cachedSize = size
+      end
+    else
+      fourthButtonState.cachedPos = nil
+      fourthButtonState.cachedSize = nil
+    end
+  end))
+
+  local function isPointOverButton(point)
+    local button = fourthButtonState.instance
+    if not button or not button.Parent then return false end
+    local ok, objects = pcall(function()
+      return UserInputService:GetGuiObjectsAtPosition(point.X, point.Y)
+    end)
+    if ok and objects and #objects > 0 then
+      local topObject = objects[1]
+      return topObject == button or topObject:IsDescendantOf(button)
+    end
+    if not fourthButtonState.cachedPos or not fourthButtonState.cachedSize then return false end
+    local position, size = fourthButtonState.cachedPos, fourthButtonState.cachedSize
+    return point.X >= position.X and point.X <= position.X + size.X
+      and point.Y >= position.Y and point.Y <= position.Y + size.Y
+  end
+
+  local pressPosition, pressTime = nil, 0
+
+  table.insert(fourthButtonState.connections, UserInputService.InputBegan:Connect(function(input)
+    if not fourthButtonState.running then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+      return
+    end
+    if not isPointOverButton(input.Position) then return end
+    pressPosition = input.Position
+    pressTime = tick()
+  end))
+
+  table.insert(fourthButtonState.connections, UserInputService.InputEnded:Connect(function(input)
+    if not fourthButtonState.running then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+      return
+    end
+    if not pressPosition then return end
+    local heldFor = tick() - pressTime
+    pressPosition = nil
+    if heldFor > 0.5 then return end
+    if not isPointOverButton(input.Position) then return end
+    onFourthButtonActivated()
+  end))
+
+  local function hookButtonInput(root)
+    if not root then return end
+    local function hookObject(object)
+      if not object then return end
+      if object:IsA("GuiButton") then
+        pcall(function()
+          object.Active = true
+          object.Selectable = true
+        end)
+        pcall(function()
+          object.MouseButton1Click:Connect(onFourthButtonActivated)
+        end)
+        pcall(function()
+          object.Activated:Connect(onFourthButtonActivated)
+        end)
+      end
+    end
+    hookObject(root)
+    for _, descendant in ipairs(root:GetDescendants()) do
+      if descendant:IsA("GuiObject") then
+        hookObject(descendant)
+      end
+    end
+  end
+
+  task.spawn(function()
+    while fourthButtonState.running do
+      task.wait(0.5)
+      if not fourthButtonState.running then break end
+      local mainUI = playerGui:FindFirstChild("MainUI")
+      if mainUI then
+        local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
+        if abilityContainer then
+          local blockButton = abilityContainer:FindFirstChild("Block")
+          local cloneButton = abilityContainer:FindFirstChild("Clone")
+          local activeMode = getActiveBlockMode()
+          local source = nil
+          if blockButton and cloneButton then
+            source = (activeMode == "007n7") and cloneButton or blockButton
+          else
+            source = blockButton or cloneButton
+          end
+          local existing = abilityContainer:FindFirstChild("FourthBlockAbility")
+          local needsRebuild = false
+          if not existing then
+            needsRebuild = (source ~= nil)
+          elseif not source then
+            needsRebuild = false
+          elseif fourthButtonState.sourceName ~= source.Name then
+            needsRebuild = true
+          elseif fourthButtonState.instance ~= existing then
+            fourthButtonState.instance = existing
+            hookButtonInput(existing)
+            if fourthButtonState.applyTint then
+              fourthButtonState.applyTint()
+            end
+          end
+          if needsRebuild and source then
+            if existing then
+              pcall(function()
+                existing:Destroy()
+              end)
+            end
+            local copy = source:Clone()
+            copy.Name = "FourthBlockAbility"
+            copy.LayoutOrder = 4
+            if copy:IsA("GuiObject") then
+              copy.ZIndex = 50
+            end
+            for _, descendant in ipairs(copy:GetDescendants()) do
+              if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                local loweredText = descendant.Text:lower()
+                if loweredText:find("block") or loweredText:find("clone") then
+                  descendant.Text = ""
+                  descendant.Visible = false
+                end
+              end
+              if descendant:IsA("GuiObject") then
+                descendant.ZIndex = math.max(descendant.ZIndex, 50)
+                descendant.Active = true
+              end
+            end
+            copy.Parent = abilityContainer
+            fourthButtonState.instance = copy
+            fourthButtonState.sourceName = source.Name
+            hookButtonInput(copy)
+            if fourthButtonState.applyTint then
+              fourthButtonState.applyTint()
+            end
+            print("[testbraken] ✅ 4th button created from:", source.Name)
+          end
+        end
+      end
+    end
+  end)
+
+  print("[testbraken] AutoBlockButton ON")
+end
+
+local function stopFourthButton()
+  if not fourthButtonState.running then return end
+  fourthButtonState.running = false
+  for _, connection in ipairs(fourthButtonState.connections) do
+    pcall(function()
+      connection:Disconnect()
+    end)
+  end
+  fourthButtonState.connections = {}
+  if fourthButtonState.instance and fourthButtonState.instance.Parent then
+    pcall(function()
+      fourthButtonState.instance:Destroy()
+    end)
+  end
+  fourthButtonState.instance = nil
+  fourthButtonState.cachedPos = nil
+  fourthButtonState.cachedSize = nil
+  fourthButtonState.sourceName = nil
+  print("[testbraken] AutoBlockButton OFF")
+end
+
+function startAutoBlock()
+  if autoBlockState.running then return end
+  autoBlockState.running = true
+  autoBlockState.generation = autoBlockState.generation + 1
+  local generation = autoBlockState.generation
+  autoBlockState.attrStates = {}
+
+  local character = LP.Character
+  if character then
+    autoBlockState.LocalRoot = character:FindFirstChild("HumanoidRootPart")
+    watchPunchSounds(character)
+  end
+  table.insert(autoBlockState.connections, LP.CharacterAdded:Connect(function(newCharacter)
+    autoBlockState.LocalRoot = newCharacter:WaitForChild("HumanoidRootPart", 5)
+    watchPunchSounds(newCharacter)
+  end))
+
+  local function watchKiller(killer)
+    if not killer or not killer:IsA("Model") then return end
+    watchKillerSounds(killer)
+  end
+
+  local function attachToKillersFolder(folder)
+    if not folder then return false end
+    autoBlockState.KillersFolder = folder
+    table.insert(autoBlockState.connections, folder.ChildAdded:Connect(function(child)
+      if autoBlockState.running and autoBlockState.generation == generation then
+        task.wait(0.1)
+        watchKiller(child)
+      end
+    end))
+    for _, child in ipairs(folder:GetChildren()) do
+      watchKiller(child)
+    end
+    return true
+  end
+
+  local playersFolder = Workspace:FindFirstChild("Players")
+  local killersFolder = playersFolder and playersFolder:FindFirstChild("Killers")
+  if not attachToKillersFolder(killersFolder) then
+    task.spawn(function()
+      local attempts = 0
+      while autoBlockState.running and autoBlockState.generation == generation and attempts < 60 do
+        attempts = attempts + 1
+        task.wait(1)
+        local retryPlayers = Workspace:FindFirstChild("Players")
+        local retryKillers = retryPlayers and retryPlayers:FindFirstChild("Killers")
+        if retryKillers and attachToKillersFolder(retryKillers) then
+          break
+        end
+      end
+    end)
+  end
+
+  table.insert(autoBlockState.connections, RunService.Heartbeat:Connect(function()
+    if not autoBlockState.running or autoBlockState.generation ~= generation then return end
+    checkKillerAbilities()
+  end))
+
+  if fourthButtonState.applyTint then
+    fourthButtonState.applyTint()
+  end
+  print("[testbraken] AutoBlock ON")
+end
+
+function stopAutoBlock()
+  autoBlockState.running = false
+  autoBlockState.generation = autoBlockState.generation + 1
+  autoBlockState.attrStates = {}
+  for _, connection in ipairs(autoBlockState.connections) do
+    pcall(function()
+      connection:Disconnect()
+    end)
+  end
+  autoBlockState.connections = {}
+  print("[testbraken] AutoBlock OFF")
+end
+
+    local function makeABToggle(config)
+        local option = autoBlockHubTab:Toggle(config)
+        return {
+            Set = function(_, value)
+                local ok = pcall(function() option:SetValue(value) end)
+                if not ok then pcall(function() option:Set(value) end) end
+            end,
+            Get = function() return option.Value end,
+        }
+    end
+
+    autoBlockHubTab:Section({Name = "音效 / 动画识别格挡（来自 Forsaken 中文版）"})
+    ABToggles.AutoBlock = makeABToggle({
+        Name = "自动格挡（音效 / 动画识别）",
+        Value = ABConfig.AutoBlock,
+        Callback = function(enabled)
+            if ABSuppressCallbacks then return end
+            requestBlockToggle(enabled, "default")
+        end,
+    })
+    ABToggles.ABModeDropdown = autoBlockHubTab:Dropdown({
+        Name = "格挡模式",
+        Values = {"Guest 1337", "007n7"},
+        Value = (ABConfig.ABMode == "007n7") and "007n7" or "Guest 1337",
+        Callback = function(selected)
+            ABConfig.ABMode = (selected == "007n7") and "007n7" or "Guest1337"
+        end,
+    })
+    ABToggles.AimPunch = autoBlockHubTab:Toggle({
+        Name = "自动瞄准并出拳",
+        Value = ABConfig.AimPunch,
+        Callback = function(enabled)
+            ABConfig.AimPunch = enabled
+        end,
+    })
+    ABToggles.AutoBlockButton = autoBlockHubTab:Toggle({
+        Name = "自动格挡按钮",
+        Value = ABConfig.AutoBlockButton,
+        Callback = function(enabled)
+            ABConfig.AutoBlockButton = enabled
+            if enabled then startFourthButton() else stopFourthButton() end
+        end,
+    })
+    ABToggles.FourthButtonTargetDropdown = autoBlockHubTab:Dropdown({
+        Name = "第四个按钮目标",
+        Values = {"默认", "自定义"},
+        Value = (ABConfig.FourthButtonTarget == "custom") and "自定义" or "默认",
+        Callback = function(selected)
+            ABConfig.FourthButtonTarget = (selected == "自定义") and "custom" or "default"
+        end,
+    })
+
+    autoBlockHubTab:Section({Name = "自定义判定区格挡"})
+    ABToggles.AutoBlockCustom = makeABToggle({
+        Name = "自定义自动格挡",
+        Value = ABConfig.AutoBlockCustom,
+        Callback = function(enabled)
+            if ABSuppressCallbacks then return end
+            requestBlockToggle(enabled, "custom")
+        end,
+    })
+    ABToggles.CustomABModeDropdown = autoBlockHubTab:Dropdown({
+        Name = "自定义格挡模式",
+        Values = {"Guest 1337", "007n7"},
+        Value = (ABConfig.CustomABMode == "007n7") and "007n7" or "Guest 1337",
+        Callback = function(selected)
+            ABConfig.CustomABMode = (selected == "007n7") and "007n7" or "Guest1337"
+        end,
+    })
+    ABToggles.ShowDiamond = makeABToggle({
+        Name = "显示菱形判定区",
+        Value = ABConfig.ShowDiamond,
+        Callback = function(enabled)
+            if ABSuppressCallbacks then
+                ABConfig.ShowDiamond = enabled
+                refreshCustomZones()
                 return
             end
-            for _, gen in ipairs(RoundGenerators) do
-                local char = LocalPlayer.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                if not root then continue end
-                local function occupied(pos)
-                    local surv = GetSurvivorsFolder()
-                    if not surv then return false end
-                    for _, p in ipairs(surv:GetChildren()) do
-                        local pr = p:FindFirstChild("HumanoidRootPart")
-                        if pr and p ~= char and (pr.Position - pos).Magnitude <= 6 then
-                            return true
-                        end
-                    end
-                    return false
-                end
-                task.wait(0.3)
-                local prog = gen:FindFirstChild("Progress")
-                if not prog or prog.Value == 100 then continue end
-                local main   = gen:FindFirstChild("Main")
-                local prompt = main and main:FindFirstChild("Prompt")
-                if not prompt then continue end
-                local t0  = tick()
-                local pos = gen:FindFirstChild("Positions")
-                if not pos then continue end
-                local occC = occupied(pos.Center.Position)
-                local occR = occupied(pos.Right.Position)
-                local occL = occupied(pos.Left.Position)
-                if occC and occR and occL then continue end
-                if not occC then
-                    root.CFrame = pos.Center.CFrame
-                elseif not occR then
-                    root.CFrame = pos.Right.CFrame
-                else
-                    root.CFrame = pos.Left.CFrame
-                end
-                char.Humanoid:MoveTo(main.Position)
-                repeat
-                    fireproximityprompt(prompt)
-                    task.wait(0.5)
-                until tick() - t0 >= 7 or LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI")
-                if tick() - t0 >= 7 then continue end
-                task.wait(0.4)
-                local puzzleUI = LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI")
-                if not (puzzleUI and puzzleUI.Enabled) then continue end
-                task.spawn(function()
-                    local lastPuzzle
-                    while task.wait() and gen:FindFirstChild("Progress")
-                          and gen.Progress.Value ~= 100
-                          and LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI") do
-                        if CurrentPuzzle == lastPuzzle then continue end
-                        lastPuzzle = CurrentPuzzle
-                        if not Config.AutoCompleteGenerators then
-                            pcall(AutoGenerator, CurrentPuzzle, true)
-                        end
-                    end
-                end)
-                repeat task.wait() until
-                    (not gen:FindFirstChild("Progress"))
-                    or gen.Progress.Value == 100
-                    or (not LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI"))
+            if ABConfig.AutoBlock then
+                ABSuppressCallbacks = true
+                pcall(function() ABToggles.ShowDiamond:Set(false) end)
+                ABSuppressCallbacks = false
+                ABConfig.ShowDiamond = false
+                refreshCustomZones()
+                return
             end
-            CompletingAll = false
-        end)
-    end
-
-Feng.ge:Toggle({
-    Name = "自动绘制修机",
-    Value = false,
-    Callback = function(v)
-        Config.AutoCompleteGenerators = v
-    end
-})
-
-Feng.ge:Toggle({
-    Name = "发电机助手",
-    Value = false,
-    Callback = function(v)
-        Config.GeneratorHelper = v
-    end
-})
-
-Feng.ge:Toggle({
-    Name = "瞬间进入发电机",
-    Value = false,
-    Callback = function(v)
-        Config.InstantlyEnterGenerator = v
-    end
-})
-
-Feng.ge:Toggle({
-    Name = "自动完成所有发电机",
-    Value = false,
-    Callback = function(v)
-        Config.AutoGeneratorFarm = v
-        if v then
-            CompleteGenerators()
-        end
-    end
-})
-
-Feng.ge:Button({
-    Name = "完成当前发电机",
-    Callback = function()
-        if not LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI") then return end
-        task.spawn(function()
-            local gen = GetClosestGenerator()
-            if not gen then return end
-            local lastPuzzle
-            while task.wait() and gen:FindFirstChild("Progress")
-                  and gen.Progress.Value ~= 100
-                  and LocalPlayer.PlayerGui:FindFirstChild("PuzzleUI") do
-                if CurrentPuzzle == lastPuzzle then continue end
-                lastPuzzle = CurrentPuzzle
-                if not Config.AutoCompleteGenerators then
-                    pcall(AutoGenerator, CurrentPuzzle, true)
-                end
+            ABConfig.ShowDiamond = enabled
+            refreshCustomZones()
+        end,
+    })
+    ABInputs.CustomDiamondLength = autoBlockHubTab:Input({
+        Name = "菱形长度", Value = tostring(ABConfig.CustomDiamondLength), Placeholder = "8",
+        Callback = function(text) ABConfig.CustomDiamondLength = math.max(1, tonumber(text) or 8) end,
+    })
+    ABInputs.CustomDiamondWidth = autoBlockHubTab:Input({
+        Name = "菱形宽度", Value = tostring(ABConfig.CustomDiamondWidth), Placeholder = "4",
+        Callback = function(text) ABConfig.CustomDiamondWidth = math.max(1, tonumber(text) or 4) end,
+    })
+    ABInputs.CustomDiamondOffset = autoBlockHubTab:Input({
+        Name = "菱形朝向偏移", Value = tostring(ABConfig.CustomDiamondOffset), Placeholder = "3",
+        Callback = function(text) ABConfig.CustomDiamondOffset = math.max(0, tonumber(text) or 3) end,
+    })
+    ABToggles.ShowCircle = makeABToggle({
+        Name = "显示圆形判定区",
+        Value = ABConfig.ShowCircle,
+        Callback = function(enabled)
+            if ABSuppressCallbacks then
+                ABConfig.ShowCircle = enabled
+                refreshCustomZones()
+                return
             end
-        end)
-    end
-})
-
-    local pf = GetPlayersFolder()
-    local survConn
-    local function bindSurv()
-        local surv = pf and pf:FindFirstChild("Survivors")
-        if surv and not survConn then
-            survConn = surv.ChildAdded:Connect(function(c)
-                if c:GetAttribute("Username") ~= LocalPlayer.Name then return end
-                task.spawn(function()
-                    WaitGenerators(15)
-                    if Config.AutoGeneratorFarm then CompleteGenerators() end
-                end)
-            end)
-        end
-    end
-    if pf then
-        bindSurv()
-        pf.ChildAdded:Connect(function(c)
-            if c.Name == "Survivors" then bindSurv() end
-        end)
-    end
-
-Feng.ge:Divider({ Name = "传送" })
-
-Feng.ge:Dropdown({
-    Name = "选择发电机",
-    Values = {
-        "1",
-        "2",
-        "3",
-        "4",
-        "5"
-    },
-    Value = "1",
-    Callback = function(v)
-        Config.SelectedGenerator = tonumber(tostring(v):sub(1, 1)) or 1
-    end
-})
-
-Feng.ge:Button({
-    Name = "传送到发电机",
-    Callback = function()
-        local gen  = RoundGenerators[Config.SelectedGenerator]
-        local char = LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        if gen and root then
-            local pos    = gen:FindFirstChild("Positions")
-            local center = pos and pos:FindFirstChild("Center")
-            if center then
-                root.CFrame = center.CFrame
+            if ABConfig.AutoBlock then
+                ABSuppressCallbacks = true
+                pcall(function() ABToggles.ShowCircle:Set(false) end)
+                ABSuppressCallbacks = false
+                ABConfig.ShowCircle = false
+                refreshCustomZones()
+                return
             end
-        end
-    end
-})
-
-Feng.se:Slider({
-    Name = "解谜速度",
-    Value = {
-        Min = 0.02,
-        Max = 1,
-        Default = 0.07
-    },
-    Rounding = 2,
-    Callback = function(v)
-        Config.PuzzleDelay = v
-    end
-})
-
-Feng.se:Toggle({
-    Name = "玩家在附近时使用正常延迟",
-    Value = false,
-    Callback = function(v)
-        Config.LegitPuzzles = v
-    end
-})
-
-Feng.se:Slider({
-    Name = "（正常）解谜速度",
-    Value = {
-        Min = 0.02,
-        Max = 2,
-        Default = 0.1
-    },
-    Rounding = 2,
-    Callback = function(v)
-        Config.LegitPuzzleDelay = v
-    end
-})
+            ABConfig.ShowCircle = enabled
+            refreshCustomZones()
+        end,
+    })
+    ABInputs.CustomCircleRadius = autoBlockHubTab:Input({
+        Name = "圆形半径", Value = tostring(ABConfig.CustomCircleRadius), Placeholder = "5",
+        Callback = function(text) ABConfig.CustomCircleRadius = math.max(1, tonumber(text) or 5) end,
+    })
+    ABInputs.ZoneHeight = autoBlockHubTab:Input({
+        Name = "判定区高度", Value = tostring(ABConfig.ZoneHeight), Placeholder = "0.5",
+        Callback = function(text) ABConfig.ZoneHeight = tonumber(text) or 0.5 end,
+    })
 end
 
-local FengYu = Window:Tab("幸存者功能包", "6452688833")
+
+Window:TabDivider()
+
+local FengYu = 
+Window:TabDivider()
+
+Window:Tab("幸存者功能包", "6452688833")
 
 local Feng = FengYu:Section({
     Name = "机会",
