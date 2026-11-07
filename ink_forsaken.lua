@@ -1503,6 +1503,10 @@ local FengYu = Window:Tab("体力区", "130874893373683")
 local Feng = FengYu:Section({
     Name = "体力设置",
     {
+        Key = "ph",
+        Name = "体力设置",
+    },
+    {
         Key = "vu",
         Name = "安全漏洞",
     },
