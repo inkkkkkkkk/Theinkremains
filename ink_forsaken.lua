@@ -1568,7 +1568,7 @@ Feng:Toggle({
 })
 end
 
-Window:Tab("体力区", "130874893373683")
+local FengYu = Window:Tab("体力区", "130874893373683")
 
 local Feng = FengYu:Section({
     Name = "体力管理",
@@ -4005,6 +4005,10 @@ Feng:Toggle({
 })
 end
 
+Window:TabDivider()
+
+Window:TabDivider()
+
 local autoBlockHubTab = Window:Tab("自动格挡", "shield")
 
 -- 合并自 Forsaken 中文版的自动格挡模块（独立命名空间）
@@ -5185,10 +5189,11 @@ end
 
 Window:TabDivider()
 
-local FengYu = 
+
+
 Window:TabDivider()
 
-Window:Tab("幸存者功能包", "6452688833")
+local FengYu = Window:Tab("幸存者功能包", "6452688833")
 
 local Feng = FengYu:Section({
     Name = "机会",
