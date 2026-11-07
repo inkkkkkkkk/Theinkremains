@@ -1501,11 +1501,7 @@ end
 local FengYu = Window:Tab("体力区", "130874893373683")
 
 local Feng = FengYu:Section({
-    Name = "体力设置",
-    {
-        Key = "ph",
-        Name = "体力设置",
-    },
+    Name = "安全漏洞",
     {
         Key = "vu",
         Name = "安全漏洞",
@@ -7078,7 +7074,6 @@ end
 
 local Feng = FengYu:Section({
     Name = "杀死全部人",
-    SubName = "就像疯子一样",
 })
 
 do
@@ -7282,7 +7277,6 @@ end
 
 local Feng = FengYu:Section({
     Name = "吸力",
-    SubName = "变成磁铁吸在幸存者上",
 })
 
 do
