@@ -346,14 +346,12 @@ local function makeWindowAdapter(rawWindow, libraryObject)
         local iconMap = {
             ["服务器"] = "server",
             ["通用区"] = "sliders-horizontal",
-            ["渲染"] = "palette",
             ["体力区"] = "zap",
             ["透视区"] = "eye",
             ["物品区"] = "package",
-            ["发电机"] = "cog",
             ["自动格挡"] = "shield",
-            ["幸存者功能包"] = "user",
-            ["幸存者综合功能"] = "users",
+            ["幸存者功能"] = "user",
+            ["杀手功能"] = "users",
         }
         local tab = self._window:AddTab(title, iconMap[title] or "layout-dashboard")
         return makeTabAdapter(tab)
@@ -4971,7 +4969,7 @@ end
         }
     end
 
-    autoBlockHubTab:Section({Name = "音效 / 动画识别格挡（来自 Forsaken 中文版）"})
+    autoBlockHubTab:Section({Name = "音效 / 动画识别格挡"})
     ABToggles.AutoBlock = makeABToggle({
         Name = "自动格挡（音效 / 动画识别）",
         Value = ABConfig.AutoBlock,
@@ -5097,7 +5095,6 @@ local FengYu = Window:Tab("幸存者功能包", "6452688833")
 
 local Feng = FengYu:Section({
     Name = "机会",
-    SubName = "这是你最后的机会",
 })
 
 do
@@ -5341,7 +5338,6 @@ end
 
 local Feng = FengYu:Section({
     Name = "两次",
-    SubName = "蚊子来了！！！",
 })
 
 do
@@ -5752,7 +5748,6 @@ end
 
 local Feng = FengYu:Section({
     Name = "维罗妮卡",
-    SubName = "过来一起看电视",
 })
 
 do
@@ -5815,7 +5810,6 @@ end
 
 local Feng = FengYu:Section({
     Name = "其他功能",
-    SubName = "不一样的体验设置",
 })
 
 do
@@ -6471,7 +6465,7 @@ Feng.tr:Slider({
 end
 
 local Feng = FengYu:Section({
-    Name = "汽车拐弯",
+    Name = "冲刺拐弯",
     SubName = "打开[准心]才有效果",
 })
 
@@ -6850,8 +6844,8 @@ Feng:Slider({
 end
 
 local Feng = FengYu:Section({
-    Name = "有蚊子！",
-    SubName = "免疫一些偷袭你的蚊子",
+    Name = "防两次",
+    SubName = "防止两次背刺",
 })
 
 do
