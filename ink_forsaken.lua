@@ -1215,7 +1215,7 @@ end
     end
 
     buildAutoBlockHubUI = function()
-    autoBlockHubTab:Section({Name = "Forsaken自动格挡"})
+    autoBlockHubTab:Section({Name = "自动格挡与判定设置"})
     ABToggles.AutoBlock = makeABToggle(autoBlockHubTab, {
         Name = "自动格挡",
         Value = ABConfig.AutoBlock,
@@ -1240,8 +1240,7 @@ end
         end,
     })
 
-    -- 判定设置并入自动格挡页，不再创建独立的“判定”导航页。
-    autoBlockHubTab:Section({Name = "判定区与碰撞箱设置"})
+    -- 判定设置与碰撞箱配置直接放在自动格挡同一专区内，不创建独立导航页。
     ABToggles.JudgementMode = autoBlockHubTab:Dropdown({
         Name = "格挡判定方式",
         Values = {"杀脚本显示碰撞箱", "菱形/圆形自定义判定", "Forsaken音效/动画识别"},
@@ -2550,13 +2549,25 @@ local Feng = FengYu:Section({
 do
     local originalDefaults = {}
     local RunService = game:GetService("RunService")
-    local SprintingModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+    local sprintingModuleCache = nil
     local function GetModule()
-        return require(SprintingModule)
+        if sprintingModuleCache then return sprintingModuleCache end
+        local systems = ReplicatedStorage:FindFirstChild("Systems")
+        local characterSystems = systems and systems:FindFirstChild("Character")
+        local gameSystems = characterSystems and characterSystems:FindFirstChild("Game")
+        local module = gameSystems and gameSystems:FindFirstChild("Sprinting")
+        if not module then return nil end
+        local ok, result = pcall(require, module)
+        if ok then
+            sprintingModuleCache = result
+            return result
+        end
+        return nil
     end
 
     local function CaptureDefaults()
         local m = GetModule()
+        if not m then return end
         originalDefaults.MaxStamina = m.MaxStamina
         originalDefaults.StaminaGain = m.StaminaGain
         originalDefaults.StaminaLoss = m.StaminaLoss
@@ -2585,9 +2596,11 @@ do
     task.spawn(function()
         while true do
             local m = GetModule()
-            for key, value in pairs(StaminaSettings) do
-                if SettingToggles[key] then
-                    m[key] = value
+            if m then
+                for key, value in pairs(StaminaSettings) do
+                    if SettingToggles[key] then
+                        m[key] = value
+                    end
                 end
             end
             task.wait(0.5)
@@ -2600,6 +2613,7 @@ Feng.ph:Toggle({
     Callback = function(state)
         bai.Spr = state
         local Sprinting = GetModule()
+        if not Sprinting then return end
         if state then
             Sprinting.StaminaLoss = 0
             Sprinting.StaminaGain = StaminaSettings.InfiniteGain or 9999
@@ -2629,7 +2643,7 @@ Feng.ph:Toggle({
         SettingToggles.MaxStamina = v
         if not v then
             local m = GetModule()
-            m.MaxStamina = originalDefaults.MaxStamina
+            if m and originalDefaults.MaxStamina ~= nil then m.MaxStamina = originalDefaults.MaxStamina end
         end
     end
 })
@@ -2653,7 +2667,7 @@ Feng.ph:Toggle({
         SettingToggles.StaminaGain = v
         if not v then
             local m = GetModule()
-            m.StaminaGain = originalDefaults.StaminaGain
+            if m and originalDefaults.StaminaGain ~= nil then m.StaminaGain = originalDefaults.StaminaGain end
         end
     end
 })
@@ -2677,7 +2691,7 @@ Feng.ph:Toggle({
         SettingToggles.StaminaLoss = v
         if not v then
             local m = GetModule()
-            m.StaminaLoss = originalDefaults.StaminaLoss
+            if m and originalDefaults.StaminaLoss ~= nil then m.StaminaLoss = originalDefaults.StaminaLoss end
         end
     end
 })
@@ -2701,7 +2715,7 @@ Feng.ph:Toggle({
         SettingToggles.SprintSpeed = v
         if not v then
             local m = GetModule()
-            m.SprintSpeed = originalDefaults.SprintSpeed
+            if m and originalDefaults.SprintSpeed ~= nil then m.SprintSpeed = originalDefaults.SprintSpeed end
         end
     end
 })
@@ -2724,9 +2738,21 @@ do
     local RunService = game:GetService("RunService")
     local TweenService = game:GetService("TweenService")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local SprintingModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+    -- 不使用无限 WaitForChild，避免游戏内模块路径暂时不存在时卡住后续专区创建。
+    local systems = ReplicatedStorage:FindFirstChild("Systems")
+    local characterSystems = systems and systems:FindFirstChild("Character")
+    local gameSystems = characterSystems and characterSystems:FindFirstChild("Game")
+    local SprintingModule = gameSystems and gameSystems:FindFirstChild("Sprinting")
+    local sprintingModuleCache = nil
     local function GetSprinting()
-        return require(SprintingModule)
+        if not SprintingModule then return nil end
+        if sprintingModuleCache then return sprintingModuleCache end
+        local ok, result = pcall(require, SprintingModule)
+        if ok then
+            sprintingModuleCache = result
+            return result
+        end
+        return nil
     end
 
     local function HasAbility(name)
