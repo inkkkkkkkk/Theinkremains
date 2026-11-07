@@ -402,7 +402,7 @@ local function createCompatWindow(config)
     config = config or {}
     local rawWindow = ObsidianLibrary:CreateWindow({
         Title = config.Name or "ink",
-        Footer = (config.SubName or " ") .. "  |  Obsidian UI by DevSloPo",
+        Footer = (config.SubName or " ") .. "  |  Project_ink_forsaken",
         Size = UDim2.fromOffset(720, 600),
         ToggleKeybind = config.Keybind or Enum.KeyCode.RightShift,
         Icon = asAssetIcon(config.Logo, nil),
@@ -416,10 +416,10 @@ local function createCompatWindow(config)
 end
 
 local RawWindow = createCompatWindow({
-    Name = "Project_ink_forsaken",
+    Name = "ink|forsaken",
     SubName = "[BY.Rebzyyx]",
     Keybind = Enum.KeyCode.RightShift,
-    Logo = 93541172717831,
+    Logo = 131444442444524,
 })
 
 local Window = protectInterface(RawWindow)
@@ -440,12 +440,12 @@ local HomeTab = Window:CreateHomeTab({
       },
     Changelog = {
         {
-            Title = "殺脚本 - 9月20日",
-            Description = "ESP重写",
+            Title = "RebzyyxNB",
+            Description = "Love.Rebzyyx",
         },
         {
-            Title = "殺脚本重做版",
-            Description = "重写一部分功能",
+            Title = "单人制作",
+            Description = "功能可能比较差劲",
         },
     },
 })
@@ -460,37 +460,37 @@ local Feng = FengYu:Section({
 })
 
 Feng:Social({
-    Name = "殺脚本创始人",
-    SubName = "单殺",
-    SmlName = "你好，你很好吗",
+    Name = "脚本作者",
+    SubName = "Rebzyyx",
+    SmlName = "关注我。伙计。",
     Logo = "rbxassetid://10418960920"
 })
 
 Feng:Social({
-    Name = "殺脚本现作者",
-    SubName = "风御 X",
-    SmlName = "yoU Too sLoW WANT To TRy AGAIN?",
-    copy = "1926190957",
-    Cbn = "复制QQ号",
-    Logo = "rbxassetid://114277328620293"
+    Name = "脚本现作者",
+    SubName = "Rebzyyx",
+    SmlName = "是的。这以后可能会换人。",
+    copy = "1101093219",
+    Cbn = "复制QQ群号",
+    Logo = "rbxassetid://1101093219"
 })
 
 Feng:Social({
-    Name = "落叶脚本中心作者",
-    SubName = "kr X",
-    SmlName = "这是干什么的",
-    copy = "1826649340",
-    Cbn = "复制QQ号",
+    Name = "这两个是我的脚本群",
+    SubName = "上面主群下面副群",
+    SmlName = "副群不能说话",
+    copy = "1101093219",
+    Cbn = "复制QQ群号",
     Logo = "rbxassetid://89985745713907"
 })
 
-Feng:Divider({ Name = "殺脚本代理列表" })
+Feng:Divider({ Name = "快手" })
 
 Feng:Social({
-    Name = "董事会(代理)",
-    SubName = "闪烁猫(被遗弃代肝)",
-    SmlName = "天下无双",
-    copy = "96130761",
+    Name = "Rebzyyx",
+    SubName = "关注我好吧",
+    SmlName = "不关注打你",
+    copy = "zczczczc766",
     Cbn = "复制快手号",
     Logo = "rbxassetid://70743990637031"
 })
