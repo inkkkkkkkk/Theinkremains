@@ -178,7 +178,7 @@ end
 local windowOk, D = pcall(function()
     return WindUI:CreateWindow({
         Title="ink_无尽现实",
-        Author="@墨水依旧",
+        Author="@Rebzyyx",
         Icon="rbxassetid://71953031400395",
         Folder="ink_HUB",
         NewElements=true,
@@ -307,7 +307,7 @@ pcall(function()
             if obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 if obj.Text == "ink_HUB" then
                     obj.TextColor3 = Color3.fromRGB(155,155,155)
-                elseif obj.Text == "@墨水依旧" then
+                elseif obj.Text == "@Rebzyyx" then
                     obj.TextColor3 = Color3.fromRGB(125,125,125)
                 end
             end
@@ -328,7 +328,7 @@ end)
 local Z = D:Tab({Title="公告", Icon="bell"})
 Z:Paragraph({
     Title = "欢迎使用 ink_无尽现实",
-    Desc = "作者：墨水依旧\n墨水快手号:zczczczc766\n徽章只能使用你已经拥有的徽章id\n开源并公开的4000+\n没惹你就开源的自动给我30年寿命\n公益脚本禁止倒卖",
+    Desc = "作者：Rebzyyx\nRebzyyx快手号:zczczczc766\n徽章只能使用你已经拥有的徽章id\n开源并公开的4000+\n没惹你就开源的自动给我30年寿命\n公益脚本禁止倒卖",
     Image = "rbxassetid://131444442444524",
     ImageSize = 100,
 })
@@ -350,7 +350,6 @@ Z:Button({Title="复制作者副群", Callback=function() setclipboard("10638285
 
 local GeneralTab = D:Tab({Title="主要功能", Icon="settings"})
 
--- 主要功能分组，让功能排列更整齐
 local MovementGroup = GeneralTab:Section({Title="移动与视角", Opened=true})
 local InteractionGroup = GeneralTab:Section({Title="交互功能", Opened=true})
 local GameGroup = GeneralTab:Section({Title="游戏功能", Opened=true})

@@ -50,8 +50,8 @@ end)
 local window
 local okWindow, windowResult = pcall(function()
     return WindUI:CreateWindow({
-        Title = "ink_破坏者谜团2",
-        Author = "@Theinkremains",
+        Title = "ink_监狱人生",
+        Author = "@Rebzyyx",
         Icon = "rbxassetid://71953031400395",
         Folder = "ink_HUB",
         NewElements = true,
@@ -264,7 +264,7 @@ end)
             if obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 if obj.Text == "ink_监狱人生" then
                     obj.TextColor3 = Color3.fromRGB(155,155,155)
-                elseif obj.Text == "@Theinkremains" then
+                elseif obj.Text == "@Rebzyyx" then
                     obj.TextColor3 = Color3.fromRGB(125,125,125)
                 end
             end
@@ -292,27 +292,8 @@ local function getEquippedGun()
     return nil
 end
 
-local function createAttributeInput(title, attrName)
-    GunTab:Input({
-        Title = title,
-        Value = "",
-        Placeholder = "请输入数值",
-        Callback = function(text)
-            inputValues[attrName] = text
-        end
-    })
-end
-
-createAttributeInput("伤害 (Damage)", "Damage")
-createAttributeInput("射速 (FireRate) - 越小越快", "FireRate")
-createAttributeInput("最大弹匣 (MaxAmmo)", "MaxAmmo")
-createAttributeInput("当前弹药 (CurrentAmmo)", "CurrentAmmo")
-createAttributeInput("换弹时间 (ReloadTime)", "ReloadTime")
-createAttributeInput("射程 (Range)", "Range")
-createAttributeInput("自动射击 (AutoFire) - 输1开,0关", "AutoFire")
-
 GunTab:Button({
-    Title = "修改",
+    Title = "确认修改数值",
     Callback = function()
         local currentWeapon = getEquippedGun()
         if not currentWeapon then
@@ -324,10 +305,10 @@ GunTab:Button({
         for attrName, valText in pairs(inputValues) do
             if valText and valText ~= "" then
                 if attrName == "AutoFire" then
-                    if valText == "1" or valText:lower() == "true" then
+                    if valText == "1" or valText:lower() == "true" or valText == "开" then
                         currentWeapon:SetAttribute(attrName, true)
                         modifiedCount = modifiedCount + 1
-                    elseif valText == "0" or valText:lower() == "false" then
+                    elseif valText == "0" or valText:lower() == "false" or valText == "关" then
                         currentWeapon:SetAttribute(attrName, false)
                         modifiedCount = modifiedCount + 1
                     end
@@ -348,6 +329,27 @@ GunTab:Button({
         end
     end
 })
+
+GunTab:Divider()
+
+local function createAttributeInput(title, attrName)
+    GunTab:Input({
+        Title = title,
+        Value = "",
+        Placeholder = "请输入数值",
+        Callback = function(text)
+            inputValues[attrName] = text
+        end
+    })
+end
+
+createAttributeInput("伤害", "Damage")
+createAttributeInput("射速", "FireRate")
+createAttributeInput("最大弹匣", "MaxAmmo")
+createAttributeInput("当前弹药", "CurrentAmmo")
+createAttributeInput("换弹时间", "ReloadTime")
+createAttributeInput("射程", "Range")
+createAttributeInput("自动射击 (输1开/0关)", "AutoFire")
 
 local function onCharacterChanged()
     task.wait(0.5)

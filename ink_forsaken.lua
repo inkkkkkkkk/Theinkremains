@@ -381,7 +381,7 @@ local function makeWindowAdapter(rawWindow, libraryObject)
         config = config or {}
         local tab = self._window:AddTab(tostring(config.Name or "主页"), "layout-dashboard")
         local group = tab:AddLeftGroupbox("脚本信息")
-        group:AddLabel({ Text = "殺脚本┃被遗弃", DoesWrap = true })
+        group:AddLabel({ Text = "Project_ink_forsaken", DoesWrap = true })
         for _, item in ipairs(config.Changelog or {}) do
             group:AddLabel({
                 Text = tostring(item.Title or "") .. "\n" .. tostring(item.Description or ""),
@@ -401,7 +401,7 @@ end
 local function createCompatWindow(config)
     config = config or {}
     local rawWindow = ObsidianLibrary:CreateWindow({
-        Title = config.Name or "殺脚本",
+        Title = config.Name or "ink",
         Footer = (config.SubName or " ") .. "  |  Obsidian UI by DevSloPo",
         Size = UDim2.fromOffset(720, 600),
         ToggleKeybind = config.Keybind or Enum.KeyCode.RightShift,
@@ -416,8 +416,8 @@ local function createCompatWindow(config)
 end
 
 local RawWindow = createCompatWindow({
-    Name = "殺脚本┃被遗弃",
-    SubName = "猎物终将会被屈服",
+    Name = "Project_ink_forsaken",
+    SubName = "[BY.Rebzyyx]",
     Keybind = Enum.KeyCode.RightShift,
     Logo = 93541172717831,
 })

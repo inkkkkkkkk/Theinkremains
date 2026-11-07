@@ -230,7 +230,7 @@ local window
 local okWindow, windowResult = pcall(function()
     return WindUI:CreateWindow({
         Title = "ink_破坏者谜团2",
-        Author = "@Theinkremains",
+        Author = "@Rebzyyx",
         Icon = "rbxassetid://71953031400395",
         Folder = "ink_HUB",
         NewElements = true,
@@ -447,7 +447,7 @@ pcall(function()
             if obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 if obj.Text == "ink_破坏者谜团2" then
                     obj.TextColor3 = Color3.fromRGB(155,155,155)
-                elseif obj.Text == "@Theinkremains" then
+                elseif obj.Text == "@Rebzyyx" then
                     obj.TextColor3 = Color3.fromRGB(125,125,125)
                 end
             end

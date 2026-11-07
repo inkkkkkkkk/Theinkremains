@@ -63,7 +63,7 @@ end)
 local C=B:CreateWindow({
     Icon="rbxassetid://71953031400395",
     Title=gradient("ink_美化",Color3.fromRGB(180,180,180),Color3.fromRGB(100,100,100)),
-    Author=gradient("@墨水依旧 司空",Color3.fromRGB(180,180,180),Color3.fromRGB(100,100,100)),
+    Author=gradient("@Rebzyyx 司空",Color3.fromRGB(180,180,180),Color3.fromRGB(100,100,100)),
     Folder="ink_美化",
     NewElements=true,
     HideSearchBar=false,
@@ -146,7 +146,7 @@ pcall(function()
         for _,obj in ipairs(root:GetDescendants()) do
             if obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 if obj.Text=="ink_美化" then obj.TextColor3=Color3.fromRGB(155,155,155)
-                elseif obj.Text=="@墨水依旧 司空" then obj.TextColor3=Color3.fromRGB(125,125,125) end
+                elseif obj.Text=="@Rebzyyx 司空" then obj.TextColor3=Color3.fromRGB(125,125,125) end
             end
         end
     end
@@ -160,7 +160,7 @@ local D=C:Section({Title="功能菜单",Opened=true})
 local Z = D:Tab({Title="公告", Icon="bell"})
 Z:Paragraph({
     Title = "欢迎使用 ink_美化",
-    Desc = "作者：墨水依旧和司空\n墨水快手号:zczczczc766\n司空快手号:smalldesikon111和smalldesikon\n开源并公开的4000+\n没惹你就开源的自动给我30年寿命\n公益脚本禁止倒卖",
+    Desc = "作者：Rebzyyx和司空\nRebzyyx快手号:zczczczc766\n司空快手号:smalldesikon111和smalldesikon\n开源并公开的4000+\n没惹你就开源的自动给我30年寿命\n公益脚本禁止倒卖",
     Image = "rbxassetid://131444442444524",
     ImageSize = 100,
 })
