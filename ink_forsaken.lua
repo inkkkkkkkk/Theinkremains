@@ -511,7 +511,6 @@ local KillHitboxSettings = {
 }
 local setKillHitboxVisual
 
-local judgementTab = Window:Tab("判定", "crosshair")
 local autoBlockHubTab
 local buildAutoBlockHubUI
 
@@ -1216,7 +1215,7 @@ end
     end
 
     buildAutoBlockHubUI = function()
-    autoBlockHubTab:Section({Name = "Forsaken自动格挡"})
+    autoBlockHubTab:Section({Name = "自动格挡与判定设置"})
     ABToggles.AutoBlock = makeABToggle(autoBlockHubTab, {
         Name = "自动格挡",
         Value = ABConfig.AutoBlock,
@@ -1240,10 +1239,9 @@ end
             ABConfig.AimPunch = enabled
         end,
     })
-    end
 
-    judgementTab:Section({Name = "自定义判定区与碰撞箱设置"})
-    ABToggles.JudgementMode = judgementTab:Dropdown({
+    -- 判定设置与碰撞箱配置直接放在自动格挡同一专区内，不创建独立导航页。
+    ABToggles.JudgementMode = autoBlockHubTab:Dropdown({
         Name = "格挡判定方式",
         Values = {"杀脚本显示碰撞箱", "菱形/圆形自定义判定", "Forsaken音效/动画识别"},
         Value = "杀脚本显示碰撞箱",
@@ -1257,7 +1255,7 @@ end
             end
         end,
     })
-    ABToggles.ShowDiamond = makeABToggle(judgementTab, {
+    ABToggles.ShowDiamond = makeABToggle(autoBlockHubTab, {
         Name = "显示菱形判定区",
         Value = ABConfig.ShowDiamond,
         Callback = function(enabled)
@@ -1270,19 +1268,19 @@ end
             refreshCustomZones()
         end,
     })
-    ABInputs.CustomDiamondLength = judgementTab:Input({
+    ABInputs.CustomDiamondLength = autoBlockHubTab:Input({
         Name = "菱形长度", Value = tostring(ABConfig.CustomDiamondLength), Placeholder = "8",
         Callback = function(text) ABConfig.CustomDiamondLength = math.max(1, tonumber(text) or 8) end,
     })
-    ABInputs.CustomDiamondWidth = judgementTab:Input({
+    ABInputs.CustomDiamondWidth = autoBlockHubTab:Input({
         Name = "菱形宽度", Value = tostring(ABConfig.CustomDiamondWidth), Placeholder = "4",
         Callback = function(text) ABConfig.CustomDiamondWidth = math.max(1, tonumber(text) or 4) end,
     })
-    ABInputs.CustomDiamondOffset = judgementTab:Input({
+    ABInputs.CustomDiamondOffset = autoBlockHubTab:Input({
         Name = "菱形朝向偏移", Value = tostring(ABConfig.CustomDiamondOffset), Placeholder = "3",
         Callback = function(text) ABConfig.CustomDiamondOffset = math.max(0, tonumber(text) or 3) end,
     })
-    ABToggles.ShowCircle = makeABToggle(judgementTab, {
+    ABToggles.ShowCircle = makeABToggle(autoBlockHubTab, {
         Name = "显示圆形判定区",
         Value = ABConfig.ShowCircle,
         Callback = function(enabled)
@@ -1295,16 +1293,16 @@ end
             refreshCustomZones()
         end,
     })
-    ABInputs.CustomCircleRadius = judgementTab:Input({
+    ABInputs.CustomCircleRadius = autoBlockHubTab:Input({
         Name = "圆形半径", Value = tostring(ABConfig.CustomCircleRadius), Placeholder = "5",
         Callback = function(text) ABConfig.CustomCircleRadius = math.max(1, tonumber(text) or 5) end,
     })
-    ABInputs.ZoneHeight = judgementTab:Input({
+    ABInputs.ZoneHeight = autoBlockHubTab:Input({
         Name = "判定区高度", Value = tostring(ABConfig.ZoneHeight), Placeholder = "0.5",
         Callback = function(text) ABConfig.ZoneHeight = tonumber(text) or 0.5 end,
     })
 
-    judgementTab:Toggle({
+    autoBlockHubTab:Toggle({
         Name = "显示碰撞箱",
         Value = KillHitboxSettings.ShowVisual,
         Callback = function(value)
@@ -1312,7 +1310,7 @@ end
             if setKillHitboxVisual then setKillHitboxVisual(value) end
         end,
     })
-    judgementTab:Slider({
+    autoBlockHubTab:Slider({
         Name = "碰撞箱缩放",
         Value = {Min = 0.1, Max = 5, Default = KillHitboxSettings.Scale},
         Rounding = 2,
@@ -1320,7 +1318,7 @@ end
             KillHitboxSettings.Scale = value
         end,
     })
-    judgementTab:Slider({
+    autoBlockHubTab:Slider({
         Name = "碰撞箱Z偏移",
         Value = {Min = -5, Max = 5, Default = KillHitboxSettings.Offset},
         Rounding = 2,
@@ -1328,7 +1326,7 @@ end
             KillHitboxSettings.Offset = value
         end,
     })
-    judgementTab:Slider({
+    autoBlockHubTab:Slider({
         Name = "碰撞箱持续时间",
         Value = {Min = 0.1, Max = 5, Default = KillHitboxSettings.Duration},
         Rounding = 2,
@@ -1336,6 +1334,9 @@ end
             KillHitboxSettings.Duration = value
         end,
     })
+    end
+
+
 end
 
 
