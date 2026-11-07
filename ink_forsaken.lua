@@ -359,13 +359,13 @@ local function makeWindowAdapter(rawWindow, libraryObject)
         local title = tostring(name or "Tab")
         local iconMap = {
             ["服务器"] = "server",
-            ["自动格挡"] = "shield",
             ["通用区"] = "sliders-horizontal",
             ["渲染"] = "palette",
             ["体力区"] = "zap",
             ["透视区"] = "eye",
             ["物品区"] = "package",
             ["发电机"] = "cog",
+            ["自动格挡"] = "shield",
             ["幸存者功能包"] = "user",
             ["幸存者综合功能"] = "users",
         }
@@ -419,7 +419,6 @@ local RawWindow = createCompatWindow({
     Name = "ink|forsaken",
     SubName = "[BY.Rebzyyx]",
     Keybind = Enum.KeyCode.RightShift,
-    Logo = 131444442444524,
 })
 
 local Window = protectInterface(RawWindow)
