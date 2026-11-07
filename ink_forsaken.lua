@@ -1,4 +1,6 @@
--- 开源来自 Yuxingchen ｜ Obsidian UI 适配版｜自动格挡整合版
+-- 开源来自 Yuxingchen ｜ Obsidian UI 适配版｜Forsaken 自动格挡整合版
+
+local UserInputService = game:GetService("UserInputService")
 
 local LoaderEnvironment = (type(getgenv) == "function" and getgenv()) or _G
 local LoaderGuard = LoaderEnvironment.__KRGuard
@@ -496,6 +498,12 @@ Feng:Social({
 })
 
 
+local KillHitboxSettings = {
+    Scale = 1.0,
+    Offset = -1.4,
+    BaseSize = Vector3.new(4.5, 6, 7.5),
+}
+
 local autoBlockHubTab = Window:Tab("自动格挡", "shield")
 
 -- 合并自 Forsaken 中文版的自动格挡模块（独立命名空间）
@@ -505,17 +513,14 @@ do
     local Workspace = game:GetService("Workspace")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local Stats = game:GetService("Stats")
-    local UserInputService = game:GetService("UserInputService")
-    local LP = Players.LocalPlayer
+        local LP = Players.LocalPlayer
 
     local ABConfig = {
         AutoBlock = false,
-        AutoBlockButton = false,
         ABMode = "Guest1337",
         AimPunch = false,
         AutoBlockCustom = false,
-        CustomABMode = "Guest1337",
-        FourthButtonTarget = "default",
+        JudgementMode = "hitbox",
         CustomDiamondLength = 8,
         CustomDiamondWidth = 4,
         CustomDiamondOffset = 3,
@@ -542,16 +547,6 @@ local autoBlockState = {
 }
 
 local startAutoBlock, stopAutoBlock
-
-local fourthButtonState = {
-  instance = nil,
-  applyTint = nil,
-  running = false,
-  connections = {},
-  cachedPos = nil,
-  cachedSize = nil,
-  sourceName = nil,
-}
 
 local lastToggleTime = 0
 local pendingToggle = nil
@@ -649,9 +644,6 @@ local function fireClone()
 end
 
 local function getActiveBlockMode()
-  if ABConfig.AutoBlockCustom then
-    return ABConfig.CustomABMode
-  end
   return ABConfig.ABMode
 end
 
@@ -833,6 +825,23 @@ local function isLocalPlayerInZone(killer)
   if not killerRoot or not localRoot then return false end
   return isInsideDiamond(localRoot.Position, killerRoot.CFrame, killerRoot.Position)
     or isInsideCircle(localRoot.Position, killerRoot.Position)
+end
+
+local function isLocalPlayerInActiveZone(killer)
+  if ABConfig.JudgementMode == "hitbox" then
+    if not killer or not killer.Parent then return false end
+    local killerQuery = killer:FindFirstChild("QueryHitbox")
+    local character = LP.Character
+    local localQuery = character and character:FindFirstChild("QueryHitbox")
+    if not killerQuery or not localQuery then return false end
+    local boxCFrame = killerQuery.CFrame * CFrame.new(0, 0, KillHitboxSettings.Offset)
+    local localPosition = boxCFrame:PointToObjectSpace(localQuery.Position)
+    local halfSize = (KillHitboxSettings.BaseSize * KillHitboxSettings.Scale) / 2
+    return math.abs(localPosition.X) <= halfSize.X
+      and math.abs(localPosition.Y) <= halfSize.Y
+      and math.abs(localPosition.Z) <= halfSize.Z
+  end
+  return isLocalPlayerInZone(killer)
 end
 
 local function updateZoneVisuals(visuals, killerRoot, localRoot)
@@ -1023,7 +1032,7 @@ local function watchKillerSounds(killer)
     local killerRoot = killer:FindFirstChild("HumanoidRootPart")
     if not killerRoot or not killerRoot.Parent then return end
     if ABConfig.AutoBlockCustom then
-      if not isLocalPlayerInZone(killer) then return end
+      if not isLocalPlayerInActiveZone(killer) then return end
     else
       local offset = autoBlockState.LocalRoot.Position - killerRoot.Position
       local distance = offset.Magnitude
@@ -1065,7 +1074,7 @@ local function checkKillerAbilities()
             else
               local shouldBlock = false
               if ABConfig.AutoBlockCustom then
-                if isLocalPlayerInZone(killer) then
+                if isLocalPlayerInActiveZone(killer) then
                   shouldBlock = true
                 end
               else
@@ -1160,14 +1169,7 @@ local function applyBlockToggle(request)
   if ABToggles.AutoBlock then
     ABSuppressCallbacks = true
     pcall(function()
-      ABToggles.AutoBlock:Set(ABConfig.AutoBlock)
-    end)
-    ABSuppressCallbacks = false
-  end
-  if ABToggles.AutoBlockCustom then
-    ABSuppressCallbacks = true
-    pcall(function()
-      ABToggles.AutoBlockCustom:Set(ABConfig.AutoBlockCustom)
+      ABToggles.AutoBlock:Set(ABConfig.AutoBlock or ABConfig.AutoBlockCustom)
     end)
     ABSuppressCallbacks = false
   end
@@ -1179,9 +1181,6 @@ local function applyBlockToggle(request)
     if autoBlockState.running then
       pcall(stopAutoBlock)
     end
-  end
-  if fourthButtonState.applyTint then
-    pcall(fourthButtonState.applyTint)
   end
 end
 
@@ -1218,248 +1217,6 @@ local function requestBlockToggle(value, mode)
   local request = pendingToggle
   pendingToggle = nil
   applyBlockToggle(request)
-end
-
-local function startFourthButton()
-  if fourthButtonState.running then return end
-  fourthButtonState.running = true
-  fourthButtonState.connections = {}
-
-  do
-    local mainUI = playerGui:FindFirstChild("MainUI")
-    if mainUI then
-      local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
-      if abilityContainer then
-        local leftover = abilityContainer:FindFirstChild("FourthBlockAbility")
-        if leftover then
-          pcall(function()
-            leftover:Destroy()
-          end)
-        end
-      end
-    end
-  end
-
-  if not fourthButtonState.applyTint then
-    fourthButtonState.applyTint = function()
-      local button = fourthButtonState.instance
-      if not button or not button.Parent then return end
-      local tint = (ABConfig.AutoBlock or ABConfig.AutoBlockCustom) and Color3.fromRGB(0, 255, 60) or Color3.fromRGB(255, 0, 0)
-      if button:IsA("ImageButton") or button:IsA("ImageLabel") then
-        button.ImageColor3 = tint
-      end
-      for _, descendant in ipairs(button:GetDescendants()) do
-        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
-          descendant.ImageColor3 = tint
-        elseif descendant:IsA("Frame") and descendant.BackgroundTransparency < 1 then
-          descendant.BackgroundColor3 = tint
-        end
-      end
-    end
-  end
-
-  local lastActivation = 0
-  local activationCooldown = 0.15
-
-  local function onFourthButtonActivated()
-    local now = tick()
-    if now - lastActivation < activationCooldown then return end
-    lastActivation = now
-    local target = ABConfig.FourthButtonTarget or "default"
-    if target == "custom" then
-      if ABConfig.AutoBlockCustom then
-        requestBlockToggle(false, "custom")
-      else
-        requestBlockToggle(true, "custom")
-      end
-    else
-      if ABConfig.AutoBlock then
-        requestBlockToggle(false, "default")
-      else
-        requestBlockToggle(true, "default")
-      end
-    end
-  end
-
-  table.insert(fourthButtonState.connections, RunService.RenderStepped:Connect(function()
-    if not fourthButtonState.running then return end
-    local button = fourthButtonState.instance
-    if button and button.Parent then
-      local okPosition, position = pcall(function()
-        return button.AbsolutePosition
-      end)
-      local okSize, size = pcall(function()
-        return button.AbsoluteSize
-      end)
-      if okPosition and okSize then
-        fourthButtonState.cachedPos = position
-        fourthButtonState.cachedSize = size
-      end
-    else
-      fourthButtonState.cachedPos = nil
-      fourthButtonState.cachedSize = nil
-    end
-  end))
-
-  local function isPointOverButton(point)
-    local button = fourthButtonState.instance
-    if not button or not button.Parent then return false end
-    local ok, objects = pcall(function()
-      return UserInputService:GetGuiObjectsAtPosition(point.X, point.Y)
-    end)
-    if ok and objects and #objects > 0 then
-      local topObject = objects[1]
-      return topObject == button or topObject:IsDescendantOf(button)
-    end
-    if not fourthButtonState.cachedPos or not fourthButtonState.cachedSize then return false end
-    local position, size = fourthButtonState.cachedPos, fourthButtonState.cachedSize
-    return point.X >= position.X and point.X <= position.X + size.X
-      and point.Y >= position.Y and point.Y <= position.Y + size.Y
-  end
-
-  local pressPosition, pressTime = nil, 0
-
-  table.insert(fourthButtonState.connections, UserInputService.InputBegan:Connect(function(input)
-    if not fourthButtonState.running then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-      return
-    end
-    if not isPointOverButton(input.Position) then return end
-    pressPosition = input.Position
-    pressTime = tick()
-  end))
-
-  table.insert(fourthButtonState.connections, UserInputService.InputEnded:Connect(function(input)
-    if not fourthButtonState.running then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
-      return
-    end
-    if not pressPosition then return end
-    local heldFor = tick() - pressTime
-    pressPosition = nil
-    if heldFor > 0.5 then return end
-    if not isPointOverButton(input.Position) then return end
-    onFourthButtonActivated()
-  end))
-
-  local function hookButtonInput(root)
-    if not root then return end
-    local function hookObject(object)
-      if not object then return end
-      if object:IsA("GuiButton") then
-        pcall(function()
-          object.Active = true
-          object.Selectable = true
-        end)
-        pcall(function()
-          object.MouseButton1Click:Connect(onFourthButtonActivated)
-        end)
-        pcall(function()
-          object.Activated:Connect(onFourthButtonActivated)
-        end)
-      end
-    end
-    hookObject(root)
-    for _, descendant in ipairs(root:GetDescendants()) do
-      if descendant:IsA("GuiObject") then
-        hookObject(descendant)
-      end
-    end
-  end
-
-  task.spawn(function()
-    while fourthButtonState.running do
-      task.wait(0.5)
-      if not fourthButtonState.running then break end
-      local mainUI = playerGui:FindFirstChild("MainUI")
-      if mainUI then
-        local abilityContainer = mainUI:FindFirstChild("AbilityContainer", true)
-        if abilityContainer then
-          local blockButton = abilityContainer:FindFirstChild("Block")
-          local cloneButton = abilityContainer:FindFirstChild("Clone")
-          local activeMode = getActiveBlockMode()
-          local source = nil
-          if blockButton and cloneButton then
-            source = (activeMode == "007n7") and cloneButton or blockButton
-          else
-            source = blockButton or cloneButton
-          end
-          local existing = abilityContainer:FindFirstChild("FourthBlockAbility")
-          local needsRebuild = false
-          if not existing then
-            needsRebuild = (source ~= nil)
-          elseif not source then
-            needsRebuild = false
-          elseif fourthButtonState.sourceName ~= source.Name then
-            needsRebuild = true
-          elseif fourthButtonState.instance ~= existing then
-            fourthButtonState.instance = existing
-            hookButtonInput(existing)
-            if fourthButtonState.applyTint then
-              fourthButtonState.applyTint()
-            end
-          end
-          if needsRebuild and source then
-            if existing then
-              pcall(function()
-                existing:Destroy()
-              end)
-            end
-            local copy = source:Clone()
-            copy.Name = "FourthBlockAbility"
-            copy.LayoutOrder = 4
-            if copy:IsA("GuiObject") then
-              copy.ZIndex = 50
-            end
-            for _, descendant in ipairs(copy:GetDescendants()) do
-              if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                local loweredText = descendant.Text:lower()
-                if loweredText:find("block") or loweredText:find("clone") then
-                  descendant.Text = ""
-                  descendant.Visible = false
-                end
-              end
-              if descendant:IsA("GuiObject") then
-                descendant.ZIndex = math.max(descendant.ZIndex, 50)
-                descendant.Active = true
-              end
-            end
-            copy.Parent = abilityContainer
-            fourthButtonState.instance = copy
-            fourthButtonState.sourceName = source.Name
-            hookButtonInput(copy)
-            if fourthButtonState.applyTint then
-              fourthButtonState.applyTint()
-            end
-            print("[testbraken] ✅ 4th button created from:", source.Name)
-          end
-        end
-      end
-    end
-  end)
-
-  print("[testbraken] AutoBlockButton ON")
-end
-
-local function stopFourthButton()
-  if not fourthButtonState.running then return end
-  fourthButtonState.running = false
-  for _, connection in ipairs(fourthButtonState.connections) do
-    pcall(function()
-      connection:Disconnect()
-    end)
-  end
-  fourthButtonState.connections = {}
-  if fourthButtonState.instance and fourthButtonState.instance.Parent then
-    pcall(function()
-      fourthButtonState.instance:Destroy()
-    end)
-  end
-  fourthButtonState.instance = nil
-  fourthButtonState.cachedPos = nil
-  fourthButtonState.cachedSize = nil
-  fourthButtonState.sourceName = nil
-  print("[testbraken] AutoBlockButton OFF")
 end
 
 function startAutoBlock()
@@ -1521,9 +1278,6 @@ function startAutoBlock()
     checkKillerAbilities()
   end))
 
-  if fourthButtonState.applyTint then
-    fourthButtonState.applyTint()
-  end
   print("[testbraken] AutoBlock ON")
 end
 
@@ -1551,13 +1305,27 @@ end
         }
     end
 
-    autoBlockHubTab:Section({Name = "音效 / 动画识别格挡（来自 Forsaken 中文版）"})
+    autoBlockHubTab:Section({Name = "统一自动格挡（Forsaken识别 + 自定义判定）"})
     ABToggles.AutoBlock = makeABToggle({
-        Name = "自动格挡（音效 / 动画识别）",
-        Value = ABConfig.AutoBlock,
+        Name = "自动格挡",
+        Value = ABConfig.AutoBlock or ABConfig.AutoBlockCustom,
         Callback = function(enabled)
             if ABSuppressCallbacks then return end
-            requestBlockToggle(enabled, "default")
+            requestBlockToggle(enabled, ABConfig.JudgementMode == "default" and "default" or "custom")
+        end,
+    })
+    ABToggles.JudgementMode = autoBlockHubTab:Dropdown({
+        Name = "格挡判定方式",
+        Values = {"杀脚本显示碰撞箱", "菱形/圆形自定义判定", "Forsaken音效/动画识别"},
+        Value = "杀脚本显示碰撞箱",
+        Callback = function(selected)
+            if selected == "杀脚本显示碰撞箱" then
+                ABConfig.JudgementMode = "hitbox"
+            elseif selected == "菱形/圆形自定义判定" then
+                ABConfig.JudgementMode = "custom"
+            else
+                ABConfig.JudgementMode = "default"
+            end
         end,
     })
     ABToggles.ABModeDropdown = autoBlockHubTab:Dropdown({
@@ -1575,40 +1343,7 @@ end
             ABConfig.AimPunch = enabled
         end,
     })
-    ABToggles.AutoBlockButton = autoBlockHubTab:Toggle({
-        Name = "自动格挡按钮",
-        Value = ABConfig.AutoBlockButton,
-        Callback = function(enabled)
-            ABConfig.AutoBlockButton = enabled
-            if enabled then startFourthButton() else stopFourthButton() end
-        end,
-    })
-    ABToggles.FourthButtonTargetDropdown = autoBlockHubTab:Dropdown({
-        Name = "第四个按钮目标",
-        Values = {"默认", "自定义"},
-        Value = (ABConfig.FourthButtonTarget == "custom") and "自定义" or "默认",
-        Callback = function(selected)
-            ABConfig.FourthButtonTarget = (selected == "自定义") and "custom" or "default"
-        end,
-    })
-
-    autoBlockHubTab:Section({Name = "自定义判定区格挡"})
-    ABToggles.AutoBlockCustom = makeABToggle({
-        Name = "自定义自动格挡",
-        Value = ABConfig.AutoBlockCustom,
-        Callback = function(enabled)
-            if ABSuppressCallbacks then return end
-            requestBlockToggle(enabled, "custom")
-        end,
-    })
-    ABToggles.CustomABModeDropdown = autoBlockHubTab:Dropdown({
-        Name = "自定义格挡模式",
-        Values = {"Guest 1337", "007n7"},
-        Value = (ABConfig.CustomABMode == "007n7") and "007n7" or "Guest 1337",
-        Callback = function(selected)
-            ABConfig.CustomABMode = (selected == "007n7") and "007n7" or "Guest1337"
-        end,
-    })
+    autoBlockHubTab:Section({Name = "判定范围设置（与自动格挡共用）"})
     ABToggles.ShowDiamond = makeABToggle({
         Name = "显示菱形判定区",
         Value = ABConfig.ShowDiamond,
@@ -1975,8 +1710,7 @@ end
 do
     local localPlayer = game:GetService("Players").LocalPlayer
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local UserInputService = game:GetService("UserInputService")
-
+    
     local Ragdolls = require(
         ReplicatedStorage:WaitForChild("Modules")
             :WaitForChild("Rendering")
@@ -2408,8 +2142,7 @@ end
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
-    local localPlayer = Players.LocalPlayer
+        local localPlayer = Players.LocalPlayer
 
     local Fly = {
         enabled = false,
@@ -6546,22 +6279,21 @@ do
     local Workspace = game:GetService("Workspace")
     local LP = Players.LocalPlayer
 
-    local AutoBlockEnabled = false
     local ShowHitboxVisual = true
-    local HitboxScale = 1.0
-    local HitboxOffset = -1.4
+    local HitboxScale = KillHitboxSettings.Scale
+    local HitboxOffset = KillHitboxSettings.Offset
     local HitboxDuration = 1.5
     local AutoPunchEnabled = false
     local AimPunchEnabled = false
     local AimPunchMode = "CamChar"
 
-    local BaseHitboxSize = Vector3.new(4.5, 6, 7.5)
+    local BaseHitboxSize = KillHitboxSettings.BaseSize
     local HitboxColor = Color3.fromRGB(255, 255, 255)
     local ShowOutline = true
     local OutlineThickness = 0.01
     local HitboxTransparency = 0.5
 
-    local AutoBlockConnections = {}
+    local HitboxVisualConnections = {}
     local BlockHitboxData = {}
 
     local MainUI, KillersFolder, SurvivorsFolder, Hitboxes
@@ -6583,7 +6315,6 @@ do
         return container:FindFirstChild(name)
     end
 
-    local function getBlockButton() return getActionButton("Block") or getActionButton("Guard") end
     local function getPunchButton() return getActionButton("Punch") or getActionButton("Attack") or getActionButton("Slap") end
 
     local function pressButton(btn)
@@ -6601,7 +6332,6 @@ do
         return true
     end
 
-    local function pressBlock() return pressButton(getBlockButton()) end
     local function pressPunch() return pressButton(getPunchButton()) end
 
     local function CreateBlockHitboxVisual()
@@ -6647,88 +6377,28 @@ do
         if data then
             if data.visualPart then data.visualPart:Destroy() end
             if data.visualConnection then data.visualConnection:Disconnect() end
-            if data.heartbeatConnection then data.heartbeatConnection:Disconnect() end
             BlockHitboxData[Killer] = nil
         end
     end
 
-    local OverlapParamsObj = OverlapParams.new()
-    OverlapParamsObj.MaxParts = 1
-    OverlapParamsObj.FilterType = Enum.RaycastFilterType.Include
-
-    local function StartBlockDetection(Killer, queryHitbox)
+    -- 仅显示杀脚本原有攻击碰撞箱；这里不再执行碰撞检测或触发格挡。
+    local function ShowKillerHitbox(Killer, queryHitbox)
         ClearKillerBlockHitbox(Killer)
+        if not ShowHitboxVisual or not queryHitbox then return end
         local visualPart = CreateBlockHitboxVisual()
         UpdateBlockHitboxPosition(visualPart, queryHitbox)
-
-        local visualConnection = RunService.Heartbeat:Connect(function()
-            if visualPart and visualPart.Parent and queryHitbox and queryHitbox.Parent then
-                UpdateBlockHitboxPosition(visualPart, queryHitbox)
-            else
-                visualConnection:Disconnect()
+        local startedAt = tick()
+        local visualConnection
+        visualConnection = RunService.Heartbeat:Connect(function()
+            if not ShowHitboxVisual or not visualPart.Parent or not queryHitbox.Parent
+                or tick() - startedAt >= HitboxDuration then
+                if visualConnection then visualConnection:Disconnect() end
+                ClearKillerBlockHitbox(Killer)
+                return
             end
+            UpdateBlockHitboxPosition(visualPart, queryHitbox)
         end)
-
-        local data = {
-            visualPart = visualPart,
-            visualConnection = visualConnection,
-            heartbeatConnection = nil
-        }
-        BlockHitboxData[Killer] = data
-
-        local localChar = LP.Character
-        if not localChar or not SurvivorsFolder or localChar.Parent ~= SurvivorsFolder then
-            task.delay(HitboxDuration, function() ClearKillerBlockHitbox(Killer) end)
-            return
-        end
-        local localQuery = localChar:FindFirstChild("QueryHitbox")
-        if not localQuery then
-            task.delay(HitboxDuration, function() ClearKillerBlockHitbox(Killer) end)
-            return
-        end
-
-        local hitboxSize = BaseHitboxSize * HitboxScale
-        local startTime = tick()
-
-        local heartbeatPart = Instance.new("Part")
-        heartbeatPart.Size = hitboxSize
-        heartbeatPart.CanCollide = false
-        heartbeatPart.Anchored = true
-        heartbeatPart.Transparency = 1
-        heartbeatPart.Parent = Hitboxes
-
-        local heartbeatConn
-        heartbeatConn = RunService.Heartbeat:Connect(function()
-            if not AutoBlockEnabled then
-                heartbeatConn:Disconnect()
-                heartbeatPart:Destroy()
-                ClearKillerBlockHitbox(Killer)
-                return
-            end
-            if tick() - startTime > HitboxDuration then
-                heartbeatConn:Disconnect()
-                heartbeatPart:Destroy()
-                ClearKillerBlockHitbox(Killer)
-                return
-            end
-            if not queryHitbox or not queryHitbox.Parent then
-                heartbeatConn:Disconnect()
-                heartbeatPart:Destroy()
-                ClearKillerBlockHitbox(Killer)
-                return
-            end
-
-            heartbeatPart.CFrame = queryHitbox.CFrame * CFrame.new(0, 0, HitboxOffset)
-            OverlapParamsObj.FilterDescendantsInstances = { localQuery }
-            local hits = Workspace:GetPartsInPart(heartbeatPart, OverlapParamsObj)
-            if #hits > 0 then
-                pressBlock()
-                heartbeatConn:Disconnect()
-                heartbeatPart:Destroy()
-                ClearKillerBlockHitbox(Killer)
-            end
-        end)
-        data.heartbeatConnection = heartbeatConn
+        BlockHitboxData[Killer] = {visualPart = visualPart, visualConnection = visualConnection}
     end
 
     local function HandleKiller_Attribute(Killer)
@@ -6737,51 +6407,43 @@ do
         if not queryHitbox then return end
         local blockLocked = false
         local abilityConn, abilitiessConn
-
-        local function doBlock()
-            if AutoBlockEnabled then
-                StartBlockDetection(Killer, queryHitbox)
-            end
-        end
-
         abilityConn = Killer:GetAttributeChangedSignal("AbilityLastUsed"):Connect(function()
-            if not blockLocked then doBlock() else blockLocked = false end
+            if not blockLocked then
+                ShowKillerHitbox(Killer, queryHitbox)
+            else
+                blockLocked = false
+            end
         end)
         abilitiessConn = Killer:GetAttributeChangedSignal("AbilitiesUsed"):Connect(function()
             blockLocked = true
         end)
-
-        table.insert(AutoBlockConnections, {
+        table.insert(HitboxVisualConnections, {
             Disconnect = function()
-                abilityConn:Disconnect()
-                abilitiessConn:Disconnect()
+                if abilityConn then abilityConn:Disconnect() end
+                if abilitiessConn then abilitiessConn:Disconnect() end
             end
         })
     end
 
-    local function EnableAutoBlock()
-        if AutoBlockEnabled then
-            for _, con in ipairs(AutoBlockConnections) do pcall(con.Disconnect, con) end
-            AutoBlockConnections = {}
+    local function StartHitboxVisualMonitor()
+        GetObjects()
+        if not KillersFolder then return end
+        for _, killer in ipairs(KillersFolder:GetChildren()) do
+            HandleKiller_Attribute(killer)
+        end
+        local childCon = KillersFolder.ChildAdded:Connect(HandleKiller_Attribute)
+        table.insert(HitboxVisualConnections, {Disconnect = function() childCon:Disconnect() end})
+    end
+    task.spawn(function()
+        for _ = 1, 30 do
             GetObjects()
             if KillersFolder then
-                for _, killer in ipairs(KillersFolder:GetChildren()) do HandleKiller_Attribute(killer) end
-                local childCon = KillersFolder.ChildAdded:Connect(HandleKiller_Attribute)
-                table.insert(AutoBlockConnections, { Disconnect = function() childCon:Disconnect() end })
+                StartHitboxVisualMonitor()
+                break
             end
+            task.wait(1)
         end
-    end
-
-    local function DisableAutoBlock()
-        for _, con in ipairs(AutoBlockConnections) do pcall(con.Disconnect, con) end
-        AutoBlockConnections = {}
-        for killer, data in pairs(BlockHitboxData) do
-            if data.visualPart then data.visualPart:Destroy() end
-            if data.visualConnection then data.visualConnection:Disconnect() end
-            if data.heartbeatConnection then data.heartbeatConnection:Disconnect() end
-        end
-        BlockHitboxData = {}
-    end
+    end)
 
     local autoPunchRunning = true
     task.spawn(function()
@@ -6973,41 +6635,22 @@ do
     end
     LP.CharacterAdded:Connect(onCharacterAdded)
 
-    local autoBlockMonitor = true
-    task.spawn(function()
-        while autoBlockMonitor do
-            task.wait(1)
-            if not AutoBlockEnabled then continue end
-            local pf = Workspace:FindFirstChild("Players")
-            local kf = pf and pf:FindFirstChild("Killers")
-            if kf and kf ~= KillersFolder then
-                KillersFolder = kf
-                DisableAutoBlock()
-                EnableAutoBlock()
-            end
-        end
-    end)
+    -- 杀脚本的自动格挡监视器已移除；仅在杀手攻击时显示碰撞箱。
 
-autoBlockHubTab:Section({Name = "碰撞箱识别自动格挡（来自杀脚本）"})
-
-autoBlockHubTab:Toggle({
-    Name = "自动格挡（碰撞箱识别）",
-    Value = AutoBlockEnabled,
-    Callback = function(value)
-      AutoBlockEnabled = value
-      if value then 
-          EnableAutoBlock() 
-      else 
-          DisableAutoBlock() 
-      end
-    end
-})
+autoBlockHubTab:Section({Name = "杀脚本碰撞箱显示"})
 
 autoBlockHubTab:Toggle({
     Name = "显示碰撞箱",
     Value = ShowHitboxVisual,
     Callback = function(value)
         ShowHitboxVisual = value
+        for killer, data in pairs(BlockHitboxData) do
+            if data.visualPart then
+                data.visualPart.Transparency = value and (1 - HitboxTransparency) or 1
+                local outline = data.visualPart:FindFirstChildOfClass("SelectionBox")
+                if outline then outline.Visible = value and ShowOutline end
+            end
+        end
     end
 })
 
@@ -7021,6 +6664,7 @@ autoBlockHubTab:Slider({
     Rounding = 2,
     Callback = function(value)
         HitboxScale = value
+        KillHitboxSettings.Scale = value
     end
 })
 
@@ -7034,6 +6678,7 @@ autoBlockHubTab:Slider({
     Rounding = 2,
     Callback = function(value)
         HitboxOffset = value
+        KillHitboxSettings.Offset = value
     end
 })
 
@@ -7824,8 +7469,7 @@ local Feng = FengYu:Section({
 
 do
     local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
-    local Players = game:GetService("Players")
+        local Players = game:GetService("Players")
     local LP = Players.LocalPlayer
     local Camera = workspace.CurrentCamera
 
