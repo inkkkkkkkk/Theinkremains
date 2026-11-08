@@ -860,6 +860,31 @@ Feng:Button({
 })
 end
 
+Feng:Button({
+    Name = "翻译过的Dex",
+    Callback = function()
+        LoadRemote("https://gitee.com/cmbhbh/cmbh/raw/master/Bex.lua")
+    end
+})
+
+Feng:Button({
+    Name = "低画质脚本",
+    Callback = function()
+        LoadRemote(
+        "https://raw.githubusercontent.com/vexroxd/My-Script-/main/roblox%20fps%20unlocker%20script.lua"
+        )
+    end
+})
+
+Feng:Button({
+    Name = "无敌",
+    Callback = function()
+        LoadRemoteRequest({
+    Url = "https://www.kr520.top/xksoamcow.lua"
+})
+    end
+})
+
 do
     local localPlayer = game:GetService("Players").LocalPlayer
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -903,31 +928,6 @@ Feng:Toggle({
     end
 })
 end
-
-Feng:Button({
-    Name = "翻译过的Dex",
-    Callback = function()
-        LoadRemote("https://gitee.com/cmbhbh/cmbh/raw/master/Bex.lua")
-    end
-})
-
-Feng:Button({
-    Name = "低画质脚本",
-    Callback = function()
-        LoadRemote(
-        "https://raw.githubusercontent.com/vexroxd/My-Script-/main/roblox%20fps%20unlocker%20script.lua"
-        )
-    end
-})
-
-Feng:Button({
-    Name = "无敌",
-    Callback = function()
-        LoadRemoteRequest({
-    Url = "https://www.kr520.top/xksoamcow.lua"
-})
-    end
-})
 
 do
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1388,26 +1388,28 @@ do
         end)
     end
 
-    Feng:Slider({
-        Name = "视野范围 (FOV)",
-        Value = {
-            Min = 50, 
-            Max = 120,
-            Default = 80 
-        },
-        Rounding = 0,
-        Suffix = " 度",
-        Callback = function(v)
-            ApplyCustomFOV(v)
-        end
-    })
-    
-    Feng:Button({
-        Name = "重置视野为 80",
-        Callback = function()
-            ApplyCustomFOV(80)
-        end
-    })
+local FOVSlider = Feng:Slider({
+    Name = "视野范围 (FOV)",
+    Value = {
+        Min = 50,
+        Max = 120,
+        Default = 80
+    },
+    Rounding = 0,
+    Suffix = " 度",
+    Callback = function(v)
+        ApplyCustomFOV(v)
+    end
+})
+
+Feng:Button({
+    Name = "重置视野为 80",
+    Callback = function()
+        pcall(function()
+            FOVSlider:SetValue(80)
+        end)
+    end
+})
 end
 
 local Feng = FengYu:Section({
