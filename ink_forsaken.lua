@@ -468,110 +468,96 @@ local ProfileSection = FengYu:Section({ Name = "个人信息档案", SubName = "
 local executorName = "未知执行器"
 if type(identifyexecutor) == "function" then
     local ok, name = pcall(identifyexecutor)
-    if ok and name and name ~= "" then
-        executorName = name
+    if ok and name and name ~= "" then 
+        executorName = name 
     end
-elseif syn then executorName = "Synapse X"
-elseif krnl then executorName = "Krnl"
-elseif fluxus then executorName = "Fluxus"
-elseif delta then executorName = "Delta"
-elseif codex then executorName = "Codex"
 end
 
-local InfoCard = Instance.new("Frame")
-InfoCard.Size = UDim2.new(1, -10, 0, 290)
-InfoCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-InfoCard.BorderSizePixel = 0
-InfoCard.Parent = ProfileSection._groupbox.Container or ProfileSection._groupbox
-Instance.new("UICorner", InfoCard).CornerRadius = UDim.new(0, 8)
+if executorName == "未知执行器" or executorName == "" then
+    if syn then executorName = "Synapse X"
+    elseif krnl then executorName = "Krnl"
+    elseif fluxus then executorName = "Fluxus"
+    elseif delta then executorName = "Delta"
+    elseif codex then executorName = "Codex"
+    elseif electron then executorName = "Electron"
+    elseif wearedevs then executorName = "WeAreDevs (JJSploit)"
+    elseif trigon then executorName = "Trigon"
+    elseif argon then executorName = "Argon"
+    elseif hydrogen then executorName = "Hydrogen"
+    elseif valyse then executorName = "Valyse"
+    elseif wave then executorName = "Wave"
+    elseif sirius then executorName = "Sirius"
+    elseif celery then executorName = "Celery"
+    elseif evon then executorName = "Evon"
+    elseif solara then executorName = "Solara"
+    elseif xeno then executorName = "Xeno"
+    elseif awp then executorName = "AWP"
+    elseif potassium then executorName = "Potassium"
+    elseif rave then executorName = "Rave"
+    elseif vega then executorName = "Vega"
+    elseif appleware then executorName = "Appleware"
+    elseif kiwi then executorName = "Kiwi"
+    elseif secure_load then executorName = "Sentinel"
+    elseif is_sirhurt_closure then executorName = "Sirhurt"
+    elseif Kavo then executorName = "Kavo"
+    elseif OxygenU then executorName = "Oxygen U"
+    elseif getgenv and getgenv().ScriptWare then executorName = "Script-Ware"
+    end
+end
 
-local cardStroke = Instance.new("UIStroke", InfoCard)
-cardStroke.Color = Color3.fromRGB(60, 60, 65)
-cardStroke.Thickness = 1.5
-cardStroke.Parent = InfoCard
+local avatarImage = Instance.new("ImageLabel")
+avatarImage.Size = UDim2.new(0, 100, 0, 100)
+avatarImage.Position = UDim2.new(0.5, -50, 0, 10)
+avatarImage.BackgroundTransparency = 1
+avatarImage.ScaleType = Enum.ScaleType.Crop
 
-local AvatarFrame = Instance.new("Frame")
-AvatarFrame.Size = UDim2.new(0, 110, 0, 110)
-AvatarFrame.Position = UDim2.new(0.5, -55, 0, 15)
-AvatarFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-AvatarFrame.Parent = InfoCard
-Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
+local corner = Instance.new("UICorner", avatarImage)
+corner.CornerRadius = UDim.new(1, 0) 
 
-local AvatarImage = Instance.new("ImageLabel")
-AvatarImage.Size = UDim2.new(1, 0, 1, 0)
-AvatarImage.BackgroundTransparency = 1
-AvatarImage.ScaleType = Enum.ScaleType.Crop
-AvatarImage.Parent = AvatarFrame
-Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(1, 0)
+if ProfileSection._groupbox.Container then 
+    avatarImage.Parent = ProfileSection._groupbox.Container 
+else 
+    avatarImage.Parent = ProfileSection._groupbox 
+end
 
 task.spawn(function()
     local ok, thumb = pcall(function()
         return game:GetService("Players"):GetUserThumbnailAsync(game.Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
     end)
     if ok and thumb then
-        AvatarImage.Image = thumb
+        avatarImage.Image = thumb
     end
 end)
 
-local NameLabel = Instance.new("TextLabel")
-NameLabel.Size = UDim2.new(1, -20, 0, 24)
-NameLabel.Position = UDim2.new(0, 10, 0, 135)
-NameLabel.BackgroundTransparency = 1
-NameLabel.Text = game.Players.LocalPlayer.DisplayName
-NameLabel.TextColor3 = Color3.new(1, 1, 1)
-NameLabel.Font = Enum.Font.GothamBold
-NameLabel.TextSize = 22
-NameLabel.TextXAlignment = Enum.TextXAlignment.Center
-NameLabel.Parent = InfoCard
+ProfileSection._groupbox:AddDivider()
+ProfileSection._groupbox:AddLabel({Text = '用户名: <font color="rgb(0,255,0)">' .. game.Players.LocalPlayer.Name .. '</font>', DoesWrap = true})
+ProfileSection._groupbox:AddLabel({Text = 'ID: ' .. game.Players.LocalPlayer.UserId, DoesWrap = true})
 
-local UserLabel = Instance.new("TextLabel")
-UserLabel.Size = UDim2.new(1, -20, 0, 20)
-UserLabel.Position = UDim2.new(0, 10, 0, 162)
-UserLabel.BackgroundTransparency = 1
-UserLabel.Text = "@" .. game.Players.LocalPlayer.Name
-UserLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-UserLabel.Font = Enum.Font.Gotham
-UserLabel.TextSize = 14
-UserLabel.TextXAlignment = Enum.TextXAlignment.Center
-UserLabel.Parent = InfoCard
+local hwidSuccess, hwid = pcall(function() return game:GetService("RbxAnalyticsService"):GetClientId() end)
+ProfileSection._groupbox:AddLabel({Text = 'HWID: ' .. (hwidSuccess and hwid or "未知"), DoesWrap = true})
 
-local IdLabel = Instance.new("TextLabel")
-IdLabel.Size = UDim2.new(1, -20, 0, 20)
-IdLabel.Position = UDim2.new(0, 10, 0, 190)
-IdLabel.BackgroundTransparency = 1
-IdLabel.Text = "ID: " .. tostring(game.Players.LocalPlayer.UserId)
-IdLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-IdLabel.Font = Enum.Font.Gotham
-IdLabel.TextSize = 13
-IdLabel.TextXAlignment = Enum.TextXAlignment.Center
-IdLabel.Parent = InfoCard
-
-local ExecLabel = Instance.new("TextLabel")
-ExecLabel.Size = UDim2.new(1, -20, 0, 20)
-ExecLabel.Position = UDim2.new(0, 10, 0, 215)
-ExecLabel.BackgroundTransparency = 1
-ExecLabel.Text = "注入器: " .. executorName
-ExecLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-ExecLabel.Font = Enum.Font.GothamSemibold
-ExecLabel.TextSize = 13
-ExecLabel.TextXAlignment = Enum.TextXAlignment.Center
-ExecLabel.Parent = InfoCard
+ProfileSection._groupbox:AddLabel({Text = '注入器: <font color="rgb(100,200,255)">' .. executorName .. '</font>', DoesWrap = true})
 
 local startTime = os.time()
-local usageLabel = Instance.new("TextLabel")
-usageLabel.Size = UDim2.new(1, -20, 0, 20)
-usageLabel.Position = UDim2.new(0, 10, 0, 245)
-usageLabel.BackgroundTransparency = 1
-usageLabel.Text = "使用时间: 0 分钟"
-usageLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-usageLabel.Font = Enum.Font.Gotham
-usageLabel.TextSize = 13
-usageLabel.TextXAlignment = Enum.TextXAlignment.Center
-usageLabel.Parent = InfoCard
-
+local usageLabel = ProfileSection._groupbox:AddLabel({Text = '使用时间 <font color="rgb(255,0,0)">0</font> 分钟', DoesWrap = true})
 task.spawn(function()
     while task.wait(60) do
-        usageLabel.Text = "使用时间: " .. math.floor((os.time() - startTime) / 60) .. " 分钟"
+        usageLabel:SetText('使用时间 <font color="rgb(0,255,0)">' .. math.floor((os.time() - startTime) / 60) .. '</font> 分钟')
+    end
+end)
+
+local function getTimeGreeting()
+    local hour = os.date("*t").hour
+    if hour >= 5 and hour < 12 then return "上午" elseif hour >= 12 and hour < 18 then return "下午" else return "晚上" end
+end
+
+ProfileSection._groupbox:AddDivider()
+ProfileSection._groupbox:AddLabel({Text = '欢迎 <font color="rgb(0,255,0)">' .. game.Players.LocalPlayer.Name .. '</font> ' .. getTimeGreeting() .. '好', DoesWrap = true})
+
+local timeLabel = ProfileSection._groupbox:AddLabel({Text = '<font color="rgb(0,255,0)">' .. os.date("%Y-%m-%d %H:%M:%S") .. '</font>', DoesWrap = true})
+task.spawn(function()
+    while task.wait(1) do
+        timeLabel:SetText('<font color="rgb(0,255,0)">' .. os.date("%Y-%m-%d %H:%M:%S") .. '</font>')
     end
 end)
 
