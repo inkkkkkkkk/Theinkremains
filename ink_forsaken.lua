@@ -412,11 +412,6 @@ function window:Tab(name, icon)
     adapter._rawTab = tab
     return adapter
 end
-        local tab = self._window:AddTab(title, icon or iconMap[title] or "layout-dashboard")
-        local adapter = makeTabAdapter(tab)
-        adapter._rawTab = tab
-        return adapter
-    end
 
     function window:CreateHomeTab(config)
         config = config or {}
