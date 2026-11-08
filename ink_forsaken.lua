@@ -451,7 +451,7 @@ local function createCompatWindow(config)
 end
 
 local RawWindow = createCompatWindow({
-    Name = "ink|forsaken",
+    Name = "ink|forsaken[CN-🇨🇳]",
     SubName = "[BY.Rebzyyx]",
     Keybind = Enum.KeyCode.RightShift,
 })
@@ -8159,6 +8159,13 @@ ThemeGroup:Dropdown({
 ThemeGroup:Dropdown({
     Name = "UI大小", Values = {"75%", "100%", "125%", "150%"}, Value = "100%",
     Callback = function(v) ObsidianLibrary:SetDPIScale(tonumber(v:gsub("%%",""))) end
+})
+ThemeGroup:Divider()
+ThemeGroup:Button({
+    Name = '<font color="rgb(255, 0, 0)">删除用户界面</font>',
+    Callback = function()
+        ObsidianLibrary:Unload()
+    end
 })
 
 if ThemeManager and SaveManager then
