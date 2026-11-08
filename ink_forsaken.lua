@@ -439,28 +439,93 @@ local Window = protectInterface(RawWindow)
 
 Window.CurrentConfig = "None"
 
-local HomeTab = Window:CreateHomeTab({
-    Name = "主页",
-    DiscordInvite = "",
-      SupportedExecutors = { "Delta", "Synapse X", "Krnl", "Codex", "Arceus X" },
-      UnsupportedExecutors = { "Roblox Studio" },
-      Segments = {
-          Details = { Text = "你的信息", Icon = "no" },
-          Script = { Text = "更新日志", Icon = "no" },
-      },
-    Changelog = {
-        {
-            Title = "RebzyyxNB",
-            Description = "Love.Rebzyyx",
-        },
-        {
-            Title = "单人制作",
-            Description = "功能可能比较差劲",
-        },
-    },
-})
-
+local HomeTab = Window:Tab("主页")
 local FengYu = HomeTab
+
+local ProfileSection = FengYu:Section({ Name = "个人信息档案", SubName = "你的专属信息展示" })
+
+local executorName = "未知执行器"
+if type(identifyexecutor) == "function" then
+    local ok, name = pcall(identifyexecutor)
+    if ok and name and name ~= "" then
+        executorName = name
+    end
+elseif syn then executorName = "Synapse X"
+elseif krnl then executorName = "Krnl"
+elseif fluxus then executorName = "Fluxus"
+elseif delta then executorName = "Delta"
+elseif codex then executorName = "Codex"
+end
+
+local InfoCard = Instance.new("Frame")
+InfoCard.Size = UDim2.new(1, -10, 0, 120)
+InfoCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+InfoCard.BorderSizePixel = 0
+InfoCard.Parent = ProfileSection._groupbox.Container or ProfileSection._groupbox
+
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 8)
+cardCorner.Parent = InfoCard
+
+local cardStroke = Instance.new("UIStroke")
+cardStroke.Color = Color3.fromRGB(60, 60, 65)
+cardStroke.Thickness = 1.5
+cardStroke.Parent = InfoCard
+
+local AvatarFrame = Instance.new("Frame")
+AvatarFrame.Size = UDim2.new(0, 80, 0, 80)
+AvatarFrame.Position = UDim2.new(0, 20, 0.5, -40)
+AvatarFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+AvatarFrame.Parent = InfoCard
+Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
+
+local AvatarImage = Instance.new("ImageLabel")
+AvatarImage.Size = UDim2.new(1, 0, 1, 0)
+AvatarImage.BackgroundTransparency = 1
+AvatarImage.Parent = AvatarFrame
+Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(1, 0)
+
+task.spawn(function()
+    local ok, thumb = pcall(function()
+        return game:GetService("Players"):GetUserThumbnailAsync(game.Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+    end)
+    if ok and thumb then
+        AvatarImage.Image = thumb
+    end
+end)
+
+local NameLabel = Instance.new("TextLabel")
+NameLabel.Size = UDim2.new(1, -120, 0, 30)
+NameLabel.Position = UDim2.new(0, 115, 0, 15)
+NameLabel.BackgroundTransparency = 1
+NameLabel.Text = game.Players.LocalPlayer.DisplayName
+NameLabel.TextColor3 = Color3.new(1, 1, 1)
+NameLabel.Font = Enum.Font.GothamBold
+NameLabel.TextSize = 20
+NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+NameLabel.Parent = InfoCard
+
+local UserLabel = Instance.new("TextLabel")
+UserLabel.Size = UDim2.new(1, -120, 0, 20)
+UserLabel.Position = UDim2.new(0, 115, 0, 45)
+UserLabel.BackgroundTransparency = 1
+UserLabel.Text = "@" .. game.Players.LocalPlayer.Name
+UserLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+UserLabel.Font = Enum.Font.Gotham
+UserLabel.TextSize = 14
+UserLabel.TextXAlignment = Enum.TextXAlignment.Left
+UserLabel.Parent = InfoCard
+
+local ExecLabel = Instance.new("TextLabel")
+ExecLabel.Size = UDim2.new(1, -120, 0, 20)
+ExecLabel.Position = UDim2.new(0, 115, 0, 70)
+ExecLabel.BackgroundTransparency = 1
+ExecLabel.Text = "注入器: " .. executorName .. "   |   ID: " .. tostring(game.Players.LocalPlayer.UserId)
+ExecLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+ExecLabel.Font = Enum.Font.GothamSemibold
+ExecLabel.TextSize = 13
+ExecLabel.TextXAlignment = Enum.TextXAlignment.Left
+ExecLabel.Parent = InfoCard
 
 local Feng = FengYu:Section({
     Name = "开发者卡片",
@@ -512,186 +577,155 @@ local Feng = FengYu:Section({
 Feng:Button({
     Name = "浏览器",
     Callback = function()
-        local TeleportService = game:GetService("TeleportService")
-        local HttpService = game:GetService("HttpService")
-        local Players = game:GetService("Players")
+        local TS = game:GetService("TweenService")
+        local UIS = game:GetService("UserInputService")
+        local HS = game:GetService("HttpService")
+        local TPS = game:GetService("TeleportService")
+        local SG = (gethui and gethui()) or game:GetService("CoreGui")
+        if SG:FindFirstChild("ModernBrowser") then SG.ModernBrowser:Destroy() end
 
-        local serverBrowserGui = Instance.new("ScreenGui")
-        serverBrowserGui.Name = "ServerBrowserGui"
-        serverBrowserGui.Parent = game.CoreGui
+        local gui = Instance.new("ScreenGui", SG)
+        gui.Name = "ModernBrowser"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true
 
-        local mainFrame = Instance.new("Frame")
-        mainFrame.Name = "MainFrame"
-        mainFrame.Size = UDim2.new(0, 400, 0, 300)
-        mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        mainFrame.BorderSizePixel = 0
-        mainFrame.Active = true
-        mainFrame.Draggable = true
-        mainFrame.Parent = serverBrowserGui
+        local main = Instance.new("Frame", gui)
+        main.Size = UDim2.new(0, 0, 0, 0); main.Position = UDim2.new(0.5, -170, 0.5, -190)
+        main.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
+        main.BorderSizePixel = 0; main.ClipsDescendants = true
+        Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
+        local mStroke = Instance.new("UIStroke", main); mStroke.Color = Color3.fromRGB(65, 65, 70); mStroke.Thickness = 1.5
+        TS:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = UDim2.new(0, 340, 0, 380)}):Play()
 
-        local titleBar = Instance.new("Frame")
-        titleBar.Name = "TitleBar"
-        titleBar.Size = UDim2.new(1, 0, 0, 30)
-        titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        titleBar.BorderSizePixel = 0
-        titleBar.Parent = mainFrame
-
-        local titleText = Instance.new("TextLabel")
-        titleText.Name = "TitleText"
-        titleText.Size = UDim2.new(1, -30, 1, 0)
-        titleText.Position = UDim2.new(0, 10, 0, 0)
-        titleText.BackgroundTransparency = 1
-        titleText.Text = "服务器浏览器"
-        titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-        titleText.TextSize = 16
-        titleText.Font = Enum.Font.SourceSansBold
-        titleText.TextXAlignment = Enum.TextXAlignment.Left
-        titleText.Parent = titleBar
-
-        local closeButton = Instance.new("TextButton")
-        closeButton.Name = "CloseButton"
-        closeButton.Size = UDim2.new(0, 20, 0, 20)
-        closeButton.Position = UDim2.new(1, -25, 0, 5)
-        closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        closeButton.Text = "X"
-        closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        closeButton.Font = Enum.Font.SourceSansBold
-        closeButton.TextSize = 14
-        closeButton.Parent = titleBar
-
-        local serverList = Instance.new("ScrollingFrame")
-        serverList.Name = "ServerList"
-        serverList.Size = UDim2.new(1, -20, 1, -80)
-        serverList.Position = UDim2.new(0, 10, 0, 40)
-        serverList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        serverList.BorderSizePixel = 0
-        serverList.ScrollBarThickness = 6
-        serverList.CanvasSize = UDim2.new(0, 0, 0, 0)
-        serverList.Parent = mainFrame
-
-        local refreshButton = Instance.new("TextButton")
-        refreshButton.Name = "RefreshButton"
-        refreshButton.Size = UDim2.new(0, 100, 0, 30)
-        refreshButton.Position = UDim2.new(0, 10, 1, -35)
-        refreshButton.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
-        refreshButton.Text = "刷新"
-        refreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        refreshButton.Font = Enum.Font.SourceSansBold
-        refreshButton.TextSize = 14
-        refreshButton.Parent = mainFrame
-
-        local statusLabel = Instance.new("TextLabel")
-        statusLabel.Name = "StatusLabel"
-        statusLabel.Size = UDim2.new(0, 280, 0, 30)
-        statusLabel.Position = UDim2.new(0, 120, 1, -35)
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.Text = "准备就绪"
-        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-        statusLabel.TextSize = 14
-        statusLabel.Font = Enum.Font.SourceSans
-        statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-        statusLabel.Parent = mainFrame
-
-        local UIListLayout = Instance.new("UIListLayout")
-        UIListLayout.Parent = serverList
-        UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        UIListLayout.Padding = UDim.new(0, 5)
-
-        local function createServerButton(serverInfo, index)
-            local serverButton = Instance.new("Frame")
-            serverButton.Name = "ServerButton_" .. index
-            serverButton.Size = UDim2.new(1, -10, 0, 50)
-            serverButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            serverButton.BorderSizePixel = 0
-
-            local playerCount = Instance.new("TextLabel")
-            playerCount.Name = "PlayerCount"
-            playerCount.Size = UDim2.new(0, 80, 1, 0)
-            playerCount.BackgroundTransparency = 1
-            playerCount.Text = serverInfo.playing .. "/" .. serverInfo.maxPlayers
-            playerCount.TextColor3 = Color3.fromRGB(255, 255, 255)
-            playerCount.TextSize = 14
-            playerCount.Font = Enum.Font.SourceSans
-            playerCount.Parent = serverButton
-
-            local pingLabel = Instance.new("TextLabel")
-            pingLabel.Name = "PingLabel"
-            pingLabel.Size = UDim2.new(0, 80, 0, 20)
-            pingLabel.Position = UDim2.new(0, 90, 0, 5)
-            pingLabel.BackgroundTransparency = 1
-            pingLabel.Text = "延迟: " .. (serverInfo.ping or "N/A")
-            pingLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-            pingLabel.TextSize = 12
-            pingLabel.Font = Enum.Font.SourceSans
-            pingLabel.TextXAlignment = Enum.TextXAlignment.Left
-            pingLabel.Parent = serverButton
-
-            local idLabel = Instance.new("TextLabel")
-            idLabel.Name = "IdLabel"
-            idLabel.Size = UDim2.new(0, 200, 0, 20)
-            idLabel.Position = UDim2.new(0, 90, 0, 25)
-            idLabel.BackgroundTransparency = 1
-            idLabel.Text = "ID: " .. serverInfo.id
-            idLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-            idLabel.TextSize = 12
-            idLabel.Font = Enum.Font.SourceSans
-            idLabel.TextXAlignment = Enum.TextXAlignment.Left
-            idLabel.Parent = serverButton
-
-            local joinButton = Instance.new("TextButton")
-            joinButton.Name = "JoinButton"
-            joinButton.Size = UDim2.new(0, 60, 0, 25)
-            joinButton.Position = UDim2.new(1, -70, 0.5, -12.5)
-            joinButton.BackgroundColor3 = Color3.fromRGB(70, 150, 70)
-            joinButton.Text = "加入"
-            joinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            joinButton.Font = Enum.Font.SourceSansBold
-            joinButton.TextSize = 14
-            joinButton.Parent = serverButton
-
-            joinButton.MouseButton1Click:Connect(function()
-                statusLabel.Text = "正在加入服务器..."
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, serverInfo.id)
-            end)
-
-            return serverButton
-        end
-
-        local function fetchServers()
-            statusLabel.Text = "正在获取服务器..."
-            for _, child in pairs(serverList:GetChildren()) do
-                if child:IsA("Frame") then child:Destroy() end
+        local drag, dStart, sPos
+        main.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                drag = true; dStart = i.Position; sPos = main.Position
+                i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then drag = false end end)
             end
-
-            local success, result = pcall(function()
-                return HttpService:JSONDecode(GuardedHttpGet(
-                    "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-                ))
-            end)
-
-            if success and result and result.data then
-                for i, server in ipairs(result.data) do
-                    local btn = createServerButton({
-                        id = server.id,
-                        playing = server.playing,
-                        maxPlayers = server.maxPlayers,
-                        ping = server.ping
-                    }, i)
-                    btn.Parent = serverList
-                end
-                serverList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
-                statusLabel.Text = "找到 " .. #result.data .. " 个服务器"
-            else
-                statusLabel.Text = "获取服务器失败"
-            end
-        end
-
-        refreshButton.MouseButton1Click:Connect(fetchServers)
-        closeButton.MouseButton1Click:Connect(function()
-            serverBrowserGui:Destroy()
         end)
-        fetchServers()
+        UIS.InputChanged:Connect(function(i)
+            if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                local d = i.Position - dStart
+                main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + d.X, sPos.Y.Scale, sPos.Y.Offset + d.Y)
+            end
+        end)
+
+        local bar = Instance.new("Frame", main); bar.Size = UDim2.new(0, 4, 0, 16); bar.Position = UDim2.new(0, 15, 0, 17)
+        bar.BackgroundColor3 = Color3.fromRGB(180, 180, 180); bar.BorderSizePixel = 0
+        Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+
+        local title = Instance.new("TextLabel", main)
+        title.Size = UDim2.new(1, -70, 0, 50); title.Position = UDim2.new(0, 25, 0, 0); title.BackgroundTransparency = 1
+        title.Text = "服务器矩阵"; title.TextColor3 = Color3.new(1,1,1); title.Font = Enum.Font.GothamBold; title.TextSize = 16; title.TextXAlignment = Enum.TextXAlignment.Left
+
+        local close = Instance.new("TextButton", main)
+        close.Size = UDim2.new(0, 28, 0, 28); close.Position = UDim2.new(1, -38, 0, 11)
+        close.BackgroundColor3 = Color3.fromRGB(80, 80, 85); close.BackgroundTransparency = 1
+        close.Text = "X"; close.TextColor3 = Color3.fromRGB(180, 180, 180); close.Font = Enum.Font.GothamBold; close.TextSize = 15
+        Instance.new("UICorner", close).CornerRadius = UDim.new(1, 0)
+        close.MouseEnter:Connect(function() TS:Create(close, TweenInfo.new(0.15), {BackgroundTransparency = 0.5, TextColor3 = Color3.new(1,1,1)}):Play() end)
+        close.MouseLeave:Connect(function() TS:Create(close, TweenInfo.new(0.15), {BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(180,180,180)}):Play() end)
+
+        close.MouseButton1Click:Connect(function()
+            main.Visible = false
+            local sGui = Instance.new("ScreenGui", SG)
+            local bp, bs = main.AbsolutePosition, main.AbsoluteSize
+            local w, h = bs.X / 5, bs.Y / 5
+            for i = 1, 5 do for j = 1, 5 do
+                local shard = Instance.new("Frame", sGui)
+                shard.Size = UDim2.new(0, w + 1, 0, h + 1)
+                shard.Position = UDim2.new(0, bp.X + (i-1)*w, 0, bp.Y + (j-1)*h)
+                shard.BackgroundColor3 = Color3.fromRGB(30, 30, 34); shard.BorderSizePixel = 0
+                local fx = (i - 3) * math.random(50, 120)
+                local fy = (j - 3) * math.random(50, 120) + math.random(100, 200)
+                TS:Create(shard, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                    Position = shard.Position + UDim2.new(0, fx, 0, fy),
+                    Rotation = math.random(-180, 180),
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(0, 0, 0, 0)
+                }):Play()
+            end end
+            task.wait(0.6); gui:Destroy(); sGui:Destroy()
+        end)
+
+        local line = Instance.new("Frame", main); line.Size = UDim2.new(1, -30, 0, 1); line.Position = UDim2.new(0, 15, 0, 45)
+        line.BackgroundColor3 = Color3.fromRGB(65, 65, 70); line.BorderSizePixel = 0
+
+        local list = Instance.new("ScrollingFrame", main)
+        list.Size = UDim2.new(1, -30, 1, -95); list.Position = UDim2.new(0, 15, 0, 55)
+        list.BackgroundTransparency = 1; list.ScrollBarThickness = 2; list.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100); list.CanvasSize = UDim2.new(0,0,0,0)
+        Instance.new("UIListLayout", list).Padding = UDim.new(0, 6)
+
+        local function mkBtn(txt, bgColor)
+            local b = Instance.new("TextButton", main)
+            b.BackgroundColor3 = bgColor; b.Text = txt; b.TextColor3 = Color3.new(1,1,1)
+            b.Font = Enum.Font.GothamBold; b.TextSize = 13; b.AutoButtonColor = false
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+            return b
+        end
+
+        local btn = mkBtn("刷新", Color3.fromRGB(60, 60, 65))
+        btn.Size = UDim2.new(0, 80, 0, 30); btn.Position = UDim2.new(0, 15, 1, -40)
+        btn.MouseEnter:Connect(function() TS:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 80, 85)}):Play() end)
+        btn.MouseLeave:Connect(function() TS:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 65)}):Play() end)
+
+        local status = Instance.new("TextLabel", main)
+        status.Size = UDim2.new(0, 230, 0, 30); status.Position = UDim2.new(1, -245, 1, -40); status.BackgroundTransparency = 1
+        status.Text = "准备就绪"; status.TextColor3 = Color3.fromRGB(150, 150, 150); status.Font = Enum.Font.Gotham; status.TextSize = 12; status.TextXAlignment = Enum.TextXAlignment.Right; status.TextWrapped = true
+
+        local function mkCard(s)
+            local c = Instance.new("Frame", list)
+            c.Size = UDim2.new(1, -6, 0, 55); c.BackgroundColor3 = Color3.fromRGB(42, 42, 46); c.BorderSizePixel = 0
+            Instance.new("UICorner", c).CornerRadius = UDim.new(0, 6)
+            local st = Instance.new("UIStroke", c); st.Color = Color3.fromRGB(65, 65, 70); st.Thickness = 1; st.Transparency = 0.5
+
+            local p = Instance.new("TextLabel", c)
+            p.Size = UDim2.new(0, 65, 0, 20); p.Position = UDim2.new(0, 10, 0, 8); p.BackgroundTransparency = 1
+            p.Text = s.playing .. "/" .. s.maxPlayers; p.TextColor3 = Color3.fromRGB(230, 230, 230); p.Font = Enum.Font.GothamBold; p.TextSize = 14; p.TextXAlignment = Enum.TextXAlignment.Left
+
+            local ping = Instance.new("TextLabel", c)
+            ping.Size = UDim2.new(0, 65, 0, 20); ping.Position = UDim2.new(0, 10, 0, 28); ping.BackgroundTransparency = 1
+            ping.Text = "Ping " .. (s.ping or "?"); ping.TextColor3 = Color3.fromRGB(140, 140, 140); ping.Font = Enum.Font.Gotham; ping.TextSize = 11; ping.TextXAlignment = Enum.TextXAlignment.Left
+
+            local id = Instance.new("TextLabel", c)
+            id.Size = UDim2.new(0, 140, 1, 0); id.Position = UDim2.new(0, 80, 0, 0); id.BackgroundTransparency = 1
+            id.Text = "ID: " .. s.id; id.TextColor3 = Color3.fromRGB(120, 120, 120); id.Font = Enum.Font.Gotham; id.TextSize = 10; id.TextXAlignment = Enum.TextXAlignment.Left
+            id.TextTruncate = Enum.TextTruncate.AtEnd
+
+            local j = mkBtn("加入", Color3.fromRGB(70, 70, 75)); j.Parent = c
+            j.Size = UDim2.new(0, 60, 0, 28); j.Position = UDim2.new(1, -70, 0.5, -14); j.TextSize = 12
+            j.MouseEnter:Connect(function() TS:Create(j, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(100, 100, 105)}):Play() end)
+            j.MouseLeave:Connect(function() TS:Create(j, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 75)}):Play() end)
+            j.MouseButton1Click:Connect(function() status.Text = "正在传送..."; status.TextColor3 = Color3.fromRGB(255, 255, 255); TPS:TeleportToPlaceInstance(game.PlaceId, s.id) end)
+
+            c.MouseEnter:Connect(function() TS:Create(st, TweenInfo.new(0.2), {Color = Color3.fromRGB(180, 180, 180), Transparency = 0}):Play() end)
+            c.MouseLeave:Connect(function() TS:Create(st, TweenInfo.new(0.2), {Color = Color3.fromRGB(65, 65, 70), Transparency = 0.5}):Play() end)
+        end
+
+        local isFetch, cd = false, 0
+        local function fetch()
+            if isFetch then return end
+            if tick() < cd then status.Text = "冷却中 " .. math.ceil(cd - tick()) .. "s"; status.TextColor3 = Color3.fromRGB(150, 150, 150); return end
+            isFetch = true; cd = tick() + 5; btn.Text = "Wait..."; status.Text = "获取中..."; status.TextColor3 = Color3.fromRGB(200, 200, 200)
+            
+            for _, v in pairs(list:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+            local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=true"
+            local ok, res = pcall(function()
+                local rf = (syn and syn.request) or (http and http.request) or http_request or request
+                local body = rf and rf({Url = url, Method = "GET"}).Body or game:HttpGet(url)
+                return HS:JSONDecode(body)
+            end)
+            
+            if ok and res and res.data then
+                if #res.data == 0 then status.Text = "无公开房间"; status.TextColor3 = Color3.fromRGB(180, 180, 180) else
+                    for _, s in ipairs(res.data) do mkCard(s) end
+                    list.CanvasSize = UDim2.new(0, 0, 0, #res.data *  61)
+                    status.Text = "已连接 " .. #res.data .. " 个节点"; status.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
+            else status.Text = "拒绝连接"; status.TextColor3 = Color3.fromRGB(180, 180, 180) end
+            
+            task.spawn(function() task.wait(5); isFetch = false; btn.Text = "刷新" end)
+        end
+        btn.MouseButton1Click:Connect(fetch); fetch()
     end
 })
 
