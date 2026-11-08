@@ -1354,6 +1354,63 @@ Feng:Slider({
 end
 
 local Feng = FengYu:Section({
+    Name = "视角修改",
+    SubName = "自定义你的视野范围 (FOV)",
+})
+
+do
+    local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+    local player = game.Players.LocalPlayer
+
+    local function ApplyCustomFOV(value)
+        pcall(function()
+            local fovObj = player:FindFirstChild("PlayerData") and 
+                           player.PlayerData:FindFirstChild("Settings") and 
+                           player.PlayerData.Settings:FindFirstChild("Game") and 
+                           player.PlayerData.Settings.Game:FindFirstChild("FieldOfView")
+
+            if not fovObj then return end
+
+            fovObj.Value = value
+
+            local b = buffer.create(9)
+            buffer.writeu8(b, 0, 2)         
+            buffer.writef64(b, 1, value)     
+
+            local args = {
+                "UpdateSettings",
+                {
+                    fovObj,
+                    b
+                }
+            }
+            remote:FireServer(unpack(args))
+        end)
+    end
+
+    Feng:Slider({
+        Name = "视野范围 (FOV)",
+        Value = {
+            Min = 50, 
+            Max = 120,
+            Default = 80 
+        },
+        Rounding = 0,
+        Suffix = " 度",
+        Callback = function(v)
+            ApplyCustomFOV(v)
+        end
+    })
+    
+    Feng:Button({
+        Name = "重置视野为 80",
+        Callback = function()
+            ApplyCustomFOV(80)
+        end
+    })
+end
+
+local Feng = FengYu:Section({
     Name = "保存点",
     SubName = "标记位置并传送",
 })
