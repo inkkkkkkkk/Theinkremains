@@ -502,7 +502,7 @@ Feng:Social({
     Logo = "rbxassetid://70743990637031"
 })
 
-local FengYu = Window:Tab("服务器", "132419977785712")
+local FengYu = Window:Tab("服务器")
 
 local Feng = FengYu:Section({
     Name = "服务器列表",
@@ -770,7 +770,7 @@ Feng:Button({
     end
 })
 
-local FengYu = Window:Tab("通用区", "73542239032835")
+local FengYu = Window:Tab("通用区")
 
 local Feng = FengYu:Section({
     Name = "主要列表",
@@ -1533,7 +1533,7 @@ Feng:Toggle({
 })
 end
 
-local FengYu = Window:Tab("体力区", "130874893373683")
+local FengYu = Window:Tab("体力区")
 
 local Feng = FengYu:Section({ Name = "体力设置" })
 local FengVu = FengYu:Section({ Name = "安全漏洞" })
@@ -1864,7 +1864,7 @@ FengVu:Toggle({
 })
 end
 
-local FengYu = Window:Tab("透视区", "126418616428157")
+local FengYu = Window:Tab("透视区")
 
 local Feng = FengYu:Section({
     Name = "发电机透视",
@@ -3771,7 +3771,7 @@ Feng:Colorpicker({
 })
 end
 
-local FengYu = Window:Tab("物品区", "140005402255916")
+local FengYu = Window:Tab("物品区")
 
 local Feng = FengYu:Section({
     Name = "物品互动",
@@ -5117,7 +5117,7 @@ end
     })
 end
 
-local FengYu = Window:Tab("幸存者功能", "6452688833")
+local FengYu = Window:Tab("幸存者功能")
 
 local Feng = FengYu:Section({
     Name = "机会",
@@ -6309,7 +6309,7 @@ Feng:Toggle({
 })
 end
 
-local FengYu = Window:Tab("杀手功能", "10953967587")
+local FengYu = Window:Tab("杀手功能")
 
 local Feng = FengYu:Section({ Name = "扩展" })
 local FengTr = FengYu:Section({ Name = "追踪" })
@@ -7965,7 +7965,7 @@ Feng:Toggle({
 })
 end
 
-local FengYu = Window:Tab("娱乐区", "108446823535062")
+local FengYu = Window:Tab("娱乐区")
 
 local Feng = FengYu:Section({
     Name = "权限设置",
