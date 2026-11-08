@@ -5242,6 +5242,138 @@ end
         Name = "判定区高度", Value = tostring(ABConfig.ZoneHeight), Placeholder = "0.5",
         Callback = function(text) ABConfig.ZoneHeight = tonumber(text) or 0.5 end,
     })
+    
+    local QuickBarGui_Audio = nil
+local QuickBarBtn_Audio = nil
+local QuickBarGui_Custom = nil
+local QuickBarBtn_Custom = nil
+
+local function RefreshQuickBars()
+    if QuickBarBtn_Audio then
+        if ABConfig.AutoBlock then
+            QuickBarBtn_Audio.BackgroundColor3 = Color3.fromRGB(85, 85, 90) 
+            QuickBarBtn_Audio.Text = "音效格挡\n已开启"
+        else
+            QuickBarBtn_Audio.BackgroundColor3 = Color3.fromRGB(45, 45, 48) 
+            QuickBarBtn_Audio.Text = "音效格挡\n已关闭"
+        end
+    end
+
+    if QuickBarBtn_Custom then
+        if ABConfig.AutoBlockCustom then
+            QuickBarBtn_Custom.BackgroundColor3 = Color3.fromRGB(85, 85, 90) 
+            QuickBarBtn_Custom.Text = "自定义格挡\n已开启"
+        else
+            QuickBarBtn_Custom.BackgroundColor3 = Color3.fromRGB(45, 45, 48) 
+            QuickBarBtn_Custom.Text = "自定义格挡\n已关闭"
+        end
+    end
+end
+
+local function CreateSingleQuickBar(mode, defaultPos)
+    local SG = (gethui and gethui()) or game:GetService("CoreGui")
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "AutoBlockQuickBar_" .. mode
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 999
+    gui.Parent = SG
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 150, 0, 60)
+    btn.Position = defaultPos
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 15
+    btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    btn.AutoButtonColor = false
+    btn.TextWrapped = true
+    btn.Parent = gui
+    
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.fromRGB(100, 100, 100)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.2
+
+    btn.MouseButton1Click:Connect(function()
+        if mode == "default" then
+            requestBlockToggle(not ABConfig.AutoBlock, "default")
+            if ABToggles.AutoBlock then
+                ABSuppressCallbacks = true
+                pcall(function() ABToggles.AutoBlock:Set(ABConfig.AutoBlock) end)
+                ABSuppressCallbacks = false
+            end
+        else
+            requestBlockToggle(not ABConfig.AutoBlockCustom, "custom")
+            if ABToggles.AutoBlockCustom then
+                ABSuppressCallbacks = true
+                pcall(function() ABToggles.AutoBlockCustom:Set(ABConfig.AutoBlockCustom) end)
+                ABSuppressCallbacks = false
+            end
+        end
+        RefreshQuickBars()
+    end)
+
+    local dragging, dragInput, dragStart, startPos
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = btn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    btn.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    return gui, btn
+end
+
+local oldApplyBlockToggle = applyBlockToggle
+applyBlockToggle = function(request)
+    oldApplyBlockToggle(request)
+    RefreshQuickBars()
+end
+
+autoBlockHubTab:Section({ Name = "自动格挡快捷" })
+
+autoBlockHubTab:Toggle({
+    Name = "开启 [音效格挡] 悬浮窗",
+    Value = false,
+    Callback = function(state)
+        if state then
+            QuickBarGui_Audio, QuickBarBtn_Audio = CreateSingleQuickBar("default", UDim2.new(0, 20, 0.4, 0))
+            RefreshQuickBars()
+        else
+            if QuickBarGui_Audio then QuickBarGui_Audio:Destroy() QuickBarGui_Audio = nil QuickBarBtn_Audio = nil end
+        end
+    end
+})
+
+autoBlockHubTab:Toggle({
+    Name = "开启 [自定义格挡] 悬浮窗",
+    Value = false,
+    Callback = function(state)
+        if state then
+            QuickBarGui_Custom, QuickBarBtn_Custom = CreateSingleQuickBar("custom", UDim2.new(0, 20, 0.5, 0))
+            RefreshQuickBars()
+        else
+            if QuickBarGui_Custom then QuickBarGui_Custom:Destroy() QuickBarGui_Custom = nil QuickBarBtn_Custom = nil end
+        end
+    end
+})
+    
 end
 
 local FengYu = Window:Tab("幸存者功能")
