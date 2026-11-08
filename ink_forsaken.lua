@@ -861,7 +861,7 @@ Feng:Button({
 end
 
 Feng:Button({
-    Name = "翻译过的Dex",
+    Name = "Dex++[反编译]",
     Callback = function()
         LoadRemote("https://gitee.com/cmbhbh/cmbh/raw/master/Bex.lua")
     end
@@ -4112,6 +4112,30 @@ local autoBlockState = {
   LocalRoot = nil,
 }
 
+local IgnoreBeheadCooldown = false
+
+local BlacklistIDs = {
+    ["84856423728667"] = true,
+    ["126355327951215"] = true,
+    ["126681776859538"] = true,
+    ["116250166603410"] = true,
+    ["102111078266527"] = true,
+    ["126727756047566"] = true,
+}
+
+task.spawn(function()
+    local Event = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+    
+    Event.OnClientEvent:Connect(function(action, data)
+        if action == "UseActorAbility" and type(data) == "table" and data[1] == "Behead" then
+            IgnoreBeheadCooldown = true
+            task.delay(1, function()
+                IgnoreBeheadCooldown = false
+            end)
+        end
+    end)
+end)
+
 local startAutoBlock, stopAutoBlock
 
 local fourthButtonState = {
@@ -4227,6 +4251,10 @@ local function getActiveBlockMode()
 end
 
 local function performBlock()
+    if IgnoreBeheadCooldown then
+        return
+    end
+
   if getActiveBlockMode() == "007n7" then
     fireClone()
   else
@@ -4578,6 +4606,8 @@ local function enforceBlockModeExclusivity()
 end
 
 local function watchKillerSounds(killer)
+    local sId = sound.SoundId:match("%d+")
+    if sId and BlacklistIDs[sId] then return end
   if not killer then return end
 
   local function checkSound(sound)
@@ -8009,7 +8039,8 @@ do
         ["138938529389204"] = true, ["70483423693126"] = true, ["114126519127454"] = true, ["130958529065375"] = true,
         ["81803417290685"] = true, ["90620531468240"] = true, ["82691533602949"] = true, ["99829427721752"] = true,
         ["93366464803829"] = true, ["107032335460679"] = true, ["112135252467978"] = true, ["77375846492436"] = true,
-        ["127245564598429"] = true
+        ["127245564598429"] = true, ["106860049270347"] = true, ["120950360130737"] = true, ["108196996477620"] = true,
+        ["109572851772132"] = true
     }
 
     local autoBlockTriggerSounds = {
@@ -8025,7 +8056,7 @@ do
         ["117231507259853"] = true, ["119089145505438"] = true, ["121954639447247"] = true, ["125213046326879"] = true,
         ["131406927389838"] = true, ["71834552297085"] = true, ["805165833096"] = true, ["823363523051"] = true,
         ["120059928759346"] = true, ["82336352305186"] = true, ["104625283622511"] = true, ["126131675979001"] = true,
-        ["98675142200448"] = true
+        ["98675142200448"] = true, ["92869747208256"] = true, ["99215225043220"] = true, ["99918466107008"] = true,
     }
 
     local localPunchAnims = {"87259391926321", "86096387000557", "86709774283672", "140703210927645", "136007065400978", "129843313690921", "108807732150251", "138040001965654"}
@@ -8097,6 +8128,7 @@ do
                         for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                             local id = tostring(track.Animation and track.Animation.AnimationId or ""):match("%d+")
                             if id then
+                            if BlacklistIDs[id] then continue end
                                 local isGuestPunch = table.find(localPunchAnims, id)
                                 local isOneShoot = table.find(oneShootAnims, id)
                                 local validDist = false
