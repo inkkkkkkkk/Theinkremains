@@ -374,18 +374,44 @@ local function makeWindowAdapter(rawWindow, libraryObject)
         CurrentConfig = "None",
     }
 
-    function window:Tab(name, icon)
-        local title = tostring(name or "Tab")
-        local iconMap = {
-            ["服务器"] = "server",
-            ["通用区"] = "sliders-horizontal",
-            ["体力区"] = "zap",
-            ["透视区"] = "eye",
-            ["物品区"] = "package",
-            ["自动格挡"] = "shield",
-            ["幸存者功能"] = "user",
-            ["杀手功能"] = "users",
-        }
+function window:Tab(name, icon)
+    local title = tostring(name or "Tab")
+    local iconMap = {
+        ["服务器"] = "server",
+        ["通用区"] = "sliders-horizontal",
+        ["体力区"] = "zap",
+        ["透视区"] = "eye",
+        ["物品区"] = "package",
+        ["自动格挡"] = "shield",
+        ["幸存者功能"] = "user",
+        ["杀手功能"] = "users",
+        ["娱乐区"] = "gamepad-2",
+        ["界面设置"] = "settings",
+    }
+    
+    local descMap = {
+        ["主页"] = "Project_ink_forsaken 脚本首页",
+        ["服务器"] = "服务器相关内容",
+        ["通用区"] = "包含各类辅助功能",
+        ["体力区"] = "调整角色的体力相关功能",
+        ["透视区"] = "帮助你看到更多东西",
+        ["物品区"] = "物品管理 互动与传送",
+        ["自动格挡"] = "自动格挡相关功能",
+        ["幸存者功能"] = "幸存者的专属辅助",
+        ["杀手功能"] = "杀手的专属辅助",
+        ["娱乐区"] = "娱乐功能",
+        ["界面设置"] = "主题 UI 与配置管理"
+    }
+
+    local tab = self._window:AddTab({
+        Name = title,
+        Description = descMap[title] or "Project_ink_forsaken",
+        Icon = icon or iconMap[title] or "layout-dashboard"
+    })
+    local adapter = makeTabAdapter(tab)
+    adapter._rawTab = tab
+    return adapter
+end
         local tab = self._window:AddTab(title, icon or iconMap[title] or "layout-dashboard")
         local adapter = makeTabAdapter(tab)
         adapter._rawTab = tab
@@ -458,23 +484,20 @@ elseif codex then executorName = "Codex"
 end
 
 local InfoCard = Instance.new("Frame")
-InfoCard.Size = UDim2.new(1, -10, 0, 120)
+InfoCard.Size = UDim2.new(1, -10, 0, 290)
 InfoCard.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 InfoCard.BorderSizePixel = 0
 InfoCard.Parent = ProfileSection._groupbox.Container or ProfileSection._groupbox
+Instance.new("UICorner", InfoCard).CornerRadius = UDim.new(0, 8)
 
-local cardCorner = Instance.new("UICorner")
-cardCorner.CornerRadius = UDim.new(0, 8)
-cardCorner.Parent = InfoCard
-
-local cardStroke = Instance.new("UIStroke")
+local cardStroke = Instance.new("UIStroke", InfoCard)
 cardStroke.Color = Color3.fromRGB(60, 60, 65)
 cardStroke.Thickness = 1.5
 cardStroke.Parent = InfoCard
 
 local AvatarFrame = Instance.new("Frame")
-AvatarFrame.Size = UDim2.new(0, 80, 0, 80)
-AvatarFrame.Position = UDim2.new(0, 20, 0.5, -40)
+AvatarFrame.Size = UDim2.new(0, 110, 0, 110)
+AvatarFrame.Position = UDim2.new(0.5, -55, 0, 15)
 AvatarFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 AvatarFrame.Parent = InfoCard
 Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
@@ -482,12 +505,13 @@ Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
 local AvatarImage = Instance.new("ImageLabel")
 AvatarImage.Size = UDim2.new(1, 0, 1, 0)
 AvatarImage.BackgroundTransparency = 1
+AvatarImage.ScaleType = Enum.ScaleType.Crop
 AvatarImage.Parent = AvatarFrame
 Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(1, 0)
 
 task.spawn(function()
     local ok, thumb = pcall(function()
-        return game:GetService("Players"):GetUserThumbnailAsync(game.Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        return game:GetService("Players"):GetUserThumbnailAsync(game.Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
     end)
     if ok and thumb then
         AvatarImage.Image = thumb
@@ -495,37 +519,66 @@ task.spawn(function()
 end)
 
 local NameLabel = Instance.new("TextLabel")
-NameLabel.Size = UDim2.new(1, -120, 0, 30)
-NameLabel.Position = UDim2.new(0, 115, 0, 15)
+NameLabel.Size = UDim2.new(1, -20, 0, 24)
+NameLabel.Position = UDim2.new(0, 10, 0, 135)
 NameLabel.BackgroundTransparency = 1
 NameLabel.Text = game.Players.LocalPlayer.DisplayName
 NameLabel.TextColor3 = Color3.new(1, 1, 1)
 NameLabel.Font = Enum.Font.GothamBold
-NameLabel.TextSize = 20
-NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+NameLabel.TextSize = 22
+NameLabel.TextXAlignment = Enum.TextXAlignment.Center
 NameLabel.Parent = InfoCard
 
 local UserLabel = Instance.new("TextLabel")
-UserLabel.Size = UDim2.new(1, -120, 0, 20)
-UserLabel.Position = UDim2.new(0, 115, 0, 45)
+UserLabel.Size = UDim2.new(1, -20, 0, 20)
+UserLabel.Position = UDim2.new(0, 10, 0, 162)
 UserLabel.BackgroundTransparency = 1
 UserLabel.Text = "@" .. game.Players.LocalPlayer.Name
 UserLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 UserLabel.Font = Enum.Font.Gotham
 UserLabel.TextSize = 14
-UserLabel.TextXAlignment = Enum.TextXAlignment.Left
+UserLabel.TextXAlignment = Enum.TextXAlignment.Center
 UserLabel.Parent = InfoCard
 
+local IdLabel = Instance.new("TextLabel")
+IdLabel.Size = UDim2.new(1, -20, 0, 20)
+IdLabel.Position = UDim2.new(0, 10, 0, 190)
+IdLabel.BackgroundTransparency = 1
+IdLabel.Text = "ID: " .. tostring(game.Players.LocalPlayer.UserId)
+IdLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+IdLabel.Font = Enum.Font.Gotham
+IdLabel.TextSize = 13
+IdLabel.TextXAlignment = Enum.TextXAlignment.Center
+IdLabel.Parent = InfoCard
+
 local ExecLabel = Instance.new("TextLabel")
-ExecLabel.Size = UDim2.new(1, -120, 0, 20)
-ExecLabel.Position = UDim2.new(0, 115, 0, 70)
+ExecLabel.Size = UDim2.new(1, -20, 0, 20)
+ExecLabel.Position = UDim2.new(0, 10, 0, 215)
 ExecLabel.BackgroundTransparency = 1
-ExecLabel.Text = "注入器: " .. executorName .. "   |   ID: " .. tostring(game.Players.LocalPlayer.UserId)
+ExecLabel.Text = "注入器: " .. executorName
 ExecLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
 ExecLabel.Font = Enum.Font.GothamSemibold
 ExecLabel.TextSize = 13
-ExecLabel.TextXAlignment = Enum.TextXAlignment.Left
+ExecLabel.TextXAlignment = Enum.TextXAlignment.Center
 ExecLabel.Parent = InfoCard
+
+local startTime = os.time()
+local usageLabel = Instance.new("TextLabel")
+usageLabel.Size = UDim2.new(1, -20, 0, 20)
+usageLabel.Position = UDim2.new(0, 10, 0, 245)
+usageLabel.BackgroundTransparency = 1
+usageLabel.Text = "使用时间: 0 分钟"
+usageLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+usageLabel.Font = Enum.Font.Gotham
+usageLabel.TextSize = 13
+usageLabel.TextXAlignment = Enum.TextXAlignment.Center
+usageLabel.Parent = InfoCard
+
+task.spawn(function()
+    while task.wait(60) do
+        usageLabel.Text = "使用时间: " .. math.floor((os.time() - startTime) / 60) .. " 分钟"
+    end
+end)
 
 local Feng = FengYu:Section({
     Name = "开发者卡片",
