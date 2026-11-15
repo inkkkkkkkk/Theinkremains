@@ -814,7 +814,49 @@ pop(P4, {
     
     {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx  Rebzyyx F3xgui v67  BY.Rebzyyx, Rezlaine") end},
     
-    {"全服改皮肤", function() SendCmd(";char all zczczczc722") end} 
+    {"全服改皮肤", function() SendCmd(";char all zczczczc722") end},
+    
+    {"全服黑夜", function() 
+        SendCmd(";time 0") 
+        game:GetService("Lighting").ClockTime = 0 
+        game:GetService("Lighting").Brightness = 0 
+    end},
+    
+    {"全服白天", function() 
+        SendCmd(";time 14") 
+        game:GetService("Lighting").ClockTime = 14 
+        game:GetService("Lighting").Brightness = 2 
+    end},
+    
+    {"全服大雾", function() 
+        SendCmd(";fog 200") 
+        game:GetService("Lighting").FogEnd = 200 
+        game:GetService("Lighting").FogColor = Color3.fromRGB(150, 150, 150) 
+    end},
+    
+    {"重置环境", function() 
+        SendCmd(";time 14 ;fog 10000") 
+        game:GetService("Lighting").ClockTime = 14 
+        game:GetService("Lighting").Brightness = 2 
+        game:GetService("Lighting").FogEnd = 100000 
+        game:GetService("Lighting").FogColor = Color3.fromRGB(192, 192, 192) 
+    end},
+
+    {"变大(全服)", function() SendCmd(";size all 3") end},
+    {"变小(全服)", function() SendCmd(";size all 0.5") end},
+    {"变大(自己)", function() SendCmd(";size me 3") end},
+    {"变小(自己)", function() SendCmd(";size me 0.5") end},
+    
+    {"拉所有人", function() SendCmd(";bring all") end},
+    
+    {"杀死所有人", function() 
+        SendCmd(";kill all") 
+        for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("Humanoid") then
+                pcall(function() p.Character.Humanoid.Health = 0 end)
+            end
+        end
+    end}
 })
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
