@@ -525,7 +525,7 @@ local function TriggerJumpscare(imgId)
     local r = getRemote()
     if not r then return end
     
-    SendCmd(";music 6018028320")
+    SendCmd(";music 6018028320 ;volume 100")
     
     for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
         task.spawn(function()
@@ -544,7 +544,7 @@ local function TriggerJumpscare(imgId)
                 local startTime = tick()
                 local conn
                 conn = RunService.Heartbeat:Connect(function()
-                    if tick() - startTime > 3 then
+                    if tick() - startTime > 9 then
                         conn:Disconnect()
                         pcall(function() r:InvokeServer("Remove", {p}) end)
                         return
