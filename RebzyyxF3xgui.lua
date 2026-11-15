@@ -84,6 +84,20 @@ GetBtn.MouseLeave:Connect(function() TS:Create(GetBtn, TweenInfo.new(0.1), {Back
 Btn.MouseEnter:Connect(function() if not Lock and not Working then TS:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(255,50,80)}):Play() end end)
 Btn.MouseLeave:Connect(function() if not Lock and not Working then TS:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3=R}):Play() end end)
 
+task.spawn(function()
+    if isfile and isfile("Rebzyyx_Remember.txt") then
+        local ok, content = pcall(readfile, "Rebzyyx_Remember.txt")
+        if ok and content and content ~= "" then
+            local k = string.upper(content)
+            if Keys[k] then
+                Input.Text = k
+                Stat.Text = "已自动填入上次卡密，请点击验证"
+                Stat.TextColor3 = Color3.fromRGB(50,200,100)
+            end
+        end
+    end
+end)
+
 Btn.MouseButton1Click:Connect(function()
     if Lock or Working then return end
     local k = string.upper(Input.Text)
@@ -119,6 +133,7 @@ Btn.MouseButton1Click:Connect(function()
         blur:Destroy() Gui:Destroy()
         game:GetService("StarterGui"):SetCore("SendNotification", {Title="卡密验证", Text=Keys[k], Duration=4})
         getgenv().AuthPassed = true
+        if writefile then pcall(writefile, "Rebzyyx_Remember.txt", k) end
     else
         Fail = Fail + 1
         Btn.Text = "验证" Shake()
