@@ -534,7 +534,7 @@ end
 
 local lastCmdTime = 0
 local function SendCmd(cmd)
-    if tick() - lastCmdTime < 3 then return end
+    if tick() - lastCmdTime < 0.3 then return end
     lastCmdTime = tick()
     
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -770,13 +770,20 @@ pop(P3, MusicList)
 pop(P2, BaseList)
 pop(P4, {
     {"获取F3X", function() SendCmd(";btools me") end}, 
+
+    {"R6(自己)",  function() SendCmd(";r6 me")  end},
+    {"R6(全服)",  function() SendCmd(";r6 all") end},
+    {"R15(自己)", function() SendCmd(";r15 me") end},
+    {"R15(全服)", function() SendCmd(";r15 all") end},
+    {"RE(自己)",  function() SendCmd(";re me")  end},
+    {"RE(全服)",  function() SendCmd(";re all") end},
     
     {"标题(自己)", function() SendCmd(";titler me Rebzyyx") end},
     {"标题(全服)", function() SendCmd(";titler all Rebzyyx") end},
     
     {"全服改名", function() SendCmd(";name all Rebzyyx") end}, 
     
-    {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx. Rebzyyx F3xgui v67 BY.Rebzyyx, Rezlaine.") end},
+    {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx  Rebzyyx F3xgui v67  BY.Rebzyyx, Rezlaine") end},
     
     {"全服改皮肤", function() SendCmd(";char all zczczczc722") end} 
 })
