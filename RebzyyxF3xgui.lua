@@ -777,13 +777,12 @@ local realmBtn = c("TextButton", {
     Size = UDim2.new(1, 0, 0, 38), 
     Font = Enum.Font.GothamBold, 
     Text = "Rebzyyx realm[BY.Rebzyyx]", 
-    TextColor3 = RED, 
+    TextColor3 = TXT, 
     TextSize = 14, 
     AutoButtonColor = false, 
     ZIndex = 3
 }, P2)
 c("UICorner", {CornerRadius = UDim.new(0, 8)}, realmBtn)
-c("UIStroke", {Color = RED, Thickness = 1.5}, realmBtn)
 
 realmBtn.MouseEnter:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
 realmBtn.MouseLeave:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN}):Play() end)
