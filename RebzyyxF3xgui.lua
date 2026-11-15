@@ -4,7 +4,7 @@ local TS, RS, LG = game:GetService("TweenService"), game:GetService("RunService"
 local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end if par then o.Parent=par end return o end
 local R, BG, W, D, L = Color3.fromRGB(220,20,60), Color3.fromRGB(15,15,18), Color3.fromRGB(245,245,245), Color3.fromRGB(130,130,135), Color3.fromRGB(40,40,45)
-local Keys = {["REBZYYX-KEY"]="欢迎尊贵的作者", ["REZLAINE-KEY"]="欢迎尊贵的作者", ["RZ336"]="成功验证通用卡密"}
+local Keys = {["REBZYYX-KEY"]="欢迎尊贵的作者", ["REZLAINE-KEY"]="欢迎尊贵的作者", ["RZ336"]="成功验证通用卡密",["测试卡密"]="成功验证测试卡密"}
 
 local blur = new("BlurEffect", {Size=0, Parent=LG})
 TS:Create(blur, TweenInfo.new(1), {Size=18}):Play()
@@ -45,7 +45,7 @@ local Ibg = new("Frame", {Size=UDim2.new(1,-40,0,40), Position=UDim2.new(0,20,0,
 new("UICorner", {CornerRadius=UDim.new(0,4)}, Ibg)
 local Line = new("Frame", {Size=UDim2.new(1,0,0,2), Position=UDim2.new(0,0,1,-2), BackgroundColor3=L, BorderSizePixel=0, Parent=Ibg})
 new("TextLabel", {Size=UDim2.new(0,20,1,0), Position=UDim2.new(0,8,0,0), BackgroundTransparency=1, Text=">", TextColor3=R, Font=Enum.Font.Code, TextSize=16, TextXAlignment=Enum.TextXAlignment.Center, BorderSizePixel=0, Parent=Ibg})
-local Input = new("TextBox", {Size=UDim2.new(1,-35,1,0), Position=UDim2.new(0,30,0,0), BackgroundTransparency=1, PlaceholderText="在此输入卡密...", PlaceholderColor3=Color3.fromRGB(70,70,75), TextColor3=W, Font=Enum.Font.Code, TextSize=15, TextXAlignment=Enum.TextXAlignment.Left, ClearTextOnFocus=false, BorderSizePixel=0, Parent=Ibg})
+local Input = new("", {Size=UDim2.new(1,-35,1,0), Position=UDim2.new(0,30,0,0), BackgroundTransparency=1, PlaceholderText="在此输入卡密...", PlaceholderColor3=Color3.fromRGB(70,70,75), TextColor3=W, Font=Enum.Font.Code, TextSize=15, TextXAlignment=Enum.TextXAlignment.Left, ClearTextOnFocus=false, BorderSizePixel=0, Parent=Ibg})
 Input.Focused:Connect(function() TS:Create(Line, TweenInfo.new(0.1), {BackgroundColor3=R}):Play() end)
 Input.FocusLost:Connect(function() TS:Create(Line, TweenInfo.new(0.1), {BackgroundColor3=L}):Play() end)
 local Btn = new("TextButton", {Size=UDim2.new(0,110,0,34), Position=UDim2.new(1,-130,0,155), BackgroundColor3=R, Text="验证", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=14, AutoButtonColor=false, BorderSizePixel=0, Parent=OrigGroup})
