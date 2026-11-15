@@ -768,6 +768,36 @@ local BaseList = {
 
 pop(P3, MusicList)
 pop(P2, BaseList)
+
+local realmBtnY = math.ceil(#BaseList / 3) * 48
+local realmBtn = c("TextButton", {
+    BackgroundColor3 = BTN, 
+    BorderSizePixel = 0, 
+    Position = UDim2.new(0, 0, 0, realmBtnY), 
+    Size = UDim2.new(1, 0, 0, 38), 
+    Font = Enum.Font.GothamBold, 
+    Text = "Rebzyyx realm[BY.Rebzyyx]", 
+    TextColor3 = RED, 
+    TextSize = 14, 
+    AutoButtonColor = false, 
+    ZIndex = 3
+}, P2)
+c("UICorner", {CornerRadius = UDim.new(0, 8)}, realmBtn)
+c("UIStroke", {Color = RED, Thickness = 1.5}, realmBtn)
+
+realmBtn.MouseEnter:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
+realmBtn.MouseLeave:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN}):Play() end)
+realmBtn.MouseButton1Down:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.05), {BackgroundColor3 = BTN_DOWN}):Play() end)
+realmBtn.MouseButton1Up:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
+
+realmBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/realm.lua"))()
+    end)
+end)
+
+P2.CanvasSize = UDim2.new(0, 0, 0, realmBtnY + 48)
+
 pop(P4, {
     {"获取F3X", function() SendCmd(";btools me") end}, 
 
