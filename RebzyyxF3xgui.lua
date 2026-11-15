@@ -385,12 +385,24 @@ local BaseList = {
     {"贴图3", function() SpamDecal("109960935915507") end},
     {"贴图4", function() SpamDecal("124438945870041") end},
     {"贴图5", function() SpamDecal("124863880408647") end},
-    {"删除贴图", function() CancelDecal() end}
+    {"取消贴图", function() CancelDecal() end},
+    
+    {"公告1", function() SendCmd(";serverMessage Team_RZ") end},
+    {"公告2", function() SendCmd(";serverMessage Rebzyyx NB") end},
+    {"公告3", function() SendCmd(";serverMessage BY.Rebzyyx,Rezlaine") end},
+    
+    {"提示1", function() SendCmd(";sh Team_RZ") end},
+    {"提示2", function() SendCmd(";sh Rebzyyx NB") end},
+    {"提示3", function() SendCmd(";sh BY.Rebzyyx,Rezlaine") end}
 }
 
 pop(P3, MusicList)
 pop(P2, BaseList)
-pop(P4, {{"测试", function() end}, {"测试", function() end}, {"测试", function() end}})
+pop(P4, {
+    {"标题(自己)", function() SendCmd(";titler me Rebzyyx") end},
+    {"标题(全服)", function() SendCmd(";titler all Rebzyyx") end},
+    {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx. Rebzyyx F3xgui v67 BY.Rebzyyx, Rezlaine.") end}
+})
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
 local isMin, normalSize, minSize = false, UDim2.new(0, 500, 0, 360), UDim2.new(0, 500, 0, 45)
