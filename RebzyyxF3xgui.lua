@@ -372,6 +372,23 @@ local function CancelDecal()
     end)
 end
 
+local lastCmdTime = 0
+local function SendCmd(cmd)
+    if tick() - lastCmdTime < 3 then return end
+    lastCmdTime = tick()
+    
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local hdClient = ReplicatedStorage:FindFirstChild("HDAdminHDClient")
+    if hdClient and hdClient:FindFirstChild("Signals") then
+        local remote = hdClient.Signals:FindFirstChild("RequestCommandSilent") or hdClient.Signals:FindFirstChild("RequestCommand")
+        if remote then
+            pcall(function()
+                remote:InvokeServer(cmd)
+            end)
+        end
+    end
+end
+
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
     {"天空盒2", function() CreateSky("125099022586543") end},
