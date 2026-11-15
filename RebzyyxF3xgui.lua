@@ -309,13 +309,83 @@ local function CreateSky(imageId)
     end)
 end
 
+local function SpamDecal(texId)
+    local r = getRemote()
+    if not r then return end
+    
+    local parts = {}
+    for _,v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name ~= "Sky" and v.Name ~= "Skybox" then
+            table.insert(parts, v)
+        end
+    end
+    local total = #parts
+    local batchSize = 20
+    local faces = {Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Right, Enum.NormalId.Left, Enum.NormalId.Bottom, Enum.NormalId.Top}
+    
+    task.spawn(function()
+        for i = 1, total, batchSize do
+            local threads = {}
+            for j = i, math.min(i + batchSize - 1, total) do
+                local part = parts[j]
+                if part and part.Parent then
+                    table.insert(threads, task.spawn(function()
+                        pcall(function()
+                            r:InvokeServer("SetLocked", {part}, false)
+                            for _, face in ipairs(faces) do
+                                r:InvokeServer("CreateTextures", {{Part=part,Face=face,TextureType="Decal"}})
+                                r:InvokeServer("SyncTexture", {{Part=part,Face=face,TextureType="Decal",Texture="rbxassetid://"..texId}})
+                            end
+                        end)
+                    end))
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+local function CancelDecal()
+    local r = getRemote()
+    if not r then return end
+    
+    task.spawn(function()
+        local decals = {}
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("Decal") then table.insert(decals, v) end
+        end
+        local total = #decals
+        local batchSize = 20
+        
+        for i = 1, total, batchSize do
+            local threads = {}
+            for j = i, math.min(i + batchSize - 1, total) do
+                local decal = decals[j]
+                if decal and decal.Parent then
+                    table.insert(threads, task.spawn(function()
+                        pcall(function() r:InvokeServer("Remove", {decal}) end)
+                    end))
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
     {"天空盒2", function() CreateSky("125099022586543") end},
     {"天空盒3", function() CreateSky("109960935915507") end},
     {"天空盒4", function() CreateSky("124438945870041") end},
     {"天空盒5", function() CreateSky("124863880408647") end},
-    {"删除天空盒", function() DestroySky() end}
+    {"删除天空盒", function() DestroySky() end},
+    
+    {"贴图1", function() SpamDecal("95719226713148") end},
+    {"贴图2", function() SpamDecal("125099022586543") end},
+    {"贴图3", function() SpamDecal("109960935915507") end},
+    {"贴图4", function() SpamDecal("124438945870041") end},
+    {"贴图5", function() SpamDecal("124863880408647") end},
+    {"删除贴图", function() CancelDecal() end}
 }
 
 pop(P3, MusicList)
