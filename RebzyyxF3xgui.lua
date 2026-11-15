@@ -37,7 +37,7 @@ local T1 = c("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0,
 local T2 = c("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), Font = Enum.Font.GothamBlack, Text = "", TextColor3 = RED, TextSize = 28, TextTransparency = 1}, TxtBox)
 local T3 = c("TextLabel", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 45), Font = Enum.Font.Code, Text = "BY.Rebzyyx/Rezlaine", TextColor3 = RED, TextSize = 13, TextTransparency = 1}, TxtBox)
 
-local MainGui = c("ScreenGui", {Parent = pgui}, nil)
+local MainGui = c("ScreenGui", {Parent = pgui, ResetOnSpawn = false}, nil)
 local Main = c("Frame", {BackgroundColor3 = BG, Position = UDim2.new(0.5, 0, 1.5, 0), AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.new(0, 500, 0, 360), ClipsDescendants = true, BorderSizePixel = 0, ZIndex = 1}, MainGui)
 c("UICorner", {CornerRadius = UDim.new(0, 10)}, Main)
 c("UIStroke", {Color = RED, Thickness = 2, Transparency = 0.1}, Main)
@@ -389,6 +389,178 @@ local function SendCmd(cmd)
     end
 end
 
+local isStormRunning = false
+local isRiseRunning = false
+
+local function StartFalling(texId)
+    isStormRunning = false
+    isRiseRunning = false
+    task.wait(0.1)
+    isStormRunning = true
+    local r = getRemote()
+    if not r then return end
+    task.spawn(function()
+        while isStormRunning do
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then break end
+            for i = 1, 2 do
+                task.spawn(function()
+                    local randomX = math.random(-400, 400)
+                    local randomZ = math.random(-400, 400)
+                    local randomY = math.random(-30, 30)
+                    local spawnPos = hrp.CFrame.Position + Vector3.new(randomX, randomY, randomZ)
+                    local cf = CFrame.new(spawnPos)
+                    local p = r:InvokeServer("CreatePart", "Normal", cf, workspace)
+                    if p then
+                        r:InvokeServer("SetName", {p}, "F3xParticle_Fall")
+                        r:InvokeServer("SyncResize", {{Part=p, CFrame=cf, Size=Vector3.new(15, 15, 0.2)}})
+                        r:InvokeServer("SyncCollision", {{Part=p, CanCollide=false}})
+                        r:InvokeServer("SetLocked", {p}, true)
+                        r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
+                        r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..texId}})
+                        r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal"}})
+                        r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal", Texture="rbxassetid://"..texId}})
+                        task.spawn(function()
+                            local currentCF = cf
+                            local lifeTime = 0
+                            while isStormRunning do
+                                if not p or not p.Parent then break end
+                                currentCF = currentCF + Vector3.new(0, 5, 0)
+                                r:InvokeServer("SyncMove", {{Part=p, CFrame=currentCF}})
+                                lifeTime = lifeTime + 0.05
+                                if lifeTime > 10 then
+                                    r:InvokeServer("Remove", {p})
+                                    break
+                                end
+                                task.wait(0.05)
+                            end
+                        end)
+                    end
+                end)
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+local function StartRise(texId)
+    isRiseRunning = false
+    isStormRunning = false
+    task.wait(0.1)
+    isRiseRunning = true
+    local r = getRemote()
+    if not r then return end
+    task.spawn(function()
+        while isRiseRunning do
+            for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
+                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    task.spawn(function()
+                        local hrp = plr.Character.HumanoidRootPart
+                        local spawnPos = hrp.CFrame.Position + Vector3.new(0, 3, 0)
+                        local cf = CFrame.new(spawnPos)
+                        local p = r:InvokeServer("CreatePart", "Normal", cf, workspace)
+                        if p then
+                            r:InvokeServer("SetName", {p}, "F3xParticle_Rise")
+                            r:InvokeServer("SyncResize", {{Part=p, CFrame=cf, Size=Vector3.new(5, 5, 0.2)}})
+                            r:InvokeServer("SyncCollision", {{Part=p, CanCollide=false}})
+                            r:InvokeServer("SetLocked", {p}, true)
+                            r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
+                            r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..texId}})
+                            r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal"}})
+                            r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal", Texture="rbxassetid://"..texId}})
+                            task.spawn(function()
+                                local currentCF = cf
+                                local lifeTime = 0
+                                while isRiseRunning do
+                                    if not p or not p.Parent then break end
+                                    currentCF = currentCF + Vector3.new(0, 1, 0)
+                                    r:InvokeServer("SyncMove", {{Part=p, CFrame=currentCF}})
+                                    lifeTime = lifeTime + 0.05
+                                    if lifeTime > 2 then
+                                        r:InvokeServer("Remove", {p})
+                                        break
+                                    end
+                                    task.wait(0.05)
+                                end
+                            end)
+                        end
+                    end)
+                end
+            end
+            task.wait(0.3)
+        end
+    end)
+end
+
+local function StopAndClearFalling()
+    isStormRunning = false
+    local r = getRemote()
+    if not r then return end
+    task.spawn(function()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name == "F3xParticle_Fall" then
+                pcall(function() r:InvokeServer("Remove", {v}) end)
+            end
+        end
+    end)
+end
+
+local function StopAndClearRise()
+    isRiseRunning = false
+    local r = getRemote()
+    if not r then return end
+    task.spawn(function()
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name == "F3xParticle_Rise" then
+                pcall(function() r:InvokeServer("Remove", {v}) end)
+            end
+        end
+    end)
+end
+
+local jumpscareList = {"95719226713148","125099022586543","109960935915507","124438945870041","124863880408647","136729144659713"}
+
+local function TriggerJumpscare(imgId)
+    local r = getRemote()
+    if not r then return end
+    
+    SendCmd(";music 6018028320")
+    
+    for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
+        task.spawn(function()
+            local camera = workspace.CurrentCamera
+            local spawnCF = camera.CFrame * CFrame.new(0, 0, -2) * CFrame.Angles(math.rad(90), 0, 0)
+            
+            local p = r:InvokeServer("CreatePart", "Normal", spawnCF, workspace)
+            if p then
+                r:InvokeServer("SetName", {p}, "F3xJumpscare")
+                r:InvokeServer("SyncMaterial", {{Part=p, Transparency=1}})
+                r:InvokeServer("SyncResize", {{Part=p, CFrame=p.CFrame, Size=Vector3.new(6.3, 3, 0.1)}})
+                r:InvokeServer("SetLocked", {p}, true)
+                r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
+                r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..tostring(imgId)}})
+                
+                local startTime = tick()
+                local conn
+                conn = RunService.Heartbeat:Connect(function()
+                    if tick() - startTime > 3 then
+                        conn:Disconnect()
+                        pcall(function() r:InvokeServer("Remove", {p}) end)
+                        return
+                    end
+                    if p and p.Parent then
+                        local followCF = camera.CFrame * CFrame.new(0, 0, -2) * CFrame.Angles(math.rad(180), 0, math.rad(-180))
+                        r:InvokeServer("SyncMove", {{Part=p, CFrame=followCF}})
+                    else
+                        conn:Disconnect()
+                    end
+                end)
+            end
+        end)
+    end
+end
+
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
     {"天空盒2", function() CreateSky("125099022586543") end},
@@ -404,6 +576,27 @@ local BaseList = {
     {"贴图5", function() SpamDecal("124863880408647") end},
     {"取消贴图", function() CancelDecal() end},
     
+    {"粒子1", function() StartFalling("95719226713148") end},
+    {"粒子2", function() StartFalling("125099022586543") end},
+    {"粒子3", function() StartFalling("109960935915507") end},
+    {"粒子4", function() StartFalling("124438945870041") end},
+    {"粒子5", function() StartFalling("124863880408647") end},
+    {"停止并清除", function() StopAndClearFalling() end}, 
+    
+    {"跟随粒子1", function() StartRise("95719226713148") end},
+    {"跟随粒子2", function() StartRise("125099022586543") end},
+    {"跟随粒子3", function() StartRise("109960935915507") end},
+    {"跟随粒子4", function() StartRise("124438945870041") end},
+    {"跟随粒子5", function() StartRise("124863880408647") end},
+    {"停止并清除", function() StopAndClearRise() end}, 
+
+    {"跳跃惊吓1", function() TriggerJumpscare(jumpscareList[1]) end},
+    {"跳跃惊吓2", function() TriggerJumpscare(jumpscareList[2]) end},
+    {"跳跃惊吓3", function() TriggerJumpscare(jumpscareList[3]) end},
+    {"跳跃惊吓4", function() TriggerJumpscare(jumpscareList[4]) end},
+    {"跳跃惊吓5", function() TriggerJumpscare(jumpscareList[5]) end},
+    {"跳跃惊吓6", function() TriggerJumpscare(jumpscareList[6]) end},
+
     {"公告1", function() SendCmd(";serverMessage Team_RZ") end},
     {"公告2", function() SendCmd(";serverMessage Rebzyyx NB") end},
     {"公告3", function() SendCmd(";serverMessage BY.Rebzyyx,Rezlaine") end},
@@ -416,9 +609,16 @@ local BaseList = {
 pop(P3, MusicList)
 pop(P2, BaseList)
 pop(P4, {
+    {"获取F3X", function() SendCmd(";btools me") end}, 
+    
     {"标题(自己)", function() SendCmd(";titler me Rebzyyx") end},
     {"标题(全服)", function() SendCmd(";titler all Rebzyyx") end},
-    {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx. Rebzyyx F3xgui v67 BY.Rebzyyx, Rezlaine.") end}
+    
+    {"全服改名", function() SendCmd(";name all Rebzyyx") end}, 
+    
+    {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx. Rebzyyx F3xgui v67 BY.Rebzyyx, Rezlaine.") end},
+    
+    {"全服改皮肤", function() SendCmd(";char all zczczczc722") end} 
 })
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
