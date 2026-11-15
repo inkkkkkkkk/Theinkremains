@@ -1,3 +1,148 @@
+getgenv().AuthPassed = false
+
+local TS, RS, LG = game:GetService("TweenService"), game:GetService("RunService"), game:GetService("Lighting")
+local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end if par then o.Parent=par end return o end
+local R, BG, W, D, L = Color3.fromRGB(220,20,60), Color3.fromRGB(15,15,18), Color3.fromRGB(245,245,245), Color3.fromRGB(130,130,135), Color3.fromRGB(40,40,45)
+local Keys = {["REBZYYX-KEY"]="欢迎尊贵的作者", ["REZLAINE-KEY"]="欢迎尊贵的作者", ["RZ336"]="成功验证通用卡密"}
+
+local blur = new("BlurEffect", {Size=0, Parent=LG})
+TS:Create(blur, TweenInfo.new(1), {Size=18}):Play()
+local Gui = new("ScreenGui", {Name="KeyAuth", ResetOnSpawn=false, DisplayOrder=9999, IgnoreGuiInset=true, Parent=PG})
+local Main = new("Frame", {Size=UDim2.new(0,380,0,240), Position=UDim2.new(0.5,-190,-0.6,0), BackgroundColor3=BG, BorderSizePixel=0, ClipsDescendants=true, Parent=Gui})
+new("UICorner", {CornerRadius=UDim.new(0,8)}, Main)
+local St1, St2 = new("UIStroke", {Color=R, Thickness=1.5}, Main), new("UIStroke", {Color=R, Thickness=4, Transparency=0.8}, Main)
+new("UIGradient", {Rotation=45, Color=ColorSequence.new(Color3.fromRGB(30,30,35), BG)}, Main)
+local tPos = UDim2.new(0.5,-190,0.5,-120)
+TS:Create(Main, TweenInfo.new(0.65, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position=tPos}):Play()
+
+for _,v in ipairs({UDim2.new(0,6,0,6), UDim2.new(1,-14,0,6), UDim2.new(0,6,1,-14), UDim2.new(1,-14,1,-14)}) do
+    local c = new("Frame", {Size=UDim2.new(0,8,0,8), Position=v, BackgroundTransparency=1, BorderSizePixel=0, Parent=Main})
+    new("Frame", {Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,v.X.Scale,0), BackgroundColor3=R, BorderSizePixel=0, Parent=c})
+    new("Frame", {Size=UDim2.new(0,1,1,0), Position=UDim2.new(v.X.Scale,0,0,0), BackgroundColor3=R, BorderSizePixel=0, Parent=c})
+end
+local Top = new("Frame", {Size=UDim2.new(1,0,0,40), BackgroundColor3=Color3.fromRGB(22,22,26), BorderSizePixel=0, Parent=Main})
+new("UICorner", {CornerRadius=UDim.new(0,8)}, Top)
+new("Frame", {Size=UDim2.new(1,0,0,20), Position=UDim2.new(0,0,1,-20), BackgroundColor3=Color3.fromRGB(22,22,26), BorderSizePixel=0, Parent=Top})
+new("Frame", {Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,0), BackgroundColor3=L, BorderSizePixel=0, Parent=Top})
+local Dot = new("Frame", {Size=UDim2.new(0,6,0,6), Position=UDim2.new(0,15,0.5,-3), BackgroundColor3=Color3.fromRGB(50,200,100), BorderSizePixel=0, Parent=Top})
+new("UICorner", {CornerRadius=UDim.new(1,0)}, Dot)
+task.spawn(function() while Dot.Parent do TS:Create(Dot, TweenInfo.new(0.8), {BackgroundTransparency=0.5}):Play() task.wait(0.8) TS:Create(Dot, TweenInfo.new(0.8), {BackgroundTransparency=0}):Play() task.wait(0.8) end end)
+new("TextLabel", {Size=UDim2.new(1,-100,1,0), Position=UDim2.new(0,30,0,0), BackgroundTransparency=1, Text="REBZYYX卡密验证", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, Parent=Top})
+new("TextLabel", {Size=UDim2.new(0,50,1,0), Position=UDim2.new(1,-90,0,0), BackgroundTransparency=1, Text="v67", TextColor3=D, Font=Enum.Font.Code, TextSize=11, TextXAlignment=Enum.TextXAlignment.Right, BorderSizePixel=0, Parent=Top})
+local Close = new("TextButton", {Size=UDim2.new(0,40,0,40), Position=UDim2.new(1,-40,0,0), BackgroundTransparency=1, Text="", BorderSizePixel=0, Parent=Top})
+local L1, L2 = new("Frame", {Size=UDim2.new(0,12,0,2), Position=UDim2.new(0.5,-6,0.5,-1), BackgroundColor3=D, BorderSizePixel=0, Rotation=45, Parent=Close}), new("Frame", {Size=UDim2.new(0,12,0,2), Position=UDim2.new(0.5,-6,0.5,-1), BackgroundColor3=D, BorderSizePixel=0, Rotation=-45, Parent=Close})
+local function Exit() TS:Create(blur, TweenInfo.new(0.5), {Size=0}):Play() task.delay(0.5, function() blur:Destroy() end) Gui:Destroy() end
+Close.MouseEnter:Connect(function() TS:Create(L1, TweenInfo.new(0.1), {BackgroundColor3=R}):Play() TS:Create(L2, TweenInfo.new(0.1), {BackgroundColor3=R}):Play() end)
+Close.MouseLeave:Connect(function() TS:Create(L1, TweenInfo.new(0.1), {BackgroundColor3=D}):Play() TS:Create(L2, TweenInfo.new(0.1), {BackgroundColor3=D}):Play() end)
+Close.MouseButton1Click:Connect(Exit)
+
+local OrigGroup = new("CanvasGroup", {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, BorderSizePixel=0, Parent=Main})
+new("TextLabel", {Size=UDim2.new(1,-40,0,30), Position=UDim2.new(0,20,0,55), BackgroundTransparency=1, Text="请输入卡密", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=18, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, Parent=OrigGroup})
+local Stat = new("TextLabel", {Size=UDim2.new(1,-150,0,20), Position=UDim2.new(0,20,0,195), BackgroundTransparency=1, Text="", TextColor3=R, Font=Enum.Font.GothamBold, TextSize=12, TextXAlignment=Enum.TextXAlignment.Left, BorderSizePixel=0, Parent=OrigGroup})
+new("TextLabel", {Size=UDim2.new(0,130,0,20), Position=UDim2.new(1,-150,0,195), BackgroundTransparency=1, Text="BY.Rezlaine", TextColor3=Color3.fromRGB(60,60,65), Font=Enum.Font.Code, TextSize=10, TextXAlignment=Enum.TextXAlignment.Right, BorderSizePixel=0, Parent=OrigGroup})
+local Ibg = new("Frame", {Size=UDim2.new(1,-40,0,40), Position=UDim2.new(0,20,0,100), BackgroundColor3=Color3.fromRGB(22,22,26), BorderSizePixel=0, Parent=OrigGroup})
+new("UICorner", {CornerRadius=UDim.new(0,4)}, Ibg)
+local Line = new("Frame", {Size=UDim2.new(1,0,0,2), Position=UDim2.new(0,0,1,-2), BackgroundColor3=L, BorderSizePixel=0, Parent=Ibg})
+new("TextLabel", {Size=UDim2.new(0,20,1,0), Position=UDim2.new(0,8,0,0), BackgroundTransparency=1, Text=">", TextColor3=R, Font=Enum.Font.Code, TextSize=16, TextXAlignment=Enum.TextXAlignment.Center, BorderSizePixel=0, Parent=Ibg})
+local Input = new("TextBox", {Size=UDim2.new(1,-35,1,0), Position=UDim2.new(0,30,0,0), BackgroundTransparency=1, PlaceholderText="在此输入卡密...", PlaceholderColor3=Color3.fromRGB(70,70,75), TextColor3=W, Font=Enum.Font.Code, TextSize=15, TextXAlignment=Enum.TextXAlignment.Left, ClearTextOnFocus=false, BorderSizePixel=0, Parent=Ibg})
+Input.Focused:Connect(function() TS:Create(Line, TweenInfo.new(0.1), {BackgroundColor3=R}):Play() end)
+Input.FocusLost:Connect(function() TS:Create(Line, TweenInfo.new(0.1), {BackgroundColor3=L}):Play() end)
+local Btn = new("TextButton", {Size=UDim2.new(0,110,0,34), Position=UDim2.new(1,-130,0,155), BackgroundColor3=R, Text="验证", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=14, AutoButtonColor=false, BorderSizePixel=0, Parent=OrigGroup})
+new("UICorner", {CornerRadius=UDim.new(0,4)}, Btn)
+local GetBtn = new("TextButton", {Size=UDim2.new(0,110,0,34), Position=UDim2.new(0,20,0,155), BackgroundColor3=Color3.fromRGB(30,30,35), Text="获取卡密", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=14, AutoButtonColor=false, BorderSizePixel=0, Parent=OrigGroup})
+new("UICorner", {CornerRadius=UDim.new(0,4)}, GetBtn)
+new("UIStroke", {Color=L, Thickness=1}, GetBtn)
+
+local FetchGroup = new("CanvasGroup", {Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,0,0,15), BackgroundTransparency=1, BorderSizePixel=0, GroupTransparency=1, Visible=false, Parent=Main})
+new("TextLabel", {Size=UDim2.new(1,0,0,30), Position=UDim2.new(0,0,0,45), BackgroundTransparency=1, Text="卡密获取方法", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=18, BorderSizePixel=0, Parent=FetchGroup})
+new("TextLabel", {Size=UDim2.new(1,0,0,20), Position=UDim2.new(0,0,0,75), BackgroundTransparency=1, Text="添加QQ号为这个的人:", TextColor3=D, Font=Enum.Font.GothamBold, TextSize=13, BorderSizePixel=0, Parent=FetchGroup})
+local QQ = new("TextButton", {Size=UDim2.new(1,-40,0,40), Position=UDim2.new(0,20,0,100), BackgroundColor3=Color3.fromRGB(22,22,26), Text="点击复制: 2047955671", TextColor3=R, Font=Enum.Font.Code, TextSize=18, AutoButtonColor=false, BorderSizePixel=0, Parent=FetchGroup})
+new("UICorner", {CornerRadius=UDim.new(0,4)}, QQ)
+new("UIStroke", {Color=L, Thickness=1}, QQ)
+new("TextLabel", {Size=UDim2.new(1,0,0,20), Position=UDim2.new(0,0,0,150), BackgroundTransparency=1, Text="说明来意，等待同意，禁止泄露卡密", TextColor3=D, Font=Enum.Font.GothamBold, TextSize=13, BorderSizePixel=0, Parent=FetchGroup})
+local Cfm = new("TextButton", {Size=UDim2.new(0,120,0,34), Position=UDim2.new(0.5,-60,0,190), BackgroundColor3=Color3.fromRGB(30,30,35), Text="确认并返回", TextColor3=W, Font=Enum.Font.GothamBold, TextSize=14, AutoButtonColor=false, BorderSizePixel=0, Parent=FetchGroup})
+new("UICorner", {CornerRadius=UDim.new(0,4)}, Cfm)
+
+GetBtn.MouseButton1Click:Connect(function() TS:Create(OrigGroup, TweenInfo.new(0.25), {GroupTransparency=1, Position=UDim2.new(0,0,0,-15)}):Play() task.wait(0.25) OrigGroup.Visible = false FetchGroup.Visible = true FetchGroup.Position = UDim2.new(0,0,0,15) TS:Create(FetchGroup, TweenInfo.new(0.25), {GroupTransparency=0, Position=UDim2.new(0,0,0,0)}):Play() end)
+Cfm.MouseButton1Click:Connect(function() TS:Create(FetchGroup, TweenInfo.new(0.25), {GroupTransparency=1, Position=UDim2.new(0,0,0,-15)}):Play() task.wait(0.25) FetchGroup.Visible = false OrigGroup.Visible = true OrigGroup.Position = UDim2.new(0,0,0,15) TS:Create(OrigGroup, TweenInfo.new(0.25), {GroupTransparency=0, Position=UDim2.new(0,0,0,0)}):Play() end)
+QQ.MouseButton1Click:Connect(function() if setclipboard then setclipboard("2047955671") QQ.Text="已复制!" task.delay(1.5,function() QQ.Text="点击复制: 2047955671" end) end end)
+
+local Fail, Lock, Working, LC = 0, false, false, 0
+local bPos = tPos
+local function Shake()
+    local st, c = tick()
+    c = RS.RenderStepped:Connect(function()
+        local el = tick() - st
+        if el > 0.3 then Main.Position = bPos c:Disconnect() return end
+        Main.Position = bPos + UDim2.new(0, math.sin(el*80)*10*(1-(el/0.3)), 0, 0)
+    end)
+end
+
+GetBtn.MouseEnter:Connect(function() TS:Create(GetBtn, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(45,45,50)}):Play() end)
+GetBtn.MouseLeave:Connect(function() TS:Create(GetBtn, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(30,30,35)}):Play() end)
+Btn.MouseEnter:Connect(function() if not Lock and not Working then TS:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3=Color3.fromRGB(255,50,80)}):Play() end end)
+Btn.MouseLeave:Connect(function() if not Lock and not Working then TS:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3=R}):Play() end end)
+
+Btn.MouseButton1Click:Connect(function()
+    if Lock or Working then return end
+    local k = string.upper(Input.Text)
+    if k == "" then Stat.Text = "卡密不能为空" Shake() return end
+    
+    Working = true
+    Btn.Text = "验证中..."
+    Stat.Text = "正在验证卡密，请稍候..."
+    Stat.TextColor3 = D
+    
+    local pt, pc = tick()
+    pc = RS.RenderStepped:Connect(function()
+        if not Working then Btn.BackgroundColor3 = R pc:Disconnect() return end
+        Btn.BackgroundColor3 = R:Lerp(Color3.fromRGB(255,50,80), (math.sin((tick()-pt)*10)+1)/2)
+    end)
+
+    task.wait(1)
+    Working = false
+    if pc then pc:Disconnect() end
+    Btn.BackgroundColor3 = R
+
+    if Keys[k] then
+        Stat.Text = Keys[k]
+        Stat.TextColor3 = Color3.fromRGB(50,200,100)
+        Btn.Text, Btn.BackgroundColor3 = "成功", Color3.fromRGB(50,200,100)
+        task.wait(0.6)
+        
+        local e = TweenInfo.new(0.65, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+        TS:Create(Main, e, {Position=UDim2.new(0.5,-190,-0.6,0), BackgroundTransparency=1}):Play()
+        TS:Create(St1, e, {Transparency=1}):Play() TS:Create(St2, e, {Transparency=1}):Play()
+        TS:Create(blur, TweenInfo.new(0.65), {Size=0}):Play()
+        task.wait(0.7)
+        blur:Destroy() Gui:Destroy()
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title="卡密验证", Text=Keys[k], Duration=4})
+        getgenv().AuthPassed = true
+    else
+        Fail = Fail + 1
+        Btn.Text = "验证" Shake()
+        if Fail >= 3 then
+            LC = LC + 1
+            if LC == 1 then
+                Lock = true Btn.Text = "已锁定" Btn.BackgroundColor3 = Color3.fromRGB(60,60,65)
+                for i = 5, 1, -1 do Stat.Text = "错误次数过多，请等待 " .. i .. " 秒" task.wait(1) end
+                Lock, Fail = false, 0
+                Btn.Text, Btn.BackgroundColor3 = "验证", R
+                Stat.Text = "锁定已解除，请重新输入"
+            else
+                Stat.Text = "你已用完所有验证机会"
+                Btn.Text, Btn.BackgroundColor3 = "已封禁", Color3.fromRGB(60,60,65)
+                task.wait(1.5)
+                game:GetService("Players").LocalPlayer:Kick("你已用完所有验证机会")
+            end
+        else
+            Stat.Text = "卡密错误 (剩余尝试: " .. (3 - Fail) .. ")"
+        end
+    end
+end)
+
+repeat task.wait() until getgenv().AuthPassed
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
