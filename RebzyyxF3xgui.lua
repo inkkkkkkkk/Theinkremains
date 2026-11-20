@@ -242,12 +242,10 @@ local Home = c("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0
 local P2 = c("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, BorderSizePixel = 0, ZIndex = 2, ScrollBarThickness = 3, ScrollBarImageColor3 = RED, CanvasSize = UDim2.new(0,0,0,0)}, Cont)
 local P3 = c("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, BorderSizePixel = 0, ZIndex = 2, ScrollBarThickness = 3, ScrollBarImageColor3 = RED, CanvasSize = UDim2.new(0,0,0,0)}, Cont)
 local P4 = c("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, BorderSizePixel = 0, ZIndex = 2, ScrollBarThickness = 3, ScrollBarImageColor3 = RED, CanvasSize = UDim2.new(0,0,0,0)}, Cont)
-local P5 = c("ScrollingFrame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, BorderSizePixel = 0, ZIndex = 2, ScrollBarThickness = 3, ScrollBarImageColor3 = RED, CanvasSize = UDim2.new(0,0,0,0)}, Cont)
 
-local P = {Home, P2, P3, P4, P5}
+local P = {Home, P2, P3, P4}
 
 local NH, N1, N2, N3 = mNB("家", 20), mNB("基础", 70), mNB("音乐", 120), mNB("其它", 170)
-local N4 = mNB("地图", 220) 
 
 local function setP(i)
     for j, p in ipairs(P) do p.Visible = (j == i) end
@@ -259,7 +257,6 @@ NH.MouseButton1Down:Connect(function() setP(1) end)
 N1.MouseButton1Down:Connect(function() setP(2) end)
 N2.MouseButton1Down:Connect(function() setP(3) end)
 N3.MouseButton1Down:Connect(function() setP(4) end)
-N4.MouseButton1Down:Connect(function() setP(5) end)
 setP(1)
 
 local function mBtn(par, t, pos, callback)
@@ -861,52 +858,7 @@ pop(P4, {
                 pcall(function() p.Character.Humanoid.Health = 0 end)
             end
         end
-    end},
-
-    {"锚定", function() SendCmd(";anchor all") end},
-    {"取消锚定", function() SendCmd(";unanchor all") end},
-    {"迪斯科", function() SendCmd(";disco all") end},
-    {"迪斯科角色", function() SendCmd(";disco me") end},
-    {"鸡臂", function() SendCmd(";chicken me") end},
-    {"浮动垫", function() 
-        SendCmd(";platform me") 
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local pad = Instance.new("Part", workspace)
-            pad.Size = Vector3.new(6, 1, 6)
-            pad.Position = char.HumanoidRootPart.Position - Vector3.new(0, 3, 0)
-            pad.Anchored = true
-            pad.Material = Enum.Material.Neon
-            pad.Color = Color3.fromRGB(200, 10, 30)
-        end
-    end},
-    {"摇头", function() 
-        local char = player.Character
-        if char and char:FindFirstChild("Head") then
-            local head = char.Head
-            task.spawn(function()
-                for i = 1, 20 do
-                    if head and head.Parent then
-                        head.CFrame = head.CFrame * CFrame.Angles(0, math.rad(30), 0)
-                    end
-                    task.wait(0.05)
-                end
-            end)
-        end
     end}
-})
-
-pop(P5, {
-    {"十字路口", function() SendCmd(";map Crossroads") end},
-    {"高地剑战", function() SendCmd(";map Heights") end},
-    {"玻璃屋", function() SendCmd(";map Glass Houses") end},
-    {"毁灭尖塔", function() SendCmd(";map Doomspire") end},
-    {"躲避球", function() SendCmd(";map Dodgeball") end},
-    {"火箭竞技场", function() SendCmd(";map Rocket Arena") end},
-    {"混沌峡谷", function() SendCmd(";map Chaos Canyon") end},
-    {"快乐老家", function() SendCmd(";map Happy Home") end},
-    {"海盗岛", function() SendCmd(";map Pirate Island") end},
-    {"西部荒野", function() SendCmd(";map Wild West") end}
 })
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
