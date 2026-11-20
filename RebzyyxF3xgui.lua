@@ -4,7 +4,7 @@ local TS, RS, LG = game:GetService("TweenService"), game:GetService("RunService"
 local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end if par then o.Parent=par end return o end
 local R, BG, W, D, L = Color3.fromRGB(220,20,60), Color3.fromRGB(15,15,18), Color3.fromRGB(245,245,245), Color3.fromRGB(130,130,135), Color3.fromRGB(40,40,45)
-local Keys = {["Rebzyyx666"]="欢迎尊贵的作者", ["Rezlaine666"]="欢迎尊贵的作者", ["LOL"]="成功验证通用卡密"}
+local Keys = {["REBZYYX-KEY"]="欢迎尊贵的作者", ["REZLAINE-KEY"]="欢迎尊贵的作者", ["LOL"]="成功验证通用卡密"}
 
 local blur = new("BlurEffect", {Size=0, Parent=LG})
 TS:Create(blur, TweenInfo.new(1), {Size=18}):Play()
@@ -659,26 +659,22 @@ local function StopAndClearFalling()
     isStormRunning = false
     local r = getRemote()
     if not r then return end
-    task.spawn(function()
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name == "F3xParticle_Fall" then
-                pcall(function() r:InvokeServer("Remove", {v}) end)
-            end
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name == "F3xParticle_Fall" then
+            pcall(function() r:InvokeServer("Remove", {v}) end)
         end
-    end)
+    end
 end
 
 local function StopAndClearRise()
     isRiseRunning = false
     local r = getRemote()
     if not r then return end
-    task.spawn(function()
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name == "F3xParticle_Rise" then
-                pcall(function() r:InvokeServer("Remove", {v}) end)
-            end
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name == "F3xParticle_Rise" then
+            pcall(function() r:InvokeServer("Remove", {v}) end)
         end
-    end)
+    end
 end
 
 local BaseList = {
@@ -688,41 +684,39 @@ local BaseList = {
     {"天空盒4", function() CreateSky("124438945870041") end},
     {"天空盒5", function() CreateSky("124863880408647") end},
     {"删除天空盒", function() DestroySky() end},
-    
+
     {"贴图1", function() SpamDecal("95719226713148") end},
     {"贴图2", function() SpamDecal("125099022586543") end},
     {"贴图3", function() SpamDecal("109960935915507") end},
     {"贴图4", function() SpamDecal("124438945870041") end},
     {"贴图5", function() SpamDecal("124863880408647") end},
     {"取消贴图", function() CancelDecal() end},
-    
+
     {"粒子1", function() StartFalling("95719226713148") end},
     {"粒子2", function() StartFalling("125099022586543") end},
     {"粒子3", function() StartFalling("109960935915507") end},
     {"粒子4", function() StartFalling("124438945870041") end},
     {"粒子5", function() StartFalling("124863880408647") end},
-    {"停止并清除", function() StopAndClearFalling() end}, 
-    
+    {"停止并清除", function() StopAndClearFalling() end},
+
     {"跟随粒子1", function() StartRise("95719226713148") end},
     {"跟随粒子2", function() StartRise("125099022586543") end},
     {"跟随粒子3", function() StartRise("109960935915507") end},
     {"跟随粒子4", function() StartRise("124438945870041") end},
     {"跟随粒子5", function() StartRise("124863880408647") end},
-    {"停止并清除", function() StopAndClearRise() end}, 
+    {"停止并清除", function() StopAndClearRise() end},
 
     {"弹窗公告1", function() SendCmd(";alert all Team_RZ") end},
     {"弹窗公告2", function() SendCmd(";alert all Rebzyyx NB") end},
     {"弹窗公告3", function() SendCmd(";alert all BY.Rebzyyx,Rezlaine") end},
-
     {"公告1", function() SendCmd(";serverMessage Team_RZ") end},
     {"公告2", function() SendCmd(";serverMessage Rebzyyx NB") end},
     {"公告3", function() SendCmd(";serverMessage BY.Rebzyyx,Rezlaine") end},
-    
+
     {"提示1", function() SendCmd(";sh Team_RZ") end},
     {"提示2", function() SendCmd(";sh Rebzyyx NB") end},
     {"提示3", function() SendCmd(";sh BY.Rebzyyx,Rezlaine") end}
 }
-
 pop(P3, MusicList)
 pop(P2, BaseList)
 
