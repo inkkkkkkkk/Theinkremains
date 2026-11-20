@@ -4,7 +4,7 @@ local TS, RS, LG = game:GetService("TweenService"), game:GetService("RunService"
 local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end if par then o.Parent=par end return o end
 local R, BG, W, D, L = Color3.fromRGB(220,20,60), Color3.fromRGB(15,15,18), Color3.fromRGB(245,245,245), Color3.fromRGB(130,130,135), Color3.fromRGB(40,40,45)
-local Keys = {["Rebzyyx-key"]="欢迎尊贵的作者", ["Rezlaine-key"]="欢迎尊贵的作者", ["LOL"]="成功验证通用卡密"}
+local Keys = {["Rebzyyx666"]="欢迎尊贵的作者", ["Rezlaine666"]="欢迎尊贵的作者", ["LOL"]="成功验证通用卡密"}
 
 local blur = new("BlurEffect", {Size=0, Parent=LG})
 TS:Create(blur, TweenInfo.new(1), {Size=18}):Play()
