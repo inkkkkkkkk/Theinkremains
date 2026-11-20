@@ -4,7 +4,7 @@ local TS, RS, LG = game:GetService("TweenService"), game:GetService("RunService"
 local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end if par then o.Parent=par end return o end
 local R, BG, W, D, L = Color3.fromRGB(220,20,60), Color3.fromRGB(15,15,18), Color3.fromRGB(245,245,245), Color3.fromRGB(130,130,135), Color3.fromRGB(40,40,45)
-local Keys = {["000"]="欢迎尊贵的作者", ["000"]="欢迎尊贵的作者", ["000"]="成功验证通用卡密"}
+local Keys = {["Rebzyyx-key"]="欢迎尊贵的作者", ["Rezlaine-key"]="欢迎尊贵的作者", ["LOL"]="成功验证通用卡密"}
 
 local blur = new("BlurEffect", {Size=0, Parent=LG})
 TS:Create(blur, TweenInfo.new(1), {Size=18}):Play()
@@ -681,52 +681,6 @@ local function StopAndClearRise()
     end)
 end
 
-local function TriggerJumpscare(imgId)
-    local r = getRemote()
-    if not r then return end
-
-    SendCmd(";music 6018028320 ;volume 100")
-
-    for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
-        task.spawn(function()
-            local char = targetPlayer.Character
-            if not char then return end
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-
-            local spawnCF = hrp.CFrame * CFrame.new(0, 1.5, -2) * CFrame.Angles(math.rad(90), 0, 0)
-
-            local p = r:InvokeServer("CreatePart", "Normal", spawnCF, workspace)
-            if p then
-                r:InvokeServer("SetName", {p}, "F3xJumpscare_" .. targetPlayer.UserId)
-                r:InvokeServer("SyncMaterial", {{Part=p, Transparency=1}})
-                r:InvokeServer("SyncResize", {{Part=p, CFrame=p.CFrame, Size=Vector3.new(6.3, 3, 0.1)}})
-                r:InvokeServer("SetLocked", {p}, true)
-                r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
-                r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..tostring(imgId)}})
-
-                local startTime = tick()
-                local conn
-                conn = RunService.Heartbeat:Connect(function()
-                    if tick() - startTime > 9 then
-                        conn:Disconnect()
-                        pcall(function() r:InvokeServer("Remove", {p}) end)
-                        return
-                    end
-                    if p and p.Parent and hrp and hrp.Parent then
-                        local followCF = hrp.CFrame * CFrame.new(0, 1.5, -2) * CFrame.Angles(math.rad(180), 0, math.rad(-180))
-                        r:InvokeServer("SyncMove", {{Part=p, CFrame=followCF}})
-                    else
-                        conn:Disconnect()
-                        pcall(function() r:InvokeServer("Remove", {p}) end)
-                    end
-                end)
-            end
-        end)
-    end
-end
-
-
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
     {"天空盒2", function() CreateSky("125099022586543") end},
@@ -756,12 +710,9 @@ local BaseList = {
     {"跟随粒子5", function() StartRise("124863880408647") end},
     {"停止并清除", function() StopAndClearRise() end}, 
 
-    {"跳跃惊吓1", function() TriggerJumpscare(jumpscareList[1]) end},
-    {"跳跃惊吓2", function() TriggerJumpscare(jumpscareList[2]) end},
-    {"跳跃惊吓3", function() TriggerJumpscare(jumpscareList[3]) end},
-    {"跳跃惊吓4", function() TriggerJumpscare(jumpscareList[4]) end},
-    {"跳跃惊吓5", function() TriggerJumpscare(jumpscareList[5]) end},
-    {"跳跃惊吓6", function() TriggerJumpscare(jumpscareList[6]) end},
+    {"弹窗公告1", function() SendCmd(";alert all Team_RZ") end},
+    {"弹窗公告2", function() SendCmd(";alert all Rebzyyx NB") end},
+    {"弹窗公告3", function() SendCmd(";alert all BY.Rebzyyx,Rezlaine") end},
 
     {"公告1", function() SendCmd(";serverMessage Team_RZ") end},
     {"公告2", function() SendCmd(";serverMessage Rebzyyx NB") end},
