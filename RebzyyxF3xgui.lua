@@ -681,28 +681,30 @@ local function StopAndClearRise()
     end)
 end
 
-local jumpscareList = {"95719226713148","125099022586543","109960935915507","124438945870041","124863880408647","136729144659713"}
-
 local function TriggerJumpscare(imgId)
     local r = getRemote()
     if not r then return end
-    
+
     SendCmd(";music 6018028320 ;volume 100")
-    
+
     for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
         task.spawn(function()
-            local camera = workspace.CurrentCamera
-            local spawnCF = camera.CFrame * CFrame.new(0, 0, -2) * CFrame.Angles(math.rad(90), 0, 0)
-            
+            local char = targetPlayer.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            local spawnCF = hrp.CFrame * CFrame.new(0, 1.5, -2) * CFrame.Angles(math.rad(90), 0, 0)
+
             local p = r:InvokeServer("CreatePart", "Normal", spawnCF, workspace)
             if p then
-                r:InvokeServer("SetName", {p}, "F3xJumpscare")
+                r:InvokeServer("SetName", {p}, "F3xJumpscare_" .. targetPlayer.UserId)
                 r:InvokeServer("SyncMaterial", {{Part=p, Transparency=1}})
                 r:InvokeServer("SyncResize", {{Part=p, CFrame=p.CFrame, Size=Vector3.new(6.3, 3, 0.1)}})
                 r:InvokeServer("SetLocked", {p}, true)
                 r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
                 r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..tostring(imgId)}})
-                
+
                 local startTime = tick()
                 local conn
                 conn = RunService.Heartbeat:Connect(function()
@@ -711,17 +713,19 @@ local function TriggerJumpscare(imgId)
                         pcall(function() r:InvokeServer("Remove", {p}) end)
                         return
                     end
-                    if p and p.Parent then
-                        local followCF = camera.CFrame * CFrame.new(0, 0, -2) * CFrame.Angles(math.rad(180), 0, math.rad(-180))
+                    if p and p.Parent and hrp and hrp.Parent then
+                        local followCF = hrp.CFrame * CFrame.new(0, 1.5, -2) * CFrame.Angles(math.rad(180), 0, math.rad(-180))
                         r:InvokeServer("SyncMove", {{Part=p, CFrame=followCF}})
                     else
                         conn:Disconnect()
+                        pcall(function() r:InvokeServer("Remove", {p}) end)
                     end
                 end)
             end
         end)
     end
 end
+
 
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
