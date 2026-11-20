@@ -4,7 +4,7 @@ local TS, RS, LG = game:GetService("TweenService"), game:GetService("RunService"
 local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end if par then o.Parent=par end return o end
 local R, BG, W, D, L = Color3.fromRGB(220,20,60), Color3.fromRGB(15,15,18), Color3.fromRGB(245,245,245), Color3.fromRGB(130,130,135), Color3.fromRGB(40,40,45)
-local Keys = {["REBZYYX-KEY"]="欢迎尊贵的作者", ["REZLAINE-KEY"]="欢迎尊贵的作者", ["LOL"]="成功验证通用卡密"}
+local Keys = {["REBZYYX-KEY"]="欢迎尊贵的作者", ["REZLAINE-KEY"]="欢迎尊贵的作者", ["SMILE_0731"]="欢迎Smile_0731", ["PURPLE5PAYLOAD"]="欢迎Purple5Payload", ["LOL"]="成功验证通用卡密"}
 
 local blur = new("BlurEffect", {Size=0, Parent=LG})
 TS:Create(blur, TweenInfo.new(1), {Size=18}):Play()
@@ -553,128 +553,173 @@ end
 
 local isStormRunning = false
 local isRiseRunning = false
+local globalStop = false
+
+local function getRemote()
+	local tool
+	for _, v in pairs(player:GetDescendants()) do
+		if v.Name == "SyncAPI" and v.Parent:FindFirstChild("Tools") and not v.Parent:FindFirstChild("Tools"):FindFirstChild("Marketplace") then
+			tool = v.Parent
+		end
+	end
+	if not tool then
+		for _, v in pairs(player:GetDescendants()) do
+			if v.Name == "SyncAPI" then tool = v.Parent end
+		end
+	end
+	if tool and tool:FindFirstChild("SyncAPI") then
+		return tool.SyncAPI.ServerEndpoint
+	end
+	return nil
+end
+local function syncInvoke(...)
+	local remote = getRemote()
+	if remote then
+		return remote:InvokeServer(...)
+	end
+end
+
+local function sweepRemove(partName)
+	local r = getRemote()
+	if not r then return end
+	local list={}
+	for _,v in ipairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") and v.Name==partName then
+			table.insert(list,v)
+		end
+	end
+	if #list>0 then pcall(function() r:InvokeServer("Remove",list) end) end
+end
 
 local function StartFalling(texId)
-    isStormRunning = false
-    isRiseRunning = false
-    task.wait(0.1)
-    isStormRunning = true
-    local r = getRemote()
-    if not r then return end
-    task.spawn(function()
-        while isStormRunning do
-            local char = player.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then break end
-            for i = 1, 2 do
-                task.spawn(function()
-                    local randomX = math.random(-400, 400)
-                    local randomZ = math.random(-400, 400)
-                    local randomY = math.random(-30, 30)
-                    local spawnPos = hrp.CFrame.Position + Vector3.new(randomX, randomY, randomZ)
-                    local cf = CFrame.new(spawnPos)
-                    local p = r:InvokeServer("CreatePart", "Normal", cf, workspace)
-                    if p then
-                        r:InvokeServer("SetName", {p}, "F3xParticle_Fall")
-                        r:InvokeServer("SyncResize", {{Part=p, CFrame=cf, Size=Vector3.new(15, 15, 0.2)}})
-                        r:InvokeServer("SyncCollision", {{Part=p, CanCollide=false}})
-                        r:InvokeServer("SetLocked", {p}, true)
-                        r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
-                        r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..texId}})
-                        r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal"}})
-                        r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal", Texture="rbxassetid://"..texId}})
-                        task.spawn(function()
-                            local currentCF = cf
-                            local lifeTime = 0
-                            while isStormRunning do
-                                if not p or not p.Parent then break end
-                                currentCF = currentCF + Vector3.new(0, 5, 0)
-                                r:InvokeServer("SyncMove", {{Part=p, CFrame=currentCF}})
-                                lifeTime = lifeTime + 0.05
-                                if lifeTime > 10 then
-                                    r:InvokeServer("Remove", {p})
-                                    break
-                                end
-                                task.wait(0.05)
-                            end
-                        end)
-                    end
-                end)
-            end
-            task.wait(0.1)
-        end
-    end)
+	local r = getRemote()
+	if not r then return end
+	globalStop = false
+	isStormRunning = false
+	task.wait(0.1)
+	isStormRunning = true
+	task.spawn(function()
+		while isStormRunning and not globalStop do
+			local char = player.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			if not hrp then break end
+			for _=1,2 do
+				task.spawn(function()
+					if globalStop then return end
+					local randomX = math.random(-400, 400)
+					local randomZ = math.random(-400, 400)
+					local randomY = math.random(-30, 30)
+					local spawnPos = hrp.CFrame.Position + Vector3.new(randomX, randomY, randomZ)
+					local cf = CFrame.new(spawnPos)
+					local p = r:InvokeServer("CreatePart", "Normal", cf, workspace)
+					if not p or globalStop then return end
+
+					r:InvokeServer("SetName", {p}, "FallP")
+					r:InvokeServer("SyncResize", {{Part=p, CFrame=cf, Size=Vector3.new(15, 15, 0.2)}})
+					r:InvokeServer("SyncCollision", {{Part=p, CanCollide=false}})
+					r:InvokeServer("SetLocked", {p}, true)
+
+					r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
+					r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..texId}})
+					r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal"}})
+					r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal", Texture="rbxassetid://"..texId}})
+
+					task.spawn(function()
+						local currentCF = cf
+						local lifeTime = 0
+						while isStormRunning and not globalStop do
+							if not p or not p.Parent then break end
+							currentCF = currentCF + Vector3.new(0, 5, 0)
+							r:InvokeServer("SyncMove", {{Part=p, CFrame=currentCF}})
+							lifeTime = lifeTime + 0.05
+							if lifeTime > 10 then
+								r:InvokeServer("Remove", {p})
+								break
+							end
+							task.wait(0.05)
+						end
+					end)
+				end)
+			end
+			task.wait(0.1)
+		end
+	end)
 end
 
 local function StartRise(texId)
-    isRiseRunning = false
-    isStormRunning = false
-    task.wait(0.1)
-    isRiseRunning = true
-    local r = getRemote()
-    if not r then return end
-    task.spawn(function()
-        while isRiseRunning do
-            for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
-                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                    task.spawn(function()
-                        local hrp = plr.Character.HumanoidRootPart
-                        local spawnPos = hrp.CFrame.Position + Vector3.new(0, 3, 0)
-                        local cf = CFrame.new(spawnPos)
-                        local p = r:InvokeServer("CreatePart", "Normal", cf, workspace)
-                        if p then
-                            r:InvokeServer("SetName", {p}, "F3xParticle_Rise")
-                            r:InvokeServer("SyncResize", {{Part=p, CFrame=cf, Size=Vector3.new(5, 5, 0.2)}})
-                            r:InvokeServer("SyncCollision", {{Part=p, CanCollide=false}})
-                            r:InvokeServer("SetLocked", {p}, true)
-                            r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
-                            r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..texId}})
-                            r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal"}})
-                            r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal", Texture="rbxassetid://"..texId}})
-                            task.spawn(function()
-                                local currentCF = cf
-                                local lifeTime = 0
-                                while isRiseRunning do
-                                    if not p or not p.Parent then break end
-                                    currentCF = currentCF + Vector3.new(0, 1, 0)
-                                    r:InvokeServer("SyncMove", {{Part=p, CFrame=currentCF}})
-                                    lifeTime = lifeTime + 0.05
-                                    if lifeTime > 2 then
-                                        r:InvokeServer("Remove", {p})
-                                        break
-                                    end
-                                    task.wait(0.05)
-                                end
-                            end)
-                        end
-                    end)
-                end
-            end
-            task.wait(0.3)
-        end
-    end)
+	local r = getRemote()
+	if not r then return end
+	globalStop = false
+	isRiseRunning = false
+	task.wait(0.1)
+	isRiseRunning = true
+	task.spawn(function()
+		while isRiseRunning and not globalStop do
+			for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
+				if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+					task.spawn(function()
+						if globalStop then return end
+						local hrp = plr.Character.HumanoidRootPart
+						local spawnPos = hrp.CFrame.Position + Vector3.new(0, 3, 0)
+						local cf = CFrame.new(spawnPos)
+						local p = r:InvokeServer("CreatePart", "Normal", cf, workspace)
+						if not p or globalStop then return end
+
+						r:InvokeServer("SetName", {p}, "RiseP")
+						r:InvokeServer("SyncResize", {{Part=p, CFrame=cf, Size=Vector3.new(5, 5, 0.2)}})
+						r:InvokeServer("SyncCollision", {{Part=p, CanCollide=false}})
+						r:InvokeServer("SetLocked", {p}, true)
+
+						r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal"}})
+						r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Front, TextureType="Decal", Texture="rbxassetid://"..texId}})
+						r:InvokeServer("CreateTextures", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal"}})
+						r:InvokeServer("SyncTexture", {{Part=p, Face=Enum.NormalId.Back, TextureType="Decal", Texture="rbxassetid://"..texId}})
+
+						task.spawn(function()
+							local currentCF = cf
+							local lifeTime = 0
+							while isRiseRunning and not globalStop do
+								if not p or not p.Parent then break end
+								currentCF = currentCF + Vector3.new(0, 1, 0)
+								r:InvokeServer("SyncMove", {{Part=p, CFrame=currentCF}})
+								lifeTime = lifeTime + 0.05
+								if lifeTime > 2 then
+									r:InvokeServer("Remove", {p})
+									break
+								end
+								task.wait(0.05)
+							end
+						end)
+					end)
+				end
+			end
+			task.wait(0.3)
+		end
+	end)
 end
 
 local function StopAndClearFalling()
-    isStormRunning = false
-    local r = getRemote()
-    if not r then return end
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name == "F3xParticle_Fall" then
-            pcall(function() r:InvokeServer("Remove", {v}) end)
-        end
-    end
+	isStormRunning = false
+	globalStop = true
+	task.spawn(function()
+		sweepRemove("FallP")
+		task.wait(0.15)
+		sweepRemove("FallP")
+		task.wait(0.25)
+		sweepRemove("FallP")
+	end)
 end
 
 local function StopAndClearRise()
-    isRiseRunning = false
-    local r = getRemote()
-    if not r then return end
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name == "F3xParticle_Rise" then
-            pcall(function() r:InvokeServer("Remove", {v}) end)
-        end
-    end
+	isRiseRunning = false
+	globalStop = true
+	task.spawn(function()
+		sweepRemove("RiseP")
+		task.wait(0.15)
+		sweepRemove("RiseP")
+		task.wait(0.25)
+		sweepRemove("RiseP")
+	end)
 end
 
 local BaseList = {
