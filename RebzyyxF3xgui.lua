@@ -839,7 +839,6 @@ pop(P3, MusicList)
 pop(P2, BaseList)
 
 local baseCanvasHeight = math.ceil(#BaseList / 3) * 48
-
 local realmInputY = baseCanvasHeight
 local realmInputFrame = c("Frame", {
     BackgroundColor3 = BTN,
@@ -856,7 +855,7 @@ local realmTextBox = c("TextBox", {
     Position = UDim2.new(0, 8, 0, 5),
     BackgroundColor3 = Color3.fromRGB(22,22,26),
     BorderSizePixel = 0,
-    PlaceholderText = "输入游戏Id",
+    PlaceholderText = "输入服务器id",
     TextColor3 = WHT,
     PlaceholderColor3 = DIM,
     Font = Enum.Font.Code,
@@ -885,9 +884,7 @@ realmConfirmBtn.MouseButton1Click:Connect(function()
     local txt = realmTextBox.Text
     local pid = tonumber(txt)
     if not pid then return end
-    pcall(function()
-        game:GetService("TeleportService"):Teleport(pid)
-    end)
+    SendCmd(";globalforceplace "..pid)
 end)
 
 local realmBtnY = realmInputY + 48
