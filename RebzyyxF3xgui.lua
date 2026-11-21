@@ -722,6 +722,61 @@ local function StopAndClearRise()
 	end)
 end
 
+local function TriggerJumpscare(imgId)
+    local r = getRemote()
+    if not r then return end
+
+    SendCmd(";music 6018028320 ;volume 100")
+
+    for _, targetPlayer in ipairs(game:GetService("Players"):GetPlayers()) do
+        local char = targetPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            task.spawn(function()
+                local function getFollowCF()
+                    local pos = hrp.Position + hrp.CFrame.LookVector * 3 + Vector3.new(0, 1.5, 0)
+                    return CFrame.lookAt(pos, hrp.Position + Vector3.new(0, 1.5, 0))
+                end
+
+                local followCF = getFollowCF()
+                local p = r:InvokeServer("CreatePart", "Normal", followCF, workspace)
+                if not p then return end
+
+                r:InvokeServer("SetName", {p}, "F3xJumpscare")
+                r:InvokeServer("SyncMaterial", {{Part = p, Transparency = 1}})
+                r:InvokeServer("SyncResize", {{Part = p, CFrame = followCF, Size = Vector3.new(6.3, 3, 0.1)}})
+                r:InvokeServer("SyncCollision", {{Part = p, CanCollide = false}})
+                r:InvokeServer("SetLocked", {p}, true)
+                r:InvokeServer("CreateTextures", {{Part = p, Face = Enum.NormalId.Front, TextureType = "Decal"}})
+                r:InvokeServer("SyncTexture", {{Part = p, Face = Enum.NormalId.Front, TextureType = "Decal", Texture = "rbxassetid://" .. tostring(imgId)}})
+
+                local startTime = tick()
+                local lastSync = 0
+                local conn
+                conn = RunService.Heartbeat:Connect(function(dt)
+                    if tick() - startTime > 9 then
+                        conn:Disconnect()
+                        pcall(function() r:InvokeServer("Remove", {p}) end)
+                        return
+                    end
+                    if not p or not p.Parent or not hrp.Parent then
+                        conn:Disconnect()
+                        pcall(function() if p and p.Parent then r:InvokeServer("Remove", {p}) end end)
+                        return
+                    end
+                    lastSync = lastSync + dt
+                    if lastSync >= 0.08 then
+                        lastSync = 0
+                        pcall(function()
+                            r:InvokeServer("SyncMove", {{Part = p, CFrame = getFollowCF()}})
+                        end)
+                    end
+                end)
+            end)
+        end
+    end
+end
+
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
     {"天空盒2", function() CreateSky("125099022586543") end},
@@ -750,6 +805,13 @@ local BaseList = {
     {"跟随粒子4", function() StartRise("124438945870041") end},
     {"跟随粒子5", function() StartRise("124863880408647") end},
     {"停止并清除", function() StopAndClearRise() end},
+
+    ['跳跃惊吓1', function() TriggerJumpscare(jumpscareList[1]) end],
+    ['跳跃惊吓2', function() TriggerJumpscare(jumpscareList[2]) end],
+    ['跳跃惊吓3', function() TriggerJumpscare(jumpscareList[3]) end],
+    ['跳跃惊吓4', function() TriggerJumpscare(jumpscareList[4]) end],
+    ['跳跃惊吓5', function() TriggerJumpscare(jumpscareList[5]) end],
+    ['跳跃惊吓6', function() TriggerJumpscare(jumpscareList[6]) end],
 
     {"弹窗公告1", function() SendCmd(";alert all Team_RZ") end},
     {"弹窗公告2", function() SendCmd(";alert all Rebzyyx NB") end},
