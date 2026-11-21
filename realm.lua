@@ -76,10 +76,29 @@ local function delete(part)
 	_({ "Remove", { part } })
 end
 
+local function deleteBatch(parts)
+	_({ "Remove", parts })
+end
+
 local function ClearMap()
+	local list = {}
 	for _, v in ipairs(workspace:GetDescendants()) do
-		if (v:IsA("BasePart") or v:IsA("UnionOperation")) and v.Name ~= "kys" then
-			delete(v)
+		if v:IsA("BasePart") and v.Name ~= "kys" then
+			table.insert(list, v)
+		end
+	end
+
+	local BATCH = 150
+	for i = 1, #list, BATCH do
+		local batch = {}
+		for j = i, math.min(i + BATCH - 1, #list) do
+			batch[#batch + 1] = list[j]
+		end
+		local ok = pcall(function() deleteBatch(batch) end)
+		if not ok then
+			for _, p in ipairs(batch) do
+				pcall(function() delete(p) end)
+			end
 		end
 	end
 end
