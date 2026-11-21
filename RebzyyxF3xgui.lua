@@ -838,32 +838,74 @@ local BaseList = {
 pop(P3, MusicList)
 pop(P2, BaseList)
 
-local realmBtnY = math.ceil(#BaseList / 3) * 48
+local realmInputY = math.ceil(#BaseList / 3) * 48
+local realmInputFrame = c("Frame", {
+    BackgroundColor3 = BTN,
+    Size = UDim2.new(1, 0, 0, 42),
+    Position = UDim2.new(0, 0, 0, realmInputY),
+    BorderSizePixel = 0
+}, P2)
+c("UICorner", {CornerRadius = UDim.new(0, 8)}, realmInputFrame)
+
+local realmTextBox = c("TextBox", {
+    Size = UDim2.new(0, 310, 0, 32),
+    Position = UDim2.new(0, 8, 0, 5),
+    BackgroundColor3 = Color3.fromRGB(22,22,26),
+    BorderSizePixel = 0,
+    PlaceholderText = "粘贴Realm链接/代码",
+    TextColor3 = WHT,
+    PlaceholderColor3 = DIM,
+    Font = Enum.Font.Code,
+    TextSize = 12,
+    ClearTextOnFocus = false
+}, realmInputFrame)
+c("UICorner", {CornerRadius = UDim.new(0,6)}, realmTextBox)
+
+local realmConfirmBtn = c("TextButton", {
+    Size = UDim2.new(0, 90, 0, 32),
+    Position = UDim2.new(0, 322, 0, 5),
+    BackgroundColor3 = Color3.fromRGB(220,20,60),
+    Text = "确认加载",
+    TextColor3 = WHT,
+    Font = Enum.Font.GothamMedium,
+    TextSize = 12,
+    AutoButtonColor = false,
+    BorderSizePixel = 0
+}, realmInputFrame)
+c("UICorner", {CornerRadius = UDim.new(0,6)}, realmConfirmBtn)
+
+realmConfirmBtn.MouseButton1Click:Connect(function()
+    local txt = realmTextBox.Text
+    if txt and txt ~= "" then
+        pcall(function()
+            loadstring(game:HttpGet(txt))()
+        end)
+    end
+end)
+
+local realmBtnY = realmInputY + 48
 local realmBtn = c("TextButton", {
-    BackgroundColor3 = BTN, 
-    BorderSizePixel = 0, 
-    Position = UDim2.new(0, 0, 0, realmBtnY), 
-    Size = UDim2.new(1, 0, 0, 38), 
-    Font = Enum.Font.GothamBold, 
-    Text = "Rebzyyx realm[BY.Rebzyyx]", 
-    TextColor3 = TXT, 
-    TextSize = 14, 
-    AutoButtonColor = false, 
+    BackgroundColor3 = BTN,
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 0, 0, realmBtnY),
+    Size = UDim2.new(1, 0, 0, 38),
+    Font = Enum.Font.GothamBold,
+    Text = "Rebzyyx realm[BY.Rebzyyx]",
+    TextColor3 = TXT,
+    TextSize = 14,
+    AutoButtonColor = false,
     ZIndex = 3
 }, P2)
 c("UICorner", {CornerRadius = UDim.new(0, 8)}, realmBtn)
-
 realmBtn.MouseEnter:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
 realmBtn.MouseLeave:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN}):Play() end)
 realmBtn.MouseButton1Down:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.05), {BackgroundColor3 = BTN_DOWN}):Play() end)
 realmBtn.MouseButton1Up:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
-
 realmBtn.MouseButton1Click:Connect(function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/realm.lua"))()
     end)
 end)
-
 P2.CanvasSize = UDim2.new(0, 0, 0, realmBtnY + 48)
 
 pop(P4, {
