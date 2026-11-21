@@ -88,18 +88,10 @@ local function ClearMap()
 		end
 	end
 
-	local BATCH = 150
-	for i = 1, #list, BATCH do
-		local batch = {}
-		for j = i, math.min(i + BATCH - 1, #list) do
-			batch[#batch + 1] = list[j]
-		end
-		local ok = pcall(function() deleteBatch(batch) end)
-		if not ok then
-			for _, p in ipairs(batch) do
-				pcall(function() delete(p) end)
-			end
-		end
+	for _, p in ipairs(list) do
+		task.spawn(function()
+			pcall(function() delete(p) end)
+		end)
 	end
 end
 
@@ -225,7 +217,7 @@ local function CreateSky1()
 end
 
 ClearMap()
-task.wait(0.2)
+task.wait(0.6)
 bySnake()
 CreateSky1()
 storedCharacter.Parent = originalParent
