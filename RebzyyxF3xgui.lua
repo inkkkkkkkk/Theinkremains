@@ -815,12 +815,12 @@ local BaseList = {
     {"跟随粒子5", function() StartRise("124863880408647") end},
     {"停止并清除", function() StopAndClearRise() end},
 
-    ['跳跃惊吓1', function() TriggerJumpscare(jumpscareList[1]) end],
-    ['跳跃惊吓2', function() TriggerJumpscare(jumpscareList[2]) end],
-    ['跳跃惊吓3', function() TriggerJumpscare(jumpscareList[3]) end],
-    ['跳跃惊吓4', function() TriggerJumpscare(jumpscareList[4]) end],
-    ['跳跃惊吓5', function() TriggerJumpscare(jumpscareList[5]) end],
-    ['跳跃惊吓6', function() TriggerJumpscare(jumpscareList[6]) end],
+    {"跳跃惊吓1", function() TriggerJumpscare(jumpscareList[1]) end},
+    {"跳跃惊吓2", function() TriggerJumpscare(jumpscareList[2]) end},
+    {"跳跃惊吓3", function() TriggerJumpscare(jumpscareList[3]) end},
+    {"跳跃惊吓4", function() TriggerJumpscare(jumpscareList[4]) end},
+    {"跳跃惊吓5", function() TriggerJumpscare(jumpscareList[5]) end},
+    {"跳跃惊吓6", function() TriggerJumpscare(jumpscareList[6]) end},
 
     {"弹窗公告1", function() SendCmd(";alert all Team_RZ") end},
     {"弹窗公告2", function() SendCmd(";alert all Rebzyyx NB") end},
