@@ -925,6 +925,23 @@ pop(P4, {
         end
     end},
 
+{"底板",function()
+local r=getRemote()
+if not r then warn("请手持F3X工具") return end
+local char=player.Character if not char then return end
+local hrp=char:FindFirstChild("HumanoidRootPart") if not hrp then return end
+local pos=hrp.Position+Vector3.new(0,-0.2,0)
+local cf=CFrame.new(pos)
+local plate=r:InvokeServer("CreatePart","Normal",cf,workspace)
+if not plate then return end
+r:InvokeServer("SyncResize",{{Part=plate,CFrame=cf,Size=Vector3.new(512,0.4,512)}})
+r:InvokeServer("SyncColor",{{Part=plate,Color=Color3.fromRGB(99,95,98)}})
+r:InvokeServer("SyncAnchor",{{Part=plate,Anchored=true}})
+r:InvokeServer("SyncCollision",{{Part=plate,CanCollide=true}})
+r:InvokeServer("SetLocked",{plate},true)
+r:InvokeServer("SetName",{plate},"Roblox原版底板")
+end},
+
     {"锚定",function()
     local r=getRemote()
     if not r then return end
