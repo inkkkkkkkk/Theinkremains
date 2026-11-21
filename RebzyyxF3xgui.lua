@@ -838,12 +838,16 @@ local BaseList = {
 pop(P3, MusicList)
 pop(P2, BaseList)
 
-local realmInputY = math.ceil(#BaseList / 3) * 48
+local baseCanvasHeight = math.ceil(#BaseList / 3) * 48
+
+local realmInputY = baseCanvasHeight
 local realmInputFrame = c("Frame", {
     BackgroundColor3 = BTN,
     Size = UDim2.new(1, 0, 0, 42),
     Position = UDim2.new(0, 0, 0, realmInputY),
-    BorderSizePixel = 0
+    BorderSizePixel = 0,
+    Active = true,
+    ZIndex = 10
 }, P2)
 c("UICorner", {CornerRadius = UDim.new(0, 8)}, realmInputFrame)
 
@@ -857,7 +861,9 @@ local realmTextBox = c("TextBox", {
     PlaceholderColor3 = DIM,
     Font = Enum.Font.Code,
     TextSize = 12,
-    ClearTextOnFocus = false
+    ClearTextOnFocus = false,
+    Active = true,
+    ZIndex = 11
 }, realmInputFrame)
 c("UICorner", {CornerRadius = UDim.new(0,6)}, realmTextBox)
 
@@ -870,7 +876,8 @@ local realmConfirmBtn = c("TextButton", {
     Font = Enum.Font.GothamMedium,
     TextSize = 12,
     AutoButtonColor = false,
-    BorderSizePixel = 0
+    BorderSizePixel = 0,
+    ZIndex = 11
 }, realmInputFrame)
 c("UICorner", {CornerRadius = UDim.new(0,6)}, realmConfirmBtn)
 
@@ -894,7 +901,7 @@ local realmBtn = c("TextButton", {
     TextColor3 = TXT,
     TextSize = 14,
     AutoButtonColor = false,
-    ZIndex = 3
+    ZIndex = 9
 }, P2)
 c("UICorner", {CornerRadius = UDim.new(0, 8)}, realmBtn)
 realmBtn.MouseEnter:Connect(function() TweenService:Create(realmBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
@@ -906,6 +913,7 @@ realmBtn.MouseButton1Click:Connect(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/inkkkkkkkk/Theinkremains/refs/heads/main/realm.lua"))()
     end)
 end)
+
 P2.CanvasSize = UDim2.new(0, 0, 0, realmBtnY + 48)
 
 pop(P4, {
