@@ -777,6 +777,15 @@ local function TriggerJumpscare(imgId)
     end
 end
 
+local jumpscareList = {
+    "95719226713148",
+    "125099022586543",
+    "109960935915507",
+    "124438945870041",
+    "124863880408647",
+    "95719226713148"
+}
+
 local BaseList = {
     {"天空盒1", function() CreateSky("95719226713148") end},
     {"天空盒2", function() CreateSky("125099022586543") end},
