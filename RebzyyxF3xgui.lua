@@ -734,8 +734,8 @@ local function TriggerJumpscare(imgId)
         if hrp then
             task.spawn(function()
                 local function getFollowCF()
-                    local pos = hrp.Position + hrp.CFrame.LookVector * 3 + Vector3.new(0, 1.5, 0)
-                    return CFrame.lookAt(pos, hrp.Position + Vector3.new(0, 1.5, 0))
+                    local pos = hrp.Position + hrp.CFrame.LookVector * 2 + Vector3.new(0, 2, 0)
+                    return CFrame.lookAt(pos, hrp.Position + Vector3.new(0, 2, 0))
                 end
 
                 local followCF = getFollowCF()
@@ -744,7 +744,7 @@ local function TriggerJumpscare(imgId)
 
                 r:InvokeServer("SetName", {p}, "F3xJumpscare")
                 r:InvokeServer("SyncMaterial", {{Part = p, Transparency = 1}})
-                r:InvokeServer("SyncResize", {{Part = p, CFrame = followCF, Size = Vector3.new(6.3, 3, 0.1)}})
+                r:InvokeServer("SyncResize", {{Part = p, CFrame = followCF, Size = Vector3.new(12, 6, 0.1)}})
                 r:InvokeServer("SyncCollision", {{Part = p, CanCollide = false}})
                 r:InvokeServer("SetLocked", {p}, true)
                 r:InvokeServer("CreateTextures", {{Part = p, Face = Enum.NormalId.Front, TextureType = "Decal"}})
@@ -757,11 +757,13 @@ local function TriggerJumpscare(imgId)
                     if tick() - startTime > 9 then
                         conn:Disconnect()
                         pcall(function() r:InvokeServer("Remove", {p}) end)
+                        SendCmd(";unmusic")
                         return
                     end
                     if not p or not p.Parent or not hrp.Parent then
                         conn:Disconnect()
                         pcall(function() if p and p.Parent then r:InvokeServer("Remove", {p}) end end)
+                        SendCmd(";unmusic")
                         return
                     end
                     lastSync = lastSync + dt
