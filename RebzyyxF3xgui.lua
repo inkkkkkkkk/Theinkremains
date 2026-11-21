@@ -856,7 +856,7 @@ local realmTextBox = c("TextBox", {
     Position = UDim2.new(0, 8, 0, 5),
     BackgroundColor3 = Color3.fromRGB(22,22,26),
     BorderSizePixel = 0,
-    PlaceholderText = "输入目标服务器id",
+    PlaceholderText = "输入游戏Id",
     TextColor3 = WHT,
     PlaceholderColor3 = DIM,
     Font = Enum.Font.Code,
@@ -871,7 +871,7 @@ local realmConfirmBtn = c("TextButton", {
     Size = UDim2.new(0.14, 0, 0, 32),
     Position = UDim2.new(0.84, 0, 0, 5),
     BackgroundColor3 = Color3.fromRGB(220,20,60),
-    Text = "确认传送",
+    Text = "传送",
     TextColor3 = WHT,
     Font = Enum.Font.GothamMedium,
     TextSize = 11,
@@ -883,11 +883,11 @@ c("UICorner", {CornerRadius = UDim.new(0,6)}, realmConfirmBtn)
 
 realmConfirmBtn.MouseButton1Click:Connect(function()
     local txt = realmTextBox.Text
-    if txt and txt ~= "" then
-        pcall(function()
-            loadstring(game:HttpGet(txt))()
-        end)
-    end
+    local pid = tonumber(txt)
+    if not pid then return end
+    pcall(function()
+        game:GetService("TeleportService"):Teleport(pid)
+    end)
 end)
 
 local realmBtnY = realmInputY + 48
