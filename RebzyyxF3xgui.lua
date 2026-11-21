@@ -926,21 +926,50 @@ pop(P4, {
     end},
 
     {"锚定",function()
-        local r=getRemote()
-        if not r then return end
-        local sel=r:InvokeServer("GetSelection") or {}
-        local tab={}
-        for _,p in ipairs(sel) do if p:IsA("BasePart") then table.insert(tab,{Part=p,Anchored=true}) end end
-        if #tab>0 then r:InvokeServer("SyncAnchor",tab) end
-    end},
+    local r=getRemote()
+    if not r then return end
+    local list={}
+    for _,v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v:IsA("Terrain") then
+            table.insert(list,{Part=v,Anchored=true})
+        end
+    end
+    local batch=80
+    task.spawn(function()
+        for i=1,#list,batch do
+            local tmp={}
+            for j=i,math.min(i+batch-1,#list) do
+                table.insert(tmp,list[j])
+            end
+            r:InvokeServer("SyncAnchor",tmp)
+            task.wait(0.06)
+        end
+    end)
+end},
+
+
     {"取消锚定",function()
-        local r=getRemote()
-        if not r then return end
-        local sel=r:InvokeServer("GetSelection") or {}
-        local tab={}
-        for _,p in ipairs(sel) do if p:IsA("BasePart") then table.insert(tab,{Part=p,Anchored=false}) end end
-        if #tab>0 then r:InvokeServer("SyncAnchor",tab) end
-    end},
+    local r=getRemote()
+    if not r then return end
+    local list={}
+    for _,v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v:IsA("Terrain") then
+            table.insert(list,{Part=v,Anchored=false})
+        end
+    end
+    local batch=80
+    task.spawn(function()
+        for i=1,#list,batch do
+            local tmp={}
+            for j=i,math.min(i+batch-1,#list) do
+                table.insert(tmp,list[j])
+            end
+            r:InvokeServer("SyncAnchor",tmp)
+            task.wait(0.06)
+        end
+    end)
+end},
+
     {"迪维科",function() SendCmd(";disco") end},
     {"关闭迪维科",function() SendCmd(";undisco") end},
 })
