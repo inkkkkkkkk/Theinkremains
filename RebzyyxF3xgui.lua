@@ -868,7 +868,6 @@ P2.CanvasSize = UDim2.new(0, 0, 0, realmBtnY + 48)
 
 pop(P4, {
     {"获取F3X", function() SendCmd(";btools me") end}, 
-
     {"R6(自己)",  function() SendCmd(";r6 me")  end},
     {"R6(全服)",  function() SendCmd(";r6 all") end},
     {"R15(自己)", function() SendCmd(";r15 me") end},
@@ -910,7 +909,6 @@ pop(P4, {
         game:GetService("Lighting").FogEnd = 100000 
         game:GetService("Lighting").FogColor = Color3.fromRGB(192, 192, 192) 
     end},
-
     {"变大(全服)", function() SendCmd(";size all 3") end},
     {"变小(全服)", function() SendCmd(";size all 0.5") end},
     {"变大(自己)", function() SendCmd(";size me 3") end},
@@ -925,7 +923,26 @@ pop(P4, {
                 pcall(function() p.Character.Humanoid.Health = 0 end)
             end
         end
-    end}
+    end},
+
+    {"锚定",function()
+        local r=getRemote()
+        if not r then return end
+        local sel=r:InvokeServer("GetSelection") or {}
+        local tab={}
+        for _,p in ipairs(sel) do if p:IsA("BasePart") then table.insert(tab,{Part=p,Anchored=true}) end end
+        if #tab>0 then r:InvokeServer("SyncAnchor",tab) end
+    end},
+    {"取消锚定",function()
+        local r=getRemote()
+        if not r then return end
+        local sel=r:InvokeServer("GetSelection") or {}
+        local tab={}
+        for _,p in ipairs(sel) do if p:IsA("BasePart") then table.insert(tab,{Part=p,Anchored=false}) end end
+        if #tab>0 then r:InvokeServer("SyncAnchor",tab) end
+    end},
+    {"迪维科",function() SendCmd(";disco") end},
+    {"关闭迪维科",function() SendCmd(";undisco") end},
 })
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
