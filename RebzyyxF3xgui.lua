@@ -1090,55 +1090,57 @@ end},
     {"蟾蜍雨", function() StartMeshToadRain() end},
     {"清除蟾蜍雨", function() StopMeshToadRain() end},
 
-    {"漂浮垫",function()
-        local r=getRemote()
-        if not r then warn("请手拿F3X工具！") return end
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        local exist
-        for _,v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name=="FollowPad" then exist=true break end
-        end
-        if exist then warn("漂浮垫已经存在！") return end
+{"悬浮垫",function()
+    if followPadPart then warn("悬浮垫已经存在！") return end
+    local r = getRemote()
+    if not r then warn("请手拿F3X工具！") return end
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-        local padCf = hrp.CFrame * CFrame.new(0,-3.5,0)
-        local pad = r:InvokeServer("CreatePart","Cylinder",padCf,workspace)
-        if not pad then return end
+    local startCf = hrp.CFrame * CFrame.new(0,-4,0)
+    local part = r:InvokeServer("CreatePart","Normal",startCf,workspace)
+    if not part then return end
 
-        r:InvokeServer("SyncResize",{{Part=pad,CFrame=padCf,Size=Vector3.new(1.2,42,42)}})
-        r:InvokeServer("SyncAnchor",{{Part=pad,Anchored=true}})
-        r:InvokeServer("SyncCollision",{{Part=pad,CanCollide=true}})
-        r:InvokeServer("SetName",{pad},"FollowPad")
+    r:InvokeServer("SyncResize",{{Part=part,CFrame=startCf,Size=Vector3.new(40,1,40)}})
+    r:InvokeServer("SyncAnchor",{{Part=part,Anchored=true}})
+    r:InvokeServer("SyncCollision",{{Part=part,CanCollide=true}})
+    r:InvokeServer("SetName",{part},"FollowPad")
+    r:InvokeServer("CreateMeshes",{{Part=part}})
+    r:InvokeServer("SyncMesh",{{Part=part,MeshId="rbxassetid://9095618661",Scale=Vector3.new(4.5,0.5,4.5)}})
 
-        task.spawn(function()
-            local conn
-            conn = RunService.Heartbeat:Connect(function()
-                local p = workspace:FindFirstChild("FollowPad")
-                if not p or not p.Parent then conn:Disconnect() return end
-                local c = player.Character
-                local root = c and c:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-                local targetCF = root.CFrame * CFrame.new(0,-3.5,0)
-                pcall(function() r:InvokeServer("SyncMove",{{Part=p,CFrame=targetCF}}) end)
-                local h = tick()%1
-                pcall(function() r:InvokeServer("SyncColor",{{Part=p,Color=Color3.fromHSV(h,1,1),UnionColoring=false}}) end)
-            end)
-        end)
-    end},
-    {"删除漂浮垫",function()
-        local r=getRemote()
-        if not r then return end
-        local toRemove={}
-        for _,v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name=="FollowPad" then
-                table.insert(toRemove,v)
-            end
+    followPadPart = part
+
+    followPadConn = RunService.Heartbeat:Connect(function()
+        if not followPadPart or not followPadPart.Parent then
+            if followPadConn then followPadConn:Disconnect() followPadConn=nil end
+            followPadPart = nil
+            return
         end
-        if #toRemove>0 then
-            r:InvokeServer("Remove",toRemove)
+        local c = player.Character
+        local root = c and c:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        local targetCF = root.CFrame * CFrame.new(0,-4,0)
+        pcall(function() r:InvokeServer("SyncMove",{{Part=followPadPart,CFrame=targetCF}}) end)
+        local h = tick()%1
+        pcall(function() r:InvokeServer("SyncColor",{{Part=followPadPart,Color=Color3.fromHSV(h,1,1),UnionColoring=false}}) end)
+    end)
+end},
+{"删除悬浮垫",function()
+    if followPadConn then followPadConn:Disconnect() followPadConn = nil end
+    local r = getRemote()
+    if not r then return end
+    local toRemove={}
+    for _,v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name=="FollowPad" then
+            table.insert(toRemove,v)
         end
-    end},
+    end
+    if #toRemove>0 then
+        pcall(function() r:InvokeServer("Remove",toRemove) end)
+    end
+    followPadPart = nil
+end},
     {"变成苦力怕",function()
         local r=getRemote()
         if not r then warn("需要F3X工具") return end
