@@ -1096,22 +1096,42 @@ end},
         local char = player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
-        local padCf = hrp.CFrame * CFrame.new(0,-4,0)
-        local pad = r:InvokeServer("CreatePart","Normal",padCf,workspace)
+        local exist
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name=="FollowPad" then exist=true break end
+        end
+        if exist then warn("漂浮垫已经存在！") return end
+
+        local padCf = hrp.CFrame * CFrame.new(0,-3.5,0)
+        local pad = r:InvokeServer("CreatePart","Cylinder",padCf,workspace)
         if not pad then return end
-        r:InvokeServer("SyncResize",{{Part=pad,CFrame=padCf,Size=Vector3.new(40,1,40)}})
+
+        r:InvokeServer("SyncResize",{{Part=pad,CFrame=padCf,Size=Vector3.new(1.2,42,42)}})
         r:InvokeServer("SyncAnchor",{{Part=pad,Anchored=true}})
         r:InvokeServer("SyncCollision",{{Part=pad,CanCollide=true}})
-        r:InvokeServer("CreateMeshes",{{Part=pad}})
-        r:InvokeServer("SyncMesh",{{Part=pad,MeshId="rbxassetid://9095618661",Scale=Vector3.new(4.5,0.5,4.5)}})
-        r:InvokeServer("SetName",{pad},"FloatPad")
+        r:InvokeServer("SetName",{pad},"FollowPad")
+
+        task.spawn(function()
+            local conn
+            conn = RunService.Heartbeat:Connect(function()
+                local p = workspace:FindFirstChild("FollowPad")
+                if not p or not p.Parent then conn:Disconnect() return end
+                local c = player.Character
+                local root = c and c:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                local targetCF = root.CFrame * CFrame.new(0,-3.5,0)
+                pcall(function() r:InvokeServer("SyncMove",{{Part=p,CFrame=targetCF}}) end)
+                local h = tick()%1
+                pcall(function() r:InvokeServer("SyncColor",{{Part=p,Color=Color3.fromHSV(h,1,1),UnionColoring=false}}) end)
+            end)
+        end)
     end},
     {"删除漂浮垫",function()
         local r=getRemote()
         if not r then return end
         local toRemove={}
         for _,v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name=="FloatPad" then
+            if v:IsA("BasePart") and v.Name=="FollowPad" then
                 table.insert(toRemove,v)
             end
         end
@@ -1130,12 +1150,6 @@ end},
         if #del>0 then r:InvokeServer("Remove",del) end
     end},
     {"恢复角色",function()
-        SendCmd(";re me")
-    end},
-    {"生成人物模型",function()
-        SendCmd(";char me zczczczc722")
-    end},
-    {"删除人物模型",function()
         SendCmd(";re me")
     end}
 })
