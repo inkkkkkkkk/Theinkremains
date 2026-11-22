@@ -977,34 +977,34 @@ pop(P4, {
     {"R15(全服)", function() SendCmd(";r15 all") end},
     {"RE(自己)",  function() SendCmd(";re me")  end},
     {"RE(全服)",  function() SendCmd(";re all") end},
-    
+
     {"标题(自己)", function() SendCmd(";titler me Rebzyyx") end},
     {"标题(全服)", function() SendCmd(";titler all Rebzyyx") end},
-    
+
     {"全服改名", function() SendCmd(";name all Rebzyyx") end}, 
-    
+
     {"系统提示", function() SendCmd(";systemmessage The server has been invaded by Rebzyyx  Rebzyyx F3xgui v67  BY.Rebzyyx, Rezlaine") end},
-    
+
     {"全服改皮肤", function() SendCmd(";char all zczczczc722") end},
-    
+
     {"全服黑夜", function() 
         SendCmd(";time 0") 
         game:GetService("Lighting").ClockTime = 0 
         game:GetService("Lighting").Brightness = 0 
     end},
-    
+
     {"全服白天", function() 
         SendCmd(";time 14") 
         game:GetService("Lighting").ClockTime = 14 
         game:GetService("Lighting").Brightness = 2 
     end},
-    
+
     {"全服大雾", function() 
         SendCmd(";fog 200") 
         game:GetService("Lighting").FogEnd = 200 
         game:GetService("Lighting").FogColor = Color3.fromRGB(150, 150, 150) 
     end},
-    
+
     {"重置环境", function() 
         SendCmd(";time 14 ;fog 10000") 
         game:GetService("Lighting").ClockTime = 14 
@@ -1016,9 +1016,9 @@ pop(P4, {
     {"变小(全服)", function() SendCmd(";size all 0.5") end},
     {"变大(自己)", function() SendCmd(";size me 3") end},
     {"变小(自己)", function() SendCmd(";size me 0.5") end},
-    
+
     {"拉所有人", function() SendCmd(";bring all") end},
-    
+
     {"杀死所有人", function() 
         SendCmd(";kill all") 
         for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
@@ -1027,7 +1027,6 @@ pop(P4, {
             end
         end
     end},
-
 {"底板",function()
 local r=getRemote()
 if not r then warn("请手持F3X工具") return end
@@ -1044,7 +1043,6 @@ r:InvokeServer("SyncCollision",{{Part=plate,CanCollide=true}})
 r:InvokeServer("SetLocked",{plate},true)
 r:InvokeServer("SetName",{plate},"Roblox原版底板")
 end},
-
     {"锚定",function()
     local r=getRemote()
     if not r then return end
@@ -1066,8 +1064,6 @@ end},
         end
     end)
 end},
-
-
     {"取消锚定",function()
     local r=getRemote()
     if not r then return end
@@ -1089,11 +1085,59 @@ end},
         end
     end)
 end},
-
     {"迪维科",function() SendCmd(";disco") end},
     {"关闭迪维科",function() SendCmd(";undisco") end},
     {"蟾蜍雨", function() StartMeshToadRain() end},
     {"清除蟾蜍雨", function() StopMeshToadRain() end},
+
+    {"漂浮垫",function()
+        local r=getRemote()
+        if not r then warn("请手拿F3X工具！") return end
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local padCf = hrp.CFrame * CFrame.new(0,-4,0)
+        local pad = r:InvokeServer("CreatePart","Normal",padCf,workspace)
+        if not pad then return end
+        r:InvokeServer("SyncResize",{{Part=pad,CFrame=padCf,Size=Vector3.new(40,1,40)}})
+        r:InvokeServer("SyncAnchor",{{Part=pad,Anchored=true}})
+        r:InvokeServer("SyncCollision",{{Part=pad,CanCollide=true}})
+        r:InvokeServer("CreateMeshes",{{Part=pad}})
+        r:InvokeServer("SyncMesh",{{Part=pad,MeshId="rbxassetid://9095618661",Scale=Vector3.new(4.5,0.5,4.5)}})
+        r:InvokeServer("SetName",{pad},"FloatPad")
+    end},
+    {"删除漂浮垫",function()
+        local r=getRemote()
+        if not r then return end
+        local toRemove={}
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name=="FloatPad" then
+                table.insert(toRemove,v)
+            end
+        end
+        if #toRemove>0 then
+            r:InvokeServer("Remove",toRemove)
+        end
+    end},
+    {"变成苦力怕",function()
+        local r=getRemote()
+        if not r then warn("需要F3X工具") return end
+        local char=player.Character
+        if not char then return end
+        local arms={char:FindFirstChild("Left Arm"),char:FindFirstChild("Right Arm"),char:FindFirstChild("LeftUpperArm"),char:FindFirstChild("RightUpperArm")}
+        local del={}
+        for _,a in ipairs(arms) do if a then table.insert(del,a) end end
+        if #del>0 then r:InvokeServer("Remove",del) end
+    end},
+    {"恢复角色",function()
+        SendCmd(";re me")
+    end},
+    {"生成人物模型",function()
+        SendCmd(";char me zczczczc722")
+    end},
+    {"删除人物模型",function()
+        SendCmd(";re me")
+    end}
 })
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
