@@ -555,30 +555,6 @@ local isStormRunning = false
 local isRiseRunning = false
 local globalStop = false
 
-local function getRemote()
-	local tool
-	for _, v in pairs(player:GetDescendants()) do
-		if v.Name == "SyncAPI" and v.Parent:FindFirstChild("Tools") and not v.Parent:FindFirstChild("Tools"):FindFirstChild("Marketplace") then
-			tool = v.Parent
-		end
-	end
-	if not tool then
-		for _, v in pairs(player:GetDescendants()) do
-			if v.Name == "SyncAPI" then tool = v.Parent end
-		end
-	end
-	if tool and tool:FindFirstChild("SyncAPI") then
-		return tool.SyncAPI.ServerEndpoint
-	end
-	return nil
-end
-local function syncInvoke(...)
-	local remote = getRemote()
-	if remote then
-		return remote:InvokeServer(...)
-	end
-end
-
 local function sweepRemove(partName)
 	local r = getRemote()
 	if not r then return end
@@ -589,6 +565,86 @@ local function sweepRemove(partName)
 		end
 	end
 	if #list>0 then pcall(function() r:InvokeServer("Remove",list) end) end
+end
+
+local isToadRainRunning = false
+local toadRainGlobalStop = false
+local function createToadMeshPart(position)
+    local r = getRemote()
+    if not r then return end
+    local cf = CFrame.new(position)
+    local ok, part = pcall(function()
+        return r:InvokeServer("CreatePart", "Normal", cf, workspace)
+    end)
+    if not ok or not part then return end
+    syncInvoke("SetName", {part}, "ToadMeshP")
+    syncInvoke("CreateMeshes", {{Part = part}})
+    syncInvoke("SyncResize", {{
+        Part = part,
+        CFrame = cf,
+        Size = Vector3.new(100, 100, 100)
+    }})
+    syncInvoke("SyncMesh", {{
+        Part = part,
+        MeshId = "rbxassetid://5038530279"
+    }})
+    syncInvoke("SyncMesh", {{
+        Part = part,
+        TextureId = "rbxassetid://5038530309"
+    }})
+    syncInvoke("SyncMesh", {{
+        Part = part,
+        Scale = Vector3.new(4, 4, 4)
+    }})
+    syncInvoke("SyncCollision", {{
+        Part = part,
+        CanCollide = false
+    }})
+    syncInvoke("SyncAnchor", {{
+        Part = part,
+        Anchored = false
+    }})
+end
+
+local function StartMeshToadRain()
+    local r = getRemote()
+    if not r then warn("请手持F3X工具！") return end
+    if isToadRainRunning then return end
+    isToadRainRunning = true
+    toadRainGlobalStop = false
+    task.spawn(function()
+        while isToadRainRunning and not toadRainGlobalStop do
+            local character = player.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local position = root.Position + Vector3.new(
+                    math.random(-600, 600),
+                    math.random(400, 800),
+                    math.random(-600, 600)
+                )
+                task.spawn(createToadMeshPart, position)
+            end
+            task.wait(0.3)
+        end
+    end)
+end
+
+local function StopMeshToadRain()
+    isToadRainRunning = false
+    toadRainGlobalStop = true
+    task.spawn(function()
+        local r = getRemote()
+        if not r then return end
+        local list = {}
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name == "ToadMeshP" then
+                table.insert(list, v)
+            end
+        end
+        if #list > 0 then
+            pcall(function() r:InvokeServer("Remove", list) end)
+        end
+    end)
 end
 
 local function StartFalling(texId)
@@ -1036,6 +1092,8 @@ end},
 
     {"迪维科",function() SendCmd(";disco") end},
     {"关闭迪维科",function() SendCmd(";undisco") end},
+    {"蟾蜍雨", function() StartMeshToadRain() end},
+    {"清除蟾蜍雨", function() StopMeshToadRain() end},
 })
 
 local ResizeZone = c("TextButton", {BackgroundTransparency = 1, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 1, -30), Text = "", BorderSizePixel = 0, ZIndex = 1}, Main)
